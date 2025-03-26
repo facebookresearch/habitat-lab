@@ -344,6 +344,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
                 "joint_that_can_control",
                 "motion_data_path",
                 "ik_arm_urdf",
+                "articulated_agent_usda",
                 "grasp_managers",
                 "max_climb",
                 "max_slope",
@@ -738,6 +739,6 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
                 transform.translation,
                 rotation,
             )
-        observations[
-            KEYFRAME_OBSERVATION_KEY
-        ] = self.gfx_replay_manager.extract_keyframe()
+        observations[KEYFRAME_OBSERVATION_KEY] = (
+            self.gfx_replay_manager.extract_keyframe()
+        )

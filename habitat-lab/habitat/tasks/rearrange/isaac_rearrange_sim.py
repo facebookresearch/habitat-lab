@@ -74,14 +74,6 @@ def bind_physics_material_to_hierarchy(
     dynamic_friction,
     restitution,
 ):
-
-    # material_path = f"/PhysicsMaterials/{material_name}"
-    # material_prim = stage.DefinePrim(material_path, "PhysicsMaterial")
-    # material = UsdPhysics.MaterialAPI(material_prim)
-
-    # material.CreateStaticFrictionAttr().Set(static_friction)
-    # material.CreateDynamicFrictionAttr().Set(dynamic_friction)
-    # material.CreateRestitutionAttr().Set(restitution)
     from omni.isaac.core.materials.physics_material import PhysicsMaterial
     from pxr import UsdPhysics, UsdShade
 
@@ -333,30 +325,9 @@ class IsaacRearrangeSim(HabitatSim):
     @add_perf_timing_func()
     def reset(self):
         SimulatorBackend.reset(self)
-        # asset_path = "data/usd/scenes/102344193_with_stage.usda"
-        asset_path = os.path.abspath(
-            "data/usd/scenes/fremont_static_objects.usda"
-        )
         from omni.isaac.core.utils.stage import add_reference_to_stage
 
         isaac_world = self._isaac_wrapper.service.world
-        # stage = self._isaac_wrapper.service.world.stage
-        # prim = stage.GetPrimAtPath("/World")
-        # bind_physics_material_to_hierarchy(
-        #     stage=stage,
-        #     root_prim=prim,
-        #     material_name="my_material",
-        #     static_friction=1.0,
-        #     dynamic_friction=1.0,
-        #     restitution=0.0,
-        # )
-        # # self.agents_mgr = IsaacArticulatedAgentManager(self.habitat_config, self)
-
-        # isaac_world.reset()
-        # self._isaac_rom.post_reset()
-
-        # for agent in self.agents_mgr.articulated_agents_iter:
-        #     agent._robot_wrapper.post_reset()
         stage = self._isaac_wrapper.service.world.stage
         root_prim = stage.GetPrimAtPath("/World/rigid_objects")
         for prim in list(stage.Traverse()):
@@ -376,7 +347,6 @@ class IsaacRearrangeSim(HabitatSim):
     def reconfigure(self, config: "DictConfig", ep_info: RearrangeEpisode):
         self.remove_rigid_objects()
         self._handle_to_goal_name = ep_info.info["object_labels"]
-
         self.ep_info = ep_info
         self.isaac_loaders(self.ep_info)
 
@@ -487,7 +457,6 @@ class IsaacRearrangeSim(HabitatSim):
         isaac_world = self._isaac_wrapper.service.world
 
         asset_path = os.path.abspath(ep_info.scene_dataset_config)
-        print("asset_path: ", asset_path)
         from omni.isaac.core.utils.stage import add_reference_to_stage
 
         add_reference_to_stage(
@@ -503,7 +472,6 @@ class IsaacRearrangeSim(HabitatSim):
             self.obj_to_load[obj_name] = obj_pose
         # self._rigid_objects = []
         # self.add_or_reset_rigid_objects()
-        # breakpoint()
         self._pick_target_rigid_object_idx = None
 
         stage = self._isaac_wrapper.service.world.stage
@@ -522,6 +490,7 @@ class IsaacRearrangeSim(HabitatSim):
 
         for agent in self.agents_mgr.articulated_agents_iter:
             agent._robot_wrapper.post_reset()
+            agent._robot_wrapper.set_world_asset_path(asset_path)
 
     def remove_rigid_objects(self):
         stage = self._isaac_wrapper.service.world.stage
@@ -1231,7 +1200,4 @@ class IsaacRearrangeSim(HabitatSim):
             rotation2 = mn.Quaternion.rotation(mn.Deg(90), mn.Vector3.z_axis())
             rotation = rotation1 * rotation2
             trans = mn.Matrix4.from_(rotation.to_matrix(), position)
-            print(trans)
             ro.transformation = trans
-
-    # breakpoint()

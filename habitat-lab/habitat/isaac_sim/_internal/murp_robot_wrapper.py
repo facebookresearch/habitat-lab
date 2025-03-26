@@ -27,10 +27,10 @@ class MurpRobotWrapper:
     The goal with this wrapper is convenience but not encapsulation. See also (public) IsaacMobileManipulator, which has the goal of exposing a minimal public interface to the rest of Habitat-lab.
     """
 
-    def __init__(self, isaac_service, instance_id=0):
+    def __init__(self, agent_cfg, isaac_service, instance_id=0):
 
         self._isaac_service = isaac_service
-        asset_path = "./data/usd/robots/franka_with_hand_right.usda"  # Lambda Machine Change
+        asset_path = agent_cfg.articulated_agent_usda
         robot_prim_path = f"/World/env_{instance_id}/Murp"
         self._robot_prim_path = robot_prim_path
 
@@ -478,9 +478,6 @@ class MurpRobotWrapper:
 
     def physics_callback(self, step_size):
         base_position, base_orientation = self._robot.get_world_pose()
-        trans, rot = self.get_prim_transform(
-            "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_fridgedoor2"
-        )
         self.fix_base(step_size, base_position, base_orientation)
         # self.drive_arm(step_size)
         self.drive_right_arm(step_size)
@@ -549,22 +546,6 @@ class MurpRobotWrapper:
         ee_rot = link_poses[1][self.right_ee_link_id]
 
         return ee_pos, ee_rot
-
-    def get_prim_transform(self, asset_path=None):
-        """Get Scene prim's position and rotation."""
-        if asset_path is None:
-            asset_path = os.path.abspath(
-                "data/usd/scenes/fremont_static_objects.usda"
-            )
-        prim_path = f"/World/test_scene/{asset_path}"
-        prim = self._isaac_service.world.stage.GetPrimAtPath(prim_path)
-        matrix: Gf.Matrix4d = omni.usd.get_world_transform_matrix(prim)
-        translate: Gf.Vec3d = matrix.ExtractTranslation()
-        rotation: Gf.Rotation = matrix.ExtractRotation()
-        quat_rotation: Gf.Quatd = matrix.ExtractRotationQuat()
-        euler_rotation = rotation.GetAngle()
-
-        return translate, rotation
 
     def get_articulation_links(self, prim_path: str):
         """Function to get link names which articulation can be applied

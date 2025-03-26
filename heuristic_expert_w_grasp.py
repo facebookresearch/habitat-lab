@@ -141,6 +141,9 @@ class ExpertDatagen:
                 # "murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_tmr_left_arm_only.urdf",
                 "murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_right_arm.urdf",
             )
+            usda_path = os.path.join(
+                data_path, "usd/robots/franka_with_hand_right.usda"
+            )
         else:
             urdf_path = os.path.join(
                 data_path,
@@ -150,7 +153,11 @@ class ExpertDatagen:
                 data_path,
                 "franka_tmr/franka_description_tmr/urdf/franka_right_arm.urdf",  # Lambda Change
             )
+            usda_path = os.path.join(
+                data_path, "usd/robots/franka_with_hand_right.usda"
+            )
         main_agent_config.articulated_agent_urdf = urdf_path
+        main_agent_config.articulated_agent_usda = usda_path
         main_agent_config.articulated_agent_type = "MurpRobot"
         main_agent_config.ik_arm_urdf = arm_urdf_path
 
@@ -867,7 +874,30 @@ class ExpertDatagen:
     def test_pick(self):
         self.target_name = self.env.current_episode.action_target[0]
         self.reset_robot(self.target_name)
+        path = "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_fridgedoor2"
+        door_trans, door_orientation_rpy = (
+            self.env.sim.articulated_agent._robot_wrapper.get_prim_transform(
+                path
+            )
+        )
+        from habitat.utils.gum_utils import sample_point_cloud_from_urdf
+
+        self.object_asset_files_dict = {
+            "simple_tennis_ball": "ball.urdf",
+            "simple_cube": "cube.urdf",
+            "simple_cylin4cube": "cylinder4cube.urdf",
+            "000": "dexgraspnet2/meshdata/000/simplified_sdf.urdf",
+            "048": "dexgraspnet2/meshdata/048/simplified_sdf.urdf",
+        }
+        object_name = "048"
+        pc, normals = sample_point_cloud_from_urdf(
+            os.path.abspath("data/assets"),
+            self.object_asset_files_dict[object_name],
+            100,
+            seed=4,
+        )
         for _ in range(10):
+            # self.move_to_ee()
             self.move_base(0.0, 0.0)
 
     def main(self):
