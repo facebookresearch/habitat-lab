@@ -893,6 +893,9 @@ class ExpertDatagen:
             path, convention="quat"
         )
         obj_trans = torch.tensor(np.expand_dims(obj_trans, axis=0))
+        obj_rot_real=obj_rot.GetReal()
+        obj_rot_im=obj_rot.GetImaginary()
+        obj_rot=np.array([obj_rot_im[0], obj_rot_im[1], obj_rot_im[2], obj_rot_real])
         obj_rot = torch.tensor(np.expand_dims(obj_rot, axis=0))
 
         pc_world = to_world_frame(pc, obj_rot, obj_trans)
