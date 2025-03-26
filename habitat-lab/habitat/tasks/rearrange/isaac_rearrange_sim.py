@@ -512,11 +512,15 @@ class IsaacRearrangeSim(HabitatSim):
         translate: Gf.Vec3d = matrix.ExtractTranslation()
         rotation: Gf.Rotation = matrix.ExtractRotation()
         quat_rotation: Gf.Quatd = matrix.ExtractRotationQuat()
+        prim_trans = np.array([*translate])
         if convention == "rpy":
-            euler_rotation = rotation.GetAngle()
-            return translate, euler_rotation
+            prim_rot = rotation.GetAngle()
+            return translate, prim_rot
         else:
-            return translate, quat_rotation
+            scalar = quat_rotation.GetReal()
+            vector = quat_rotation.GetImaginary()
+            prim_rot = np.array([scalar, vector[0], vector[1], vector[2]])
+        return prim_trans, prim_rot
 
     @add_perf_timing_func()
     def _setup_semantic_ids(self):
