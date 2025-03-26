@@ -866,10 +866,6 @@ class ExpertDatagen:
             )
 
     def get_rl_grasp_inputs(self):
-        path = "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_fridgedoor2"
-        door_trans, door_orientation_rpy = self.env.sim.get_prim_transform(
-            path
-        )
         self.object_asset_files_dict = {
             "simple_tennis_ball": "ball.urdf",
             "simple_cylin4cube": "cylinder4cube.urdf",
@@ -899,29 +895,43 @@ class ExpertDatagen:
         obs_dict = {}
         priv_info = {}
         # obs_dict["gt_object_point_cloud"] = pc_world
-        priv_info["object_trans"] = obj_trans
+        priv_info["object_trans"] = obj_trans.flatten()
         priv_info["object_scale"] = torch.tensor(
-            np.random.choice([0.77, 0.79, 0.81, 0.83, 0.84])
+            [np.random.choice([0.77, 0.79, 0.81, 0.83, 0.84])]
         )
-        priv_info["object_mass"] = torch.tensor(np.random.uniform(0.04, 0.08))
+        priv_info["object_mass"] = torch.tensor(
+            [np.random.uniform(0.04, 0.08)]
+        )
         priv_info["object_friction"] = torch.tensor(
-            np.random.uniform(0.3, 1.0)
+            [np.random.uniform(0.3, 1.0)]
         )
         priv_info["object_center_of_mass"] = torch.tensor(
-            np.random.uniform(-0.01, 0.01)
+            [
+                np.random.uniform(-0.01, 0.01),
+                np.random.uniform(-0.01, 0.01),
+                np.random.uniform(-0.01, 0.01),
+            ]
         )
-        priv_info["object_rot"] = obj_rot
+        priv_info["object_rot"] = obj_rot.flatten()
         priv_info["object_angvel"] = torch.zeros(3)
-        priv_info["fingertip_trans"] = torch.zeros(12)
-        priv_info["object_restitution"] = torch.tensor(
-            np.random.uniform(0, 1.0)
+
+        ee_poses, ee_rots = (
+            self.env.sim.articulated_agent._robot_wrapper.fingertip_right_pose()
         )
-        obs_dict["priv_info"] = priv_info
+        priv_info["fingertip_trans"] = torch.tensor(
+            ee_poses
+        )  # check finger tip ordering
+        priv_info["object_restitution"] = torch.tensor(
+            [np.random.uniform(0, 1.0)]
+        )
+        # concatenate priv info
+        obs_dict["priv_info"] = torch.cat(list(priv_info.values())).unsqueeze(
+            0
+        )
         clip_obs = 5.0
         joints_obs = (
             self.env.sim.articulated_agent._robot_wrapper.right_hand_joint_pos
         )
-        breakpoint()
         curr_obs = np.concatenate([joints_obs, self.target_obs])
         obs_dict["obs"] = np.clip(np.zeros(22), -clip_obs, clip_obs)
 

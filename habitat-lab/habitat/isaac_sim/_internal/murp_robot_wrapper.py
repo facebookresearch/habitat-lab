@@ -529,23 +529,44 @@ class MurpRobotWrapper:
 
         return hand_joint_positions
 
-    def ee_pose(self, convention="hab"):
+    def get_fingertip_pose(self, finger_ids, convention="hab"):
+        """Get the current ee position and rotation."""
+        link_poses = self.get_link_world_poses(convention=convention)
+        ee_poses = []
+        ee_rots = []
+        for finger_id in finger_ids:
+            ee_poses.extend([*link_poses[0][finger_id]])
+            ee_rots.extend(
+                [
+                    link_poses[1][finger_id].scalar,
+                    *link_poses[1][finger_id].vector,
+                ]
+            )
+
+        return ee_poses, ee_rots
+
+    def fingertip_pose(self, convention="hab"):
+        left_finger_ids = [43, 53, 58, 48]
+        return self.get_fingertip_pose(left_finger_ids, convention)
+
+    def fingertip_right_pose(self, convention="hab"):
+        right_finger_ids = [74, 84, 89, 79]
+        return self.get_fingertip_pose(right_finger_ids, convention)
+
+    def get_ee_pose(self, link_id, convention="hab"):
         """Get the current ee position and rotation."""
         link_poses = self.get_link_world_poses(convention=convention)
 
-        ee_pos = link_poses[0][self.ee_link_id]
-        ee_rot = link_poses[1][self.ee_link_id]
+        ee_pos = link_poses[0][link_id]
+        ee_rot = link_poses[1][link_id]
 
         return ee_pos, ee_rot
+
+    def ee_pose(self, convention="hab"):
+        return self.get_ee_pose(self.ee_link_id)
 
     def ee_right_pose(self, convention="hab"):
-        """Get the current ee position and rotation."""
-        link_poses = self.get_link_world_poses(convention=convention)
-
-        ee_pos = link_poses[0][self.right_ee_link_id]
-        ee_rot = link_poses[1][self.right_ee_link_id]
-
-        return ee_pos, ee_rot
+        return self.get_ee_pose(self.right_ee_link_id)
 
     def get_articulation_links(self, prim_path: str):
         """Function to get link names which articulation can be applied
