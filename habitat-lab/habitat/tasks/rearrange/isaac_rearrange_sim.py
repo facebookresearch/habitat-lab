@@ -1204,10 +1204,11 @@ class IsaacRearrangeSim(HabitatSim):
             obj_name,
             obj_pose,
         ) in self.obj_to_load.items():  # Iterate over the dictionary
+            obj_pose = np.array(obj_pose) # Passing Rot here flips the object so just taking pos and allowing it to compute rot
             objects_to_add.append(
                 (
                     f"{path_to_configs}/OBJECT_{obj_name}_textured.usda",
-                    mn.Vector3(*obj_pose),  # Use the stored pose directly
+                    mn.Vector3(obj_pose[0, 3], obj_pose[1, 3], obj_pose[2, 3]),  # Use the stored pose directly
                 )
             )
 
