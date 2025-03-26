@@ -700,16 +700,12 @@ class ExpertDatagen:
 
     def get_door_quat(self):
         path = self.TARGET_CONFIG[self.target_name][3]
-        door_trans, door_orientation_rpy = self.env.sim.get_prim_transform(
-            path
+        door_trans, door_orientation_quat = self.env.sim.get_prim_transform(
+            path, convention="quat"
         )
         self.visualize_pos(door_trans, "door")
-        quat_door = door_orientation_rpy.GetQuaternion()
-        # Getting Quaternion Val to Array
-        scalar = quat_door.GetReal()
-        vector = quat_door.GetImaginary()
-        quat_door = [scalar, vector[0], vector[1], vector[2]]
-        isaac_T_door_quat = self.apply_rotation(quat_door)
+
+        isaac_T_door_quat = self.apply_rotation(door_orientation_quat)
         print("door_quat: ", isaac_T_door_quat)
         return isaac_T_door_quat
 
@@ -892,10 +888,17 @@ class ExpertDatagen:
             100,
             seed=4,
         )
-        obj_trans, obj_rot = self.env.sim.get_prim_transform(path)
-        pc_world = to_world_frame(pc, obj_trans, obj_rot)
-        obs_dict["gt_object_point_cloud"] = pc_world
+        pc = torch.tensor(np.expand_dims(pc, axis=0))
+        obj_trans, obj_rot = self.env.sim.get_prim_transform(
+            path, convention="quat"
+        )
+        obj_trans = torch.tensor(np.expand_dims(obj_trans, axis=0))
+        obj_rot = torch.tensor(np.expand_dims(obj_rot, axis=0))
+
+        pc_world = to_world_frame(pc, obj_rot, obj_trans)
+        obs_dict = {}
         priv_info = {}
+        # obs_dict["gt_object_point_cloud"] = pc_world
         priv_info["object_trans"] = obj_trans
         priv_info["object_scale"] = np.random.choice(
             [0.77, 0.79, 0.81, 0.83, 0.84]
@@ -908,6 +911,13 @@ class ExpertDatagen:
         priv_info["fingertip_trans"] = np.zeros(12)
         priv_info["object_restitution"] = np.random.uniform(0, 1.0)
         obs_dict["priv_info"] = priv_info
+        clip_obs = 5.0
+        joints_obs = (
+            self.env.sim.articulated_agent._robot_wrapper.right_hand_joint_pos
+        )
+        breakpoint()
+        curr_obs = np.concatenate([joints_obs, self.target_obs])
+        obs_dict["obs"] = np.clip(np.zeros(22), -clip_obs, clip_obs)
 
         return obs_dict
 
