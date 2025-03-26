@@ -35,8 +35,9 @@ defaults:
 habitat:
   gym:
     obs_keys:
-      - articulated_agent_arm_depth # depth image of the arm: 224 by 224
-      - head_depth # depth image of the head: 224 by 224
+      # Disable any rendering of the images to improve performance
+      # - articulated_agent_arm_depth # depth image of the arm: 224 by 224
+      # - head_depth # depth image of the head: 224 by 224
       - joint # joint angle of the arm: 7-dim
       - hand_joint # joint angle of the hand: 16-dim
       - obj_start_sensor # relative position from ee to target object: 3-dim
@@ -83,19 +84,19 @@ habitat:
     agents:
       main_agent:
         radius: 0.3
-        sim_sensors:
-          head_rgb_sensor:
-            height: 224
-            width: 224
-          head_depth_sensor:
-            height: 224
-            width: 224
-          arm_depth_sensor:
-            height: 224
-            width: 224
-          arm_rgb_sensor:
-            height: 224
-            width: 224
+        # sim_sensors:
+        #   head_rgb_sensor:
+        #     height: 224
+        #     width: 224
+        #   head_depth_sensor:
+        #     height: 224
+        #     width: 224
+        #   arm_depth_sensor:
+        #     height: 224
+        #     width: 224
+        #   arm_rgb_sensor:
+        #     height: 224
+        #     width: 224
         ik_arm_urdf: /home/jimmytyyang/research/hab_training/habitat-lab/data/franka_tmr/franka_description_tmr/urdf/franka_tmr_right_arm_only.urdf
     habitat_sim_v0:
       enable_physics: False

@@ -1,18 +1,20 @@
 # @package habitat.simulator.agents.murp_agent
-defaults:
-  - /habitat/simulator/sim_sensors@sim_sensors.head_rgb_sensor: head_rgb_sensor
-  - /habitat/simulator/sim_sensors@sim_sensors.head_depth_sensor: head_depth_sensor
-  - /habitat/simulator/sim_sensors@sim_sensors.arm_rgb_sensor: arm_rgb_sensor # here for cameras
-  - /habitat/simulator/sim_sensors@sim_sensors.arm_depth_sensor: arm_depth_sensor # here for cameras
+# Disable rendering of the images
+# defaults:
+#   - /habitat/simulator/sim_sensors@sim_sensors.head_rgb_sensor: head_rgb_sensor
+#   - /habitat/simulator/sim_sensors@sim_sensors.head_depth_sensor: head_depth_sensor
+#   - /habitat/simulator/sim_sensors@sim_sensors.arm_rgb_sensor: arm_rgb_sensor # here for cameras
+#   - /habitat/simulator/sim_sensors@sim_sensors.arm_depth_sensor: arm_depth_sensor # here for cameras
 
-sim_sensors:
-  arm_rgb_sensor:
-    height: 224
-    width: 224
-    hfov: 60
-  arm_depth_sensor:
-    height: 224
-    width: 224
-    hfov: 60
-    min_depth: 0.0
-    max_depth: 1.7
+# Disable rendering of the images
+# sim_sensors:
+#   arm_rgb_sensor:
+#     height: 224
+#     width: 224
+#     hfov: 60
+#   arm_depth_sensor:
+#     height: 224
+#     width: 224
+#     hfov: 60
+#     min_depth: 0.0
+#     max_depth: 1.7
