@@ -486,9 +486,7 @@ class IsaacRearrangeSim(HabitatSim):
         self.obj_pose = []
         isaac_world = self._isaac_wrapper.service.world
 
-        asset_path = os.path.abspath(
-            "data/usd/scenes/fremont_static_objects.usda"  # TODO: Path retrieve from self.ep_info
-        )
+        asset_path = os.path.abspath(ep_info.scene_dataset_config)
         print("asset_path: ", asset_path)
         from omni.isaac.core.utils.stage import add_reference_to_stage
 
@@ -499,8 +497,8 @@ class IsaacRearrangeSim(HabitatSim):
             usd_path=asset_path, prim_path="/World/test_scene"
         )
 
-        for i in range(len(ep_info.additional_obj_config_paths)):
-            obj_name = self.ep_info.additional_obj_config_paths[i]
+        for i in range(len(ep_info.rigid_objs)):
+            obj_name = self.ep_info.rigid_objs[i][0]
             obj_pose = self.ep_info.rigid_objs[i][1]
             self.obj_to_load[obj_name] = obj_pose
         # self._rigid_objects = []
@@ -524,7 +522,7 @@ class IsaacRearrangeSim(HabitatSim):
 
         for agent in self.agents_mgr.articulated_agents_iter:
             agent._robot_wrapper.post_reset()
-    
+
     def remove_rigid_objects(self):
         stage = self._isaac_wrapper.service.world.stage
         root_prim = stage.GetPrimAtPath("/World/rigid_objects")
@@ -610,10 +608,7 @@ class IsaacRearrangeSim(HabitatSim):
 
     @add_perf_timing_func()
     def _load_navmesh(self, ep_info):
-        # navmesh_path = "data/fphab/navmeshes/102344193.navmesh"
-        navmesh_path = os.path.abspath(
-            "data/Fremont-Knuckles/navmeshes/fremont_static.navmesh"
-        )
+        navmesh_path = os.path.abspath(ep_info.navmesh_path)
         if osp.exists(navmesh_path):
             self.pathfinder.load_nav_mesh(navmesh_path)
             logger.info(f"Loaded navmesh from {navmesh_path}")
@@ -1201,114 +1196,20 @@ class IsaacRearrangeSim(HabitatSim):
         return stats_dict
 
     def add_or_reset_rigid_objects(self):
-        # on dining table
-        drop_pos = mn.Vector3(-3.6, 0.8, -7.22)  # mn.Vector3(-7.4, 0.8, -7.5)
-        offset_vec = mn.Vector3(1.3, 0.0, 0.0)
-
-        # above coffee table
-        # drop_pos = mn.Vector3(-8.1, 0.5, -3.9)
-
-        # middle of room
-        # drop_pos = mn.Vector3(-5.4, 1.2, -3.9)
-
-        up_vec = mn.Vector3(0.0, 1.0, 0.0)
-        path_to_configs = "data/objects/ycb/configs"
-
+        path_to_configs = self.ep_info.additional_obj_config_paths[0]
         do_add = len(self._rigid_objects) == 0
 
-        # for coffee table
-        if False:
-            objects_to_add = []
-            object_names = [
-                "024_bowl",
-                "013_apple",
-                "011_banana",
-                "010_potted_meat_can",
-                "077_rubiks_cube",
-                "036_wood_block",
-                "004_sugar_box",
-            ]
-            next_obj_idx = 0
-            sp = 0.25
-            for cell_y in range(5):
-                for cell_x in range(3):
-                    for cell_z in range(3):
-                        offset_vec = mn.Vector3(
-                            cell_x * sp - sp, cell_y * sp, cell_z * sp - sp
-                        )
-                        objects_to_add.append(
-                            (
-                                f"{path_to_configs}/{object_names[next_obj_idx]}.object_config.json",
-                                drop_pos + offset_vec,
-                            )
-                        )
-                        next_obj_idx = (next_obj_idx + 1) % len(object_names)
-
-        if True:
-            objects_to_add = []
-            for (
-                obj_name,
-                obj_pose,
-            ) in self.obj_to_load.items():  # Iterate over the dictionary
-                objects_to_add.append(
-                    (
-                        f"data/usd/objects/dexgraspnet2/{obj_name}/OBJECT_simplified_sdf1.usda",
-                        mn.Vector3(*obj_pose),  # Use the stored pose directly
-                    )
+        objects_to_add = []
+        for (
+            obj_name,
+            obj_pose,
+        ) in self.obj_to_load.items():  # Iterate over the dictionary
+            objects_to_add.append(
+                (
+                    f"{path_to_configs}/OBJECT_{obj_name}_textured.usda",
+                    mn.Vector3(*obj_pose),  # Use the stored pose directly
                 )
-            # for dining table
-            # objects_to_add = [
-            #     (
-            #         f"{path_to_configs}/024_bowl.object_config.json",
-            #         drop_pos + offset_vec * 0.0 + up_vec * 0.0,
-            #     ),
-            #     #            (f"{path_to_configs}/011_banana.object_config.json", drop_pos + offset_vec * 0.01 + up_vec * 0.05),
-            #     (
-            #         f"{path_to_configs}/013_apple.object_config.json",
-            #         drop_pos + offset_vec * -0.01 + up_vec * 0.05,
-            #     ),
-            #     #             (f"{path_to_configs}/011_banana.object_config.json", drop_pos + offset_vec * 0.02 + up_vec * 0.12),
-            #     (
-            #         f"{path_to_configs}/013_apple.object_config.json",
-            #         drop_pos + offset_vec * 0.01 + up_vec * 0.1,
-            #     ),
-            #     (
-            #         f"{path_to_configs}/010_potted_meat_can.object_config.json",
-            #         drop_pos + offset_vec * 0.3 + up_vec * 0.0,
-            #     ),
-            #     (
-            #         f"{path_to_configs}/077_rubiks_cube.object_config.json",
-            #         drop_pos + offset_vec * 0.6 + up_vec * 0.1,
-            #     ),
-            #     (
-            #         f"{path_to_configs}/036_wood_block.object_config.json",
-            #         drop_pos + offset_vec * 0.6 + up_vec * 0.0,
-            #     ),
-            #     (
-            #         f"{path_to_configs}/004_sugar_box.object_config.json",
-            #         drop_pos + offset_vec * 0.9,
-            #     ),
-            #     (
-            #         f"{path_to_configs}/004_sugar_box.object_config.json",
-            #         drop_pos + offset_vec * 1.0,
-            #     ),
-            #     (
-            #         f"{path_to_configs}/004_sugar_box.object_config.json",
-            #         drop_pos + offset_vec * 1.1,
-            #     ),
-            #     (
-            #         f"{path_to_configs}/004_sugar_box.object_config.json",
-            #         drop_pos + offset_vec * 0.8,
-            #     ),
-            #     (
-            #         f"{path_to_configs}/010_potted_meat_can.object_config.json",
-            #         drop_pos + offset_vec * 0.22 + up_vec * 0.0,
-            #     ),
-            #     (
-            #         f"{path_to_configs}/010_potted_meat_can.object_config.json",
-            #         drop_pos + offset_vec * 0.38 + up_vec * 0.0,
-            #     ),
-            # ]
+            )
 
         from habitat.isaac_sim.isaac_rigid_object_manager import (
             IsaacRigidObjectManager,
@@ -1329,6 +1230,7 @@ class IsaacRearrangeSim(HabitatSim):
             rotation2 = mn.Quaternion.rotation(mn.Deg(90), mn.Vector3.z_axis())
             rotation = rotation1 * rotation2
             trans = mn.Matrix4.from_(rotation.to_matrix(), position)
+            print(trans)
             ro.transformation = trans
 
     # breakpoint()
