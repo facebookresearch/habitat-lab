@@ -23,6 +23,7 @@ from typing import (
 import magnum as mn
 import numpy as np
 import numpy.typing as npt
+import omni
 
 import habitat_sim
 

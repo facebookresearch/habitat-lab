@@ -700,10 +700,8 @@ class ExpertDatagen:
 
     def get_door_quat(self):
         path = self.TARGET_CONFIG[self.target_name][3]
-        door_trans, door_orientation_rpy = (
-            self.env.sim.get_prim_transform(
-                path
-            )
+        door_trans, door_orientation_rpy = self.env.sim.get_prim_transform(
+            path
         )
         self.visualize_pos(door_trans, "door")
         quat_door = door_orientation_rpy.GetQuaternion()
@@ -871,20 +869,13 @@ class ExpertDatagen:
                 hand, grip_iters, open_iters, move_iters
             )
 
-    def test_pick(self):
-        self.target_name = self.env.current_episode.action_target[0]
-        self.reset_robot(self.target_name)
+    def get_rl_grasp_inputs(self):
         path = "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_fridgedoor2"
-        door_trans, door_orientation_rpy = (
-            self.env.sim.get_prim_transform(
-                path
-            )
+        door_trans, door_orientation_rpy = self.env.sim.get_prim_transform(
+            path
         )
-        from habitat.utils.gum_utils import sample_point_cloud_from_urdf
-
         self.object_asset_files_dict = {
             "simple_tennis_ball": "ball.urdf",
-            "simple_cube": "cube.urdf",
             "simple_cylin4cube": "cylinder4cube.urdf",
             "000": "dexgraspnet2/meshdata/000/simplified_sdf.urdf",
             "048": "dexgraspnet2/meshdata/048/simplified_sdf.urdf",
@@ -896,6 +887,30 @@ class ExpertDatagen:
             100,
             seed=4,
         )
+        obj_trans, obj_rot = self.env.sim.get_prim_transform(path)
+        pc_world = to_world_frame(pc, obj_trans, obj_rot)
+        obs_dict["gt_object_point_cloud"] = pc_world
+        priv_info = {}
+        priv_info["object_trans"] = obj_trans
+        priv_info["object_scale"] = np.random.choice(
+            [0.77, 0.79, 0.81, 0.83, 0.84]
+        )
+        priv_info["object_mass"] = np.random.uniform(0.04, 0.08)
+        priv_info["object_friction"] = np.random.uniform(0.3, 1.0)
+        priv_info["object_center_of_mass"] = np.random.uniform(-0.01, 0.01)
+        priv_info["object_rot"] = obj_rot
+        priv_info["object_angvel"] = np.zeros(3)
+        priv_info["fingertip_trans"] = np.zeros(12)
+        priv_info["object_restitution"] = np.random.uniform(0, 1.0)
+        obs_dict["priv_info"] = priv_info
+
+        return obs_dict
+
+    def test_pick(self):
+        self.target_name = self.env.current_episode.action_target[0]
+        self.reset_robot(self.target_name)
+        obs_dict = self.get_rl_grasp_inputs()
+
         for _ in range(10):
             # self.move_to_ee()
             self.move_base(0.0, 0.0)
