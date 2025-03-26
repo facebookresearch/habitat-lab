@@ -701,7 +701,7 @@ class ExpertDatagen:
     def get_door_quat(self):
         path = self.TARGET_CONFIG[self.target_name][3]
         door_trans, door_orientation_rpy = (
-            self.env.sim.articulated_agent._robot_wrapper.get_prim_transform(
+            self.env.sim.get_prim_transform(
                 path
             )
         )
@@ -876,7 +876,7 @@ class ExpertDatagen:
         self.reset_robot(self.target_name)
         path = "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_fridgedoor2"
         door_trans, door_orientation_rpy = (
-            self.env.sim.articulated_agent._robot_wrapper.get_prim_transform(
+            self.env.sim.get_prim_transform(
                 path
             )
         )
