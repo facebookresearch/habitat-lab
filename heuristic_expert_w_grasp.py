@@ -44,6 +44,10 @@ from habitat.config.default_structured_configs import (
 from habitat.core.env import Env
 from habitat.isaac_sim import actions, isaac_prim_utils
 from habitat.isaac_sim.isaac_app_wrapper import IsaacAppWrapper
+from habitat.utils.gum_utils import (
+    sample_point_cloud_from_urdf,
+    to_world_frame,
+)
 from habitat_sim.physics import JointMotorSettings, MotionType
 from habitat_sim.utils import viz_utils as vut
 from habitat_sim.utils.settings import make_cfg
@@ -701,7 +705,7 @@ class ExpertDatagen:
     def get_door_quat(self):
         path = self.TARGET_CONFIG[self.target_name][3]
         door_trans, door_orientation_quat = self.env.sim.get_prim_transform(
-            path, convention="quat"
+            os.path.join("/World/test_scene/", path), convention="quat"
         )
         self.visualize_pos(door_trans, "door")
 
@@ -865,7 +869,7 @@ class ExpertDatagen:
                 hand, grip_iters, open_iters, move_iters
             )
 
-    def get_rl_grasp_inputs(self):
+    def rl_reset(self):
         self.object_asset_files_dict = {
             "simple_tennis_ball": "ball.urdf",
             "simple_cylin4cube": "cylinder4cube.urdf",
@@ -873,10 +877,6 @@ class ExpertDatagen:
             "048": "dexgraspnet2/meshdata/048/simplified_sdf.urdf",
         }
         object_name = "048"
-        from habitat.utils.gum_utils import (
-            sample_point_cloud_from_urdf,
-            to_world_frame,
-        )
 
         pc, normals = sample_point_cloud_from_urdf(
             os.path.abspath("data/assets"),
@@ -884,63 +884,93 @@ class ExpertDatagen:
             100,
             seed=4,
         )
-        pc = torch.tensor(pc).unsqueeze(0)
+        self.gt_object_point_clouds__object = torch.tensor(pc).unsqueeze(0)
+        self.private_info = {}
+        path = (
+            str(self.env.sim._rigid_objects[0]._prim)
+            .split("<")[1]
+            .split(">")[0]
+        )
         obj_trans, obj_rot = self.env.sim.get_prim_transform(
             path, convention="quat"
         )
-        obj_trans = torch.tensor(obj_trans).unsqueeze(0)
-        obj_rot = torch.tensor(obj_rot).unsqueeze(0)
 
-        pc_world = to_world_frame(pc, obj_rot, obj_trans)
-        obs_dict = {}
-        priv_info = {}
-        # obs_dict["gt_object_point_cloud"] = pc_world
-        priv_info["object_trans"] = obj_trans.flatten()
-        priv_info["object_scale"] = torch.tensor(
+        self.private_info["object_trans"] = obj_trans.flatten()
+        self.private_info["object_scale"] = torch.tensor(
             [np.random.choice([0.77, 0.79, 0.81, 0.83, 0.84])]
         )
-        priv_info["object_mass"] = torch.tensor(
+        self.private_info["object_mass"] = torch.tensor(
             [np.random.uniform(0.04, 0.08)]
         )
-        priv_info["object_friction"] = torch.tensor(
+        self.private_info["object_friction"] = torch.tensor(
             [np.random.uniform(0.3, 1.0)]
         )
-        priv_info["object_center_of_mass"] = torch.tensor(
+        self.private_info["object_center_of_mass"] = torch.tensor(
             [
                 np.random.uniform(-0.01, 0.01),
                 np.random.uniform(-0.01, 0.01),
                 np.random.uniform(-0.01, 0.01),
             ]
         )
-        priv_info["object_rot"] = obj_rot.flatten()
-        priv_info["object_angvel"] = torch.zeros(3)
+        self.private_info["object_rot"] = obj_rot.flatten()
+        self.private_info["object_angvel"] = torch.zeros(3)
 
         ee_poses, ee_rots = (
             self.env.sim.articulated_agent._robot_wrapper.fingertip_right_pose()
         )
-        priv_info["fingertip_trans"] = torch.tensor(
+        self.private_info["fingertip_trans"] = torch.tensor(
             ee_poses
         )  # check finger tip ordering
-        priv_info["object_restitution"] = torch.tensor(
+        self.private_info["object_restitution"] = torch.tensor(
             [np.random.uniform(0, 1.0)]
         )
-        # concatenate priv info
-        obs_dict["priv_info"] = torch.cat(list(priv_info.values())).unsqueeze(
-            0
+        self.obs_buf_lag_history = torch.zeros(22 * 3)
+        self.target_obs = torch.zeros(6)
+
+    def get_obs_dict(self):
+        obs_dict = {}
+        path = (
+            str(self.env.sim._rigid_objects[0]._prim)
+            .split("<")[1]
+            .split(">")[0]
         )
+        obj_trans, obj_rot = self.env.sim.get_prim_transform(
+            path, convention="quat"
+        )
+        obj_trans = torch.tensor(obj_trans).unsqueeze(0)
+        obj_rot = torch.tensor(obj_rot).unsqueeze(0)
+
+        object_pc__world = to_world_frame(
+            self.gt_object_point_clouds__object, obj_rot, obj_trans
+        )
+        obs_dict["gt_object_point_cloud"] = object_pc__world
+        self.private_info["object_trans"] = obj_trans.flatten()
+        self.private_info["object_rot"] = obj_rot.flatten()
+        ee_poses, ee_rots = (
+            self.env.sim.articulated_agent._robot_wrapper.fingertip_right_pose()
+        )
+        self.private_info["fingertip_trans"] = torch.tensor(ee_poses)
+
+        obs_dict["priv_info"] = torch.cat(
+            list(self.private_info.values())
+        ).unsqueeze(0)
         clip_obs = 5.0
-        joints_obs = (
+        prev_obs_buf = self.obs_buf_lag_history[22:]
+        joints_obs = torch.tensor(
             self.env.sim.articulated_agent._robot_wrapper.right_hand_joint_pos
         )
-        curr_obs = np.concatenate([joints_obs, self.target_obs])
-        obs_dict["obs"] = np.clip(np.zeros(22), -clip_obs, clip_obs)
+        breakpoint()
+        cur_obs_buf = torch.cat([joints_obs, self.target_obs])
+        obs_buf = torch.cat([prev_obs_buf, cur_obs_buf])
+        obs_dict["obs"] = torch.clamp(obs_buf, -clip_obs, clip_obs)
 
         return obs_dict
 
     def test_pick(self):
         self.target_name = self.env.current_episode.action_target[0]
         self.reset_robot(self.target_name)
-        obs_dict = self.get_rl_grasp_inputs()
+        self.rl_reset()
+        obs_dict = self.get_obs_dict()
 
         for _ in range(10):
             # self.move_to_ee()

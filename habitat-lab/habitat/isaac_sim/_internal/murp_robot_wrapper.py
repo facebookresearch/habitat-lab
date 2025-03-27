@@ -546,11 +546,13 @@ class MurpRobotWrapper:
         return ee_poses, ee_rots
 
     def fingertip_pose(self, convention="hab"):
-        left_finger_ids = [43, 53, 58, 48]
+        # index, thumb, middle, ring
+        left_finger_ids = [43, 48, 53, 58]
         return self.get_fingertip_pose(left_finger_ids, convention)
 
     def fingertip_right_pose(self, convention="hab"):
-        right_finger_ids = [74, 84, 89, 79]
+        # index, thumb, middle, ring
+        right_finger_ids = [74, 79, 84, 89]
         return self.get_fingertip_pose(right_finger_ids, convention)
 
     def get_ee_pose(self, link_id, convention="hab"):

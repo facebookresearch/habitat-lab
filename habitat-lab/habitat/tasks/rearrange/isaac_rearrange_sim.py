@@ -506,8 +506,9 @@ class IsaacRearrangeSim(HabitatSim):
         """Get Scene prim's position and rotation."""
         if asset_path is None:
             asset_path = self.world_asset_path
-        prim_path = f"/World/test_scene/{asset_path}"
-        prim = self._isaac_wrapper.service.world.stage.GetPrimAtPath(prim_path)
+        prim = self._isaac_wrapper.service.world.stage.GetPrimAtPath(
+            asset_path
+        )
         matrix: Gf.Matrix4d = omni.usd.get_world_transform_matrix(prim)
         translate: Gf.Vec3d = matrix.ExtractTranslation()
         rotation: Gf.Rotation = matrix.ExtractRotation()
