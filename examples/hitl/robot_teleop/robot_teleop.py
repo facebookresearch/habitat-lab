@@ -34,6 +34,9 @@ from habitat_sim.gfx import DebugLineRender
 
 from scripts.robot import Robot
 from scripts.DoFeditor import DoFEditor
+from scripts.quest_reader import QuestReader
+from scripts.ik import DifferentialInverseKinematics
+import time
 
 # path to this example app directory
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -47,8 +50,6 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 # - setup a VR interface for IK tracking EF
 #   - use controllers for toggling things or mouse interchange
 #   - use hand state for direct manipulation of the Meta Hand
-
-
 
 
 
@@ -180,6 +181,7 @@ class AppStateRobotTeleopViewer(AppState):
         self._app_service = app_service
         self._sim = app_service.sim
         self._current_scene_index = 0
+        
 
         # bind the app specific config values
         self._app_cfg: DictConfig = omegaconf_to_object(
@@ -205,6 +207,8 @@ class AppStateRobotTeleopViewer(AppState):
 
         self.robot: Optional[Robot] = None
         self.dof_editor: Optional[DoFEditor] = None
+        self._quest_reader: Optional[QuestReader] = QuestReader(self._app_service)
+        self._ik: Optional[DifferentialInverseKinematics] = DifferentialInverseKinematics()
         self._cursor_pos = mn.Vector3(0.0, 0.0, 0.0)
         self.navmesh_lines: Optional[
             List[Tuple[mn.Vector3, mn.Vector3]]
@@ -212,6 +216,8 @@ class AppStateRobotTeleopViewer(AppState):
 
         # setup the simulator
         self.set_scene(self._current_scene_index)
+
+
 
         self._sps_tracker = AverageRateTracker(2.0)
         self._do_pause_physics = False
@@ -655,6 +661,32 @@ class AppStateRobotTeleopViewer(AppState):
                 self._sim.cast_ray(ray), self._sim
             )
 
+    
+    def update_joint_positions(self, joint_positions: List[float]) -> None:
+        """
+        Update the joint positions of the robot.
+        """
+
+        # Determine the index of the joint to increase based on time
+        current_time = int(time.time())
+        joint_index = (current_time // 5) % len(joint_positions)
+
+        print(joint_index)
+
+        # Increase the joint angle by 0.1
+        joint_positions[6] += 0.1
+
+        # 29 is EEF of right hand 23 is first
+        # 0 to 7 are of left hand
+
+        # for i in range(len(joint_positions)):
+        #     joint_positions[i] = joint_positions[i] + 0.1
+
+
+        return joint_positions
+
+
+    
     # this is where connect with the thread for controller positions
     def sim_update(
         self, dt: float, post_sim_update_dict: Dict[str, Any]
@@ -664,16 +696,36 @@ class AppStateRobotTeleopViewer(AppState):
         Handle key presses, steps the simulator, updates the GUI, debug draw, etc...
         """
 
-        self._sps_tracker.increment()
+        # self._sps_tracker.increment()
+
+        # 
+        
 
         # IO handling
         self.handle_keys(dt, post_sim_update_dict)
         self.handle_mouse_press()
         self._update_cursor_pos()
         self.move_robot_on_navmesh()
+        poseLeft, poseRight = self._quest_reader.quest_reader()
+
+        print(poseLeft is not None)
+        if poseLeft is not None:
+            _cur_angles = self.robot.ao.joint_positions
+            _cur_angles[0:7] = self._ik.inverse_kinematics(poseLeft, _cur_angles[0:7])
+            self.robot.ao.joint_positions = _cur_angles
+        if poseRight is not None:
+            _cur_angles = self.robot.ao.joint_positions
+            _cur_angles[23:30] = self._ik.inverse_kinematics(poseRight, _cur_angles[23:30])
+            self.robot.ao.joint_positions = _cur_angles
+
+        print(self.robot.ao.joint_positions[0:7])
 
         # step the simulator
-        self._sim.step_physics(dt)
+        #self._sim.step_physics(dt)
+
+        #self.robot.ao.update_all_motor_targets(self.update_joint_positions(self.robot.ao.joint_positions))
+        # print(self.robot.ao.joint_positions) 
+
 
         # update the camera position
         self._camera_helper.update(self._cursor_pos, dt)
