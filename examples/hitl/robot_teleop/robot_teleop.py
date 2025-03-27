@@ -661,32 +661,7 @@ class AppStateRobotTeleopViewer(AppState):
                 self._sim.cast_ray(ray), self._sim
             )
 
-    
-    def update_joint_positions(self, joint_positions: List[float]) -> None:
-        """
-        Update the joint positions of the robot.
-        """
-
-        # Determine the index of the joint to increase based on time
-        current_time = int(time.time())
-        joint_index = (current_time // 5) % len(joint_positions)
-
-        print(joint_index)
-
-        # Increase the joint angle by 0.1
-        joint_positions[6] += 0.1
-
-        # 29 is EEF of right hand 23 is first
-        # 0 to 7 are of left hand
-
-        # for i in range(len(joint_positions)):
-        #     joint_positions[i] = joint_positions[i] + 0.1
-
-
-        return joint_positions
-
-
-    
+ 
     # this is where connect with the thread for controller positions
     def sim_update(
         self, dt: float, post_sim_update_dict: Dict[str, Any]
@@ -696,10 +671,8 @@ class AppStateRobotTeleopViewer(AppState):
         Handle key presses, steps the simulator, updates the GUI, debug draw, etc...
         """
 
-        # self._sps_tracker.increment()
+        self._sps_tracker.increment()
 
-        # 
-        
 
         # IO handling
         self.handle_keys(dt, post_sim_update_dict)
@@ -708,7 +681,6 @@ class AppStateRobotTeleopViewer(AppState):
         self.move_robot_on_navmesh()
         poseLeft, poseRight = self._quest_reader.quest_reader()
 
-        print(poseLeft is not None)
         if poseLeft is not None:
             _cur_angles = self.robot.ao.joint_positions
             _cur_angles[0:7] = self._ik.inverse_kinematics(poseLeft, _cur_angles[0:7])
@@ -717,14 +689,6 @@ class AppStateRobotTeleopViewer(AppState):
             _cur_angles = self.robot.ao.joint_positions
             _cur_angles[23:30] = self._ik.inverse_kinematics(poseRight, _cur_angles[23:30])
             self.robot.ao.joint_positions = _cur_angles
-
-        print(self.robot.ao.joint_positions[0:7])
-
-        # step the simulator
-        #self._sim.step_physics(dt)
-
-        #self.robot.ao.update_all_motor_targets(self.update_joint_positions(self.robot.ao.joint_positions))
-        # print(self.robot.ao.joint_positions) 
 
 
         # update the camera position
