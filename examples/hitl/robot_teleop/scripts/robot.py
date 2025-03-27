@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
 import json
 from typing import Any, Dict
 import os
@@ -145,7 +151,9 @@ class Robot:
                 return
             if self.robot_cfg.create_joint_motors:
                 self.ao.update_all_motor_targets(pose)
+                pass
             if set_positions:
+                pass
                 self.ao.joint_positions = pose
 
     def cache_pose(
