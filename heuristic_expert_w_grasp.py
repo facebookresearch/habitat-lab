@@ -959,7 +959,6 @@ class ExpertDatagen:
         joints_obs = torch.tensor(
             self.env.sim.articulated_agent._robot_wrapper.right_hand_joint_pos
         )
-        breakpoint()
         cur_obs_buf = torch.cat([joints_obs, self.target_obs])
         obs_buf = torch.cat([prev_obs_buf, cur_obs_buf])
         obs_dict["obs"] = torch.clamp(obs_buf, -clip_obs, clip_obs)
