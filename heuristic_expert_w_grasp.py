@@ -913,7 +913,9 @@ class ExpertDatagen:
             ]
         )
         self.private_info["object_rot"] = obj_rot.flatten()
-        self.private_info["object_angvel"] = torch.zeros(3)
+        self.private_info["object_angvel"] = torch.tensor(
+            self.env.sim._rigid_objects[0]._rigid_prim.get_angular_velocity()
+        )
 
         ee_poses, ee_rots = (
             self.env.sim.articulated_agent._robot_wrapper.fingertip_right_pose()
@@ -966,14 +968,32 @@ class ExpertDatagen:
         return obs_dict
 
     def test_pick(self):
+        self.load_gum_policy()
         self.target_name = self.env.current_episode.action_target[0]
         self.reset_robot(self.target_name)
         self.rl_reset()
+
         obs_dict = self.get_obs_dict()
+        breakpoint()
+        mu = self.policy.model.act(obs_dict)["mus"]
+        mu = torch.clamp(mu, -1.0, 1.0)
+        print("mu: ", mu)
 
         for _ in range(10):
             # self.move_to_ee()
             self.move_base(0.0, 0.0)
+
+    def load_gum_policy(self):
+        import sys
+
+        third_party_ckpt_root_folder = "/opt/hpcaas/.mounts/fs-03ee9f8c6dddfba21/jtruong/repos/gum_ws/src/GUM"
+        sys.path.append(third_party_ckpt_root_folder)
+        from gum.planning.rl.ppo import PPO
+
+        self.policy = PPO.from_checkpoint(
+            "/opt/hpcaas/.mounts/fs-03ee9f8c6dddfba21/jtruong/repos/gum_ws/src/GUM/results/experiment_8/run5/best_reward_3340.29.pth"
+        )
+        print("loaded policy!")
 
     def main(self):
         for _ in range(self.env.number_of_episodes):
