@@ -89,7 +89,7 @@ def make_hab_cfg(agent_dict, action_dict):
     env_cfg = EnvironmentConfig()
     dataset_cfg = DatasetConfig(
         type="RearrangeDataset-v0",
-        data_path="/fsx-siro/jtruong/repos/vla-physics/habitat-lab/habitat-lab/habitat/tasks/rearrange/task_pick.json.gz",
+        data_path="/fsx-siro/jtruong/repos/vla-physics/habitat-lab/habitat-lab/habitat/tasks/rearrange/task_pick2.json.gz",
     )
 
     hab_cfg = HabitatConfig()
@@ -574,7 +574,7 @@ class ExpertDatagen:
         )
 
     def set_targets(
-        self, target_w_xyz, target_w_quat, target_joints, hand="left"
+        self, target_w_xyz, target_w_quat, target_joints, hand="left", mode
     ):
         self.target_w_xyz = target_w_xyz
         self.target_w_quat = target_w_quat
@@ -585,6 +585,7 @@ class ExpertDatagen:
         self.target_joints = target_joints
 
         # XYZ
+        target_w_xyz = np.array(target_w_xyz)
         self.open_xyz = target_w_xyz.copy()
         if hand == "left":
             self.open_xyz[2] -= 0.1
@@ -598,20 +599,41 @@ class ExpertDatagen:
             self.close_fingers = self.target_joints.copy()
             self.close_fingers[OPEN_JOINTS] += 0.2
         else:
-            self.open_xyz[2] -= 0.1
-            self.open_xyz[0] += 0.1
-            SECONDARY_JOINTS = [2, 6, 10, 15]
-            TERTIARY_JOINTS = [3, 7, 11]
-            OPEN_JOINTS = [1, 5, 9]
-            CURVE_JOINTS = [13]
-            BASE_THUMB_JOINT = [12]
-            self.grasp_fingers = self.target_joints.copy()
-            self.close_fingers = self.target_joints.copy()
-            self.close_fingers[BASE_THUMB_JOINT] += 1.1
-            # self.close_fingers[CURVE_JOINTS] -=0.5
-            self.close_fingers[SECONDARY_JOINTS] += 0.7
-            self.close_fingers[TERTIARY_JOINTS] += 1.0
-            self.close_fingers[OPEN_JOINTS] += 0.7
+            if mode == "pick":
+                self.open_xyz[1] += 0.5
+                SECONDARY_JOINTS = [2, 6, 10, 15]
+                TERTIARY_JOINTS = [3, 7, 11]
+                OPEN_JOINTS = [1, 5, 9]
+                CURVE_JOINTS = [13]
+                BASE_THUMB_JOINT = [12]
+                self.grasp_fingers = self.target_joints.copy()
+                self.grasp_fingers[BASE_THUMB_JOINT] += 0.7
+                self.grasp_fingers[SECONDARY_JOINTS] += 0.5
+                self.grasp_fingers[OPEN_JOINTS] += 0.5
+                self.grasp_fingers[TERTIARY_JOINTS] += 1.0
+                self.grasp_fingers[14] += 0.7
+                self.close_fingers = self.grasp_fingers.copy()
+                self.close_fingers[BASE_THUMB_JOINT] += 1.1
+                # self.close_fingers[CURVE_JOINTS] -=0.5
+                self.close_fingers[SECONDARY_JOINTS] += 0.7
+                self.close_fingers[TERTIARY_JOINTS] += 1.0
+                self.close_fingers[OPEN_JOINTS] += 0.7
+                self.close_fingers[14] += 1.1
+            else:
+                self.open_xyz[2] -= 0.1
+                self.open_xyz[0] += 0.1
+                SECONDARY_JOINTS = [2, 6, 10, 15]
+                TERTIARY_JOINTS = [3, 7, 11]
+                OPEN_JOINTS = [1, 5, 9]
+                CURVE_JOINTS = [13]
+                BASE_THUMB_JOINT = [12]
+                self.grasp_fingers = self.target_joints.copy()
+                self.close_fingers = self.target_joints.copy()
+                self.close_fingers[BASE_THUMB_JOINT] += 1.1
+                # self.close_fingers[CURVE_JOINTS] -=0.5
+                self.close_fingers[SECONDARY_JOINTS] += 0.7
+                self.close_fingers[TERTIARY_JOINTS] += 1.0
+                self.close_fingers[OPEN_JOINTS] += 0.7
 
     def get_targets(self, name="target", hand="right"):
         # Lambda Changes
@@ -625,16 +647,16 @@ class ExpertDatagen:
         elif name == "target_grip":
             return (
                 torch.tensor(self.close_fingers),
-                # torch.tensor(self.target_w_xyz),
-                torch.tensor(self.get_curr_ee_pose()[0]),
+                torch.tensor(self.target_w_xyz),
+                # torch.tensor(self.get_curr_ee_pose()[0]),
                 torch.tensor(self.target_w_rotmat),
             )
 
         elif name == "open":
             self.open_xyz = self.get_curr_ee_pose()[0]
             if hand == "right":
-                # self.open_xyz[1] -= 0.1
-                self.open_xyz[0] += 0.1
+                self.open_xyz[1] += 0.5
+                # self.open_xyz[0] += 0.1
 
             return (
                 torch.tensor(self.close_fingers, device="cuda:0"),
@@ -691,6 +713,41 @@ class ExpertDatagen:
         }
 
         return act
+    def generate_action_pick(self, cur_obs,name):
+        cur_tar_wrist_xyz = cur_obs["wrist_tar_xyz"]
+        cur_tar_wrist_quat = cur_obs["wrist_tar_quat"]
+        cur_tar_wrist_rotmat = rotation_conversions.quaternion_to_matrix(cur_tar_wrist_quat)
+        cur_tar_fingers =  cur_obs["tar_joints"][:16]
+        delta_t = 0.1
+        self.step += 1
+        print(self.step)
+
+        tar_joints, tar_xyz, tar_rot = self.get_targets(name=name)
+
+        # Wrist XYZ
+        delta_xyz = -(cur_tar_wrist_xyz - tar_xyz.to(cur_tar_wrist_xyz))
+        delta_xyz = torch.clamp(delta_xyz, -0.1, 0.1)
+        print("cur_tar_wrist_xyz: ", cur_tar_wrist_xyz)
+        print("tar_xyz: ", tar_xyz)
+        print("delta_xyz: ", delta_xyz)
+        # Wrist Rot
+        # delta_rot = torch.einsum('bij,bjk->bik',cur_tar_wrist_rotmat.transpose(-1,-2), tar_rot.to(cur_tar_wrist_xyz))
+        cur_tar_wrist_rotmat = cur_tar_wrist_rotmat.to(dtype=torch.float32)
+        tar_rot = tar_rot.to(dtype=torch.float32)
+        delta_rot = torch.einsum('ij,jk->ik', cur_tar_wrist_rotmat.transpose(-1, -2), tar_rot.to(dtype=torch.float32))
+
+
+        delta_ax = rotation_conversions.matrix_to_axis_angle(delta_rot)
+        #delta_ax = torch.clamp(delta_ax, -1., 1.)
+        # Fingers
+        delta_joints = -(cur_tar_fingers - tar_joints.to(cur_tar_wrist_xyz))
+
+        action = {
+            "delta_wrist_xyz": delta_xyz.cpu().numpy(),
+            "delta_ax_ang": delta_ax.cpu().numpy(),
+            "delta_joints": delta_joints.cpu().numpy()
+        }
+        return action
 
     def apply_rotation(self, quat_door):
         hab_T_door = R.from_quat(quat_door)
@@ -803,9 +860,54 @@ class ExpertDatagen:
             )
             print("saved_act tar_xyz: ", saved_act["tar_xyz"][0, :], idx)
             self.move_hand_joints(saved_act["tar_fingers"][0, :], timeout=5)
+    def grasp_object(self, name):
+
+        cur_obs = {
+            "wrist_tar_xyz": torch.tensor(self.current_target_xyz),
+            "tar_joints": torch.tensor(self.current_target_fingers),
+            "wrist_tar_quat": torch.tensor(self.current_target_rot)
+        }
+        print("VELOCITY", self.env.sim._rigid_objects[0]._rigid_prim.get_angular_velocity())
+
+        act = self.generate_action_pick(cur_obs, name)
+        dt = 0.01
+
+        base_T_hand = act["delta_wrist_xyz"]
+
+        ee_pos, ee_rot = (
+            self.env.sim.articulated_agent._robot_wrapper.hand_pose()
+        )
+        base_T_ee = self.create_T_matrix(ee_pos, ee_rot)
+
+        hand_pos, hand_rot = (
+            self.env.sim.articulated_agent._robot_wrapper.hand_pose()
+        )
+        base_T_hand = self.create_T_matrix(hand_pos, hand_rot)
+
+        ee_T_hand = np.linalg.inv(base_T_ee) @ base_T_hand
+        base_T_hand = base_T_ee @ ee_T_hand
+        print("base_T_hand: ", base_T_hand[:, -1])
+
+        self.visualize_pos(act["delta_wrist_xyz"], "hand")
+        axis_angle = act["delta_ax_ang"]
+        target_rot_mat = R.from_rotvec(axis_angle)
+        target_rot_rpy = target_rot_mat.as_euler("xyz", degrees=False)
+
+        print(
+            f"Policy XYZ {act['delta_wrist_xyz']},  Rot {np.rad2deg(target_rot_rpy)}"
+        )
+        curr_xyz, curr_ori = self.get_curr_ee_pose()
+        print(f"Curr XYZ {curr_xyz}, Rot {curr_ori}")
+        target_rot_rpy = self.target_ee_rot
+        print("DELTA ROTPY",self.target_ee_rot - target_rot_rpy)
+        new_target= self.current_target_xyz + act["delta_wrist_xyz"]
+        self.move_ee_and_hand(
+            new_target, target_rot_rpy, act["delta_joints"], timeout=10
+        )
+        self.current_target_fingers += act["delta_joints"]
 
     def execute_grasp_sequence(
-        self, hand, grip_iters, open_iters, move_iters=None
+        self, hand, grip_iters, open_iters, move_iters=None , mode = "pick"
     ):
         self.move_to_ee(
             self.target_ee_pos,
@@ -818,19 +920,34 @@ class ExpertDatagen:
         self.current_target_fingers = (
             self.env.sim.articulated_agent._robot_wrapper.right_hand_joint_pos
         )
-        self.current_target_xyz = self.target_ee_pos
-        target_xyz, target_ori = self.get_curr_ee_pose()
-        target_xyz[1] -= 0.52
-        target_ori_rpy = R.from_euler("xyz", target_ori, degrees=True)
-        target_quaternion = target_ori_rpy.as_quat(scalar_first=True)  # wxzy
-        target_joints = (
-            self.env.sim.articulated_agent._robot_wrapper.right_hand_joint_pos
-        )
+        if mode == "pick":
+            self.current_target_xyz = self.target_ee_pos
+            self.current_target_rot = R.from_euler('xyz', self.target_ee_rot, degrees=True).as_quat()
+            target_xyz, target_ori = self.get_curr_ee_pose()
+            target_xyz[2] += 0.52
+            self.current_target_xyz = target_xyz
+            target_ori_rpy = R.from_euler("xyz", target_ori, degrees=True)
+            target_quaternion = target_ori_rpy.as_quat(scalar_first=True)  # wxzy
+            target_joints = (
+                self.env.sim.articulated_agent._robot_wrapper.right_hand_joint_pos
+            )
+            target_xyz = self.target_ee_pos
+            target_xyz[1]-=0.1
+        else:
+            self.current_target_xyz = self.target_ee_pos
+            target_xyz, target_ori = self.get_curr_ee_pose()
+            target_xyz[1] -= 0.52
+            target_ori_rpy = R.from_euler("xyz", target_ori, degrees=True)
+            target_quaternion = target_ori_rpy.as_quat(scalar_first=True)  # wxzy
+            target_joints = (
+                self.env.sim.articulated_agent._robot_wrapper.right_hand_joint_pos
+            )
         self.set_targets(
             target_w_xyz=target_xyz,
             target_w_quat=target_quaternion,
             target_joints=target_joints,
             hand=hand,
+            mode=mode,
         )
         if move_iters:
             for _ in range(move_iters):
@@ -841,10 +958,16 @@ class ExpertDatagen:
             self.replay_grasp_obj()
         else:
             for _ in range(grip_iters):
-                self.grasp_obj(name="target_grip")
+                if mode =="pick":
+                    self.grasp_object(name="target_grip")
+                else:
+                    self.grasp_obj(name="target_grip")
 
         for _ in range(open_iters):
-            self.grasp_obj(name="open")
+            if mode =="pick":
+                self.grasp_object(name="open")
+            else:
+                self.grasp_obj(name="open")
 
         # Move robot back
         for _ in range(10):
@@ -854,10 +977,27 @@ class ExpertDatagen:
         self.target_name = self.env.current_episode.action_target[0]
         self.reset_robot(self.target_name)
         print("TARGET_NAME", self.target_name)
+        # self.target_ee_pos, self.target_ee_rot = (    #Just for Open Close
+        #     self.env.current_episode.action_target[1],
+        #     self.env.current_episode.action_target[2],
+        # )
+        target = self.env.sim._rigid_objects[0].transformation
+        rotation_matrix = np.array([
+            [target[0].x, target[0].y, target[0].z],
+            [target[1].x, target[1].y, target[1].z],
+            [target[2].x, target[2].y, target[2].z]
+        ])
+        rpy = R.from_matrix(rotation_matrix).as_euler('xyz', degrees=True)
+        perpendicular_rpy = rpy + np.array([0,60, 0])
+        print("RPY",perpendicular_rpy)
+
+
         self.target_ee_pos, self.target_ee_rot = (
-            self.env.current_episode.action_target[1],
-            self.env.current_episode.action_target[2],
+            self.env.sim._rigid_objects[0].translation,
+            perpendicular_rpy,
         )
+        self.target_ee_pos[1]+=0.15
+        self.target_ee_pos[0]+=0.0
         self.visualize_pos(self.target_ee_pos)
         grip_iters, open_iters, move_iters, _ = self.TARGET_CONFIG[
             self.target_name
@@ -866,7 +1006,7 @@ class ExpertDatagen:
             self.execute_grasp_sequence(hand, grip_iters, open_iters)
         elif hand == "right":
             self.execute_grasp_sequence(
-                hand, grip_iters, open_iters, move_iters
+                hand, grip_iters, open_iters, move_iters , mode = self.skill
             )
 
     def rl_reset(self):
