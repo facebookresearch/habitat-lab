@@ -188,7 +188,7 @@ class ExpertDatagen:
         aux = self.env.reset()
         self.target_name = self.env.current_episode.action_target[0]
         self.skill = skill
-        self.save_path = f"output_env_murp_{self.skill}_{self.target_name}.mp4"
+        self.save_path = f"output_env_murp2_{self.skill}_{self.target_name}.mp4"
         self.writer = imageio.get_writer(
             self.save_path,
             fps=30,
@@ -235,6 +235,12 @@ class ExpertDatagen:
                 28,
                 12,
                 24,
+                "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_freezer",
+            ],
+            "living_room_console": [
+                40,
+                20,
+                8,
                 "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_freezer",
             ],
         }
@@ -574,7 +580,7 @@ class ExpertDatagen:
         )
 
     def set_targets(
-        self, target_w_xyz, target_w_quat, target_joints, hand="left", mode
+        self, target_w_xyz, target_w_quat, target_joints, hand="left", mode="pick"
     ):
         self.target_w_xyz = target_w_xyz
         self.target_w_quat = target_w_quat
@@ -604,15 +610,16 @@ class ExpertDatagen:
                 SECONDARY_JOINTS = [2, 6, 10, 15]
                 TERTIARY_JOINTS = [3, 7, 11]
                 OPEN_JOINTS = [1, 5, 9]
+                OPEN_JOINTS2 = [1, 5, 9, 14]
                 CURVE_JOINTS = [13]
                 BASE_THUMB_JOINT = [12]
-                self.grasp_fingers = self.target_joints.copy()
-                self.grasp_fingers[BASE_THUMB_JOINT] += 0.7
-                self.grasp_fingers[SECONDARY_JOINTS] += 0.5
-                self.grasp_fingers[OPEN_JOINTS] += 0.5
-                self.grasp_fingers[TERTIARY_JOINTS] += 1.0
-                self.grasp_fingers[14] += 0.7
-                self.close_fingers = self.grasp_fingers.copy()
+                self.grasp_fingers = self.target_joints.clone()
+                self.grasp_fingers[OPEN_JOINTS2] += 0.2
+                # self.grasp_fingers[SECONDARY_JOINTS] += 0.2
+                # self.grasp_fingers[OPEN_JOINTS] += 0.5
+                # self.grasp_fingers[TERTIARY_JOINTS] += 1.0
+                self.grasp_fingers[14] += 0.2
+                self.close_fingers = self.grasp_fingers.clone()
                 self.close_fingers[BASE_THUMB_JOINT] += 1.1
                 # self.close_fingers[CURVE_JOINTS] -=0.5
                 self.close_fingers[SECONDARY_JOINTS] += 0.7
@@ -659,9 +666,9 @@ class ExpertDatagen:
                 # self.open_xyz[0] += 0.1
 
             return (
-                torch.tensor(self.close_fingers, device="cuda:0"),
-                torch.tensor(self.open_xyz, device="cuda:0"),
-                torch.tensor(self.target_w_rotmat, device="cuda:0"),
+                torch.tensor(self.close_fingers),
+                torch.tensor(self.open_xyz),
+                torch.tensor(self.target_w_rotmat),
             )
 
     def generate_action(self, cur_obs, name):
@@ -921,6 +928,26 @@ class ExpertDatagen:
             self.env.sim.articulated_agent._robot_wrapper.right_hand_joint_pos
         )
         if mode == "pick":
+            load_file = "/fsx-siro/achvysh07/projects/habitat-lab/dexgraspnet2.pth"
+            data = torch.load(load_file, map_location='cpu')
+            data_cache = data['cache']
+            cases = list(data_cache.keys())
+
+            def acquire_info(case):
+                scene = data_cache[case]
+                obj_name = case.split('_')[0]
+                robot_dof = scene['robot_dof_pos']
+                robot_base = scene['robot_root_state']
+                robot_xyz = robot_base[:, :3]
+                robot_quat = robot_base[:, 3:7]
+
+                obj_state = scene['object_root_state']
+                obj_xyz = obj_state[:, :3]
+                obj_quat = obj_state[:, 3:7]
+
+                return obj_name, robot_dof, {'xyz': robot_xyz, 'quat':robot_quat}, {'xyz': obj_xyz, 'quat':obj_quat}
+            
+            obj_name, robot_dof, robot_pose, obj_pose = acquire_info(cases[1])
             self.current_target_xyz = self.target_ee_pos
             self.current_target_rot = R.from_euler('xyz', self.target_ee_rot, degrees=True).as_quat()
             target_xyz, target_ori = self.get_curr_ee_pose()
@@ -945,7 +972,7 @@ class ExpertDatagen:
         self.set_targets(
             target_w_xyz=target_xyz,
             target_w_quat=target_quaternion,
-            target_joints=target_joints,
+            target_joints=robot_dof[0,:],
             hand=hand,
             mode=mode,
         )
@@ -996,7 +1023,7 @@ class ExpertDatagen:
             self.env.sim._rigid_objects[0].translation,
             perpendicular_rpy,
         )
-        self.target_ee_pos[1]+=0.15
+        self.target_ee_pos[1]+=0.25
         self.target_ee_pos[0]+=0.0
         self.visualize_pos(self.target_ee_pos)
         grip_iters, open_iters, move_iters, _ = self.TARGET_CONFIG[
@@ -1006,7 +1033,7 @@ class ExpertDatagen:
             self.execute_grasp_sequence(hand, grip_iters, open_iters)
         elif hand == "right":
             self.execute_grasp_sequence(
-                hand, grip_iters, open_iters, move_iters , mode = self.skill
+                hand, grip_iters, open_iters, move_iters , mode = "pick"
             )
 
     def rl_reset(self):

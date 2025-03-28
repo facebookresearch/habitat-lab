@@ -3,6 +3,7 @@ import numpy as np
 from gym import spaces
 
 import habitat_sim
+from habitat.isaac_sim import isaac_prim_utils
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.actions.actions import (
     ArmEEAction,
@@ -20,13 +21,34 @@ class BaseVelIsaacAction(BaseVelAction):
         if not self._allow_back:
             lin_vel = np.maximum(lin_vel, 0)
 
+        # self.base_vel_ctrl.linear_velocity = mn.Vector3(lin_vel, 0, 0)
+        # self.base_vel_ctrl.angular_velocity = mn.Vector3(0, ang_vel, 0)
+        # self.cur_articulated_agent._robot_wrapper._robot.set_angular_velocity(
+        #     [0, 0, ang_vel]
+        # )
+        # self.cur_articulated_agent._robot_wrapper._robot.set_linear_velocity(
+        #     [lin_vel, 0, 0]
+        # )
         self.base_vel_ctrl.linear_velocity = mn.Vector3(lin_vel, 0, 0)
         self.base_vel_ctrl.angular_velocity = mn.Vector3(0, ang_vel, 0)
+
         self.cur_articulated_agent._robot_wrapper._robot.set_angular_velocity(
             [0, 0, ang_vel]
         )
+
+        robot_forward = isaac_prim_utils.get_forward(
+            self.cur_articulated_agent._robot_wrapper._robot
+        )
+        cur_linear_vel_usd = (
+            self.cur_articulated_agent._robot_wrapper._robot.get_linear_velocity()
+        )
+        linear_vel = robot_forward * lin_vel
+        linear_vel_usd = isaac_prim_utils.habitat_to_usd_position(
+            [linear_vel.x, linear_vel.y, linear_vel.z]
+        )
+        linear_vel_usd[2] = cur_linear_vel_usd[2]
         self.cur_articulated_agent._robot_wrapper._robot.set_linear_velocity(
-            [lin_vel, 0, 0]
+            linear_vel_usd
         )
 
 
