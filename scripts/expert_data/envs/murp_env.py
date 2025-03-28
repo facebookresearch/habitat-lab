@@ -340,7 +340,12 @@ class MurpEnv:
                 break
 
     def move_ee_and_hand(
-        self, target_ee_pos, target_ee_rot=None, hand_joints=None, timeout=300
+        self,
+        target_ee_pos,
+        target_ee_rot=None,
+        hand_joints=None,
+        timeout=300,
+        text="using grasp controller",
     ):
         ctr = 0
         curr_ee_pos, curr_ee_rot_rpy = self.get_curr_ee_pose()
@@ -362,7 +367,7 @@ class MurpEnv:
 
             obs = self.env.step(action)
             im = process_obs_img(obs)
-            im = add_text_to_image(im, "using grasp controller")
+            im = add_text_to_image(im, text)
             self.writer.append_data(im)
 
             curr_ee_pos, curr_ee_rot_rpy = self.get_curr_ee_pose()

@@ -26,7 +26,7 @@ def import_fn(func_name: str) -> Callable:
     return getattr(module, args_[-1])
 
 
-def create_T_matrix(pos, rot):
+def create_T_matrix(pos, rot, use_rotvec=False):
     T_mat = np.eye(4)
     # check dtype if it is magnum quaternion
     if isinstance(rot, mn.Quaternion):
@@ -40,7 +40,11 @@ def create_T_matrix(pos, rot):
         if rot_shape == (4,):
             rot_quat = R.from_quat(rot)
         elif rot_shape == (3,):
-            rot_quat = R.from_euler("xyz", rot)
+            if use_rotvec:
+                rot_quat = R.from_rotvec(rot)
+            else:
+                rot_quat = R.from_euler("xyz", rot)
+
     T_mat[:3, :3] = rot_quat.as_matrix()
     T_mat[:, -1] = np.array([*pos, 1])
     return T_mat

@@ -7,7 +7,7 @@ from scripts.expert_data.envs.murp_env import MurpEnv
 from scripts.expert_data.utils.utils import import_fn
 
 
-def move_arm(murp_env):
+def init_arm_and_hand(murp_env, policy_env):
     target = murp_env.env.sim._rigid_objects[0].transformation
     rotation_matrix = np.array(
         [
@@ -18,10 +18,13 @@ def move_arm(murp_env):
     )
     rpy = R.from_matrix(rotation_matrix).as_euler("xyz", degrees=True)
     ee_rot = rpy + np.array([0, 90, 0])
-    murp_env.move_to_ee(
+    print("target_fingers: ", policy_env.target_fingers)
+    murp_env.move_ee_and_hand(
         murp_env.env.sim._rigid_objects[0].translation,
         ee_rot,
-        timeout=500,
+        policy_env.target_fingers,
+        timeout=300,
+        text="using arm controller",
     )
 
 
@@ -42,7 +45,7 @@ def main(config):
     murp_env.reset_robot(murp_env.env.current_episode.action_target[0])
 
     # arm control
-    move_arm(murp_env)
+    init_arm_and_hand(murp_env, policy_env)
     # grasp control
     for i in range(100):
         obs_dict = policy_env.get_obs_dict()
@@ -50,7 +53,7 @@ def main(config):
         policy_env.step(action)
         print("action: ", action)
         policy_env.progress_ctr += 1
-        policy_env.prev_targets = action
+        # policy_env.prev_targets = action
     print("saved video to: ", murp_env.save_path)
 
 
