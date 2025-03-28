@@ -6,6 +6,7 @@ import torch
 from scipy.spatial.transform import Rotation as R
 
 from scripts.expert_data.utils import rotation_conversions
+from scripts.expert_data.utils.utils import create_T_matrix
 
 
 class HeuristicOpenPolicy:
@@ -186,13 +187,6 @@ class HeuristicOpenPolicy:
         print("door_quat: ", isaac_T_door_quat)
         return isaac_T_door_quat
 
-    def create_T_matrix(self, pos, rot):
-        T_mat = np.eye(4)
-        rot_quat = R.from_quat(np.array([rot.scalar, *rot.vector]))
-        T_mat[:3, :3] = rot_quat.as_matrix()
-        T_mat[:, -1] = np.array([*pos, 1])
-        return T_mat
-
     def grasp_obj(self, name):
         quat_door = self.get_door_quat()
 
@@ -208,12 +202,12 @@ class HeuristicOpenPolicy:
         ee_pos, ee_rot = (
             self.env.sim.articulated_agent._robot_wrapper.hand_pose()
         )
-        base_T_ee = self.create_T_matrix(ee_pos, ee_rot)
+        base_T_ee = create_T_matrix(ee_pos, ee_rot)
 
         hand_pos, hand_rot = (
             self.env.sim.articulated_agent._robot_wrapper.hand_pose()
         )
-        base_T_hand = self.create_T_matrix(hand_pos, hand_rot)
+        base_T_hand = create_T_matrix(hand_pos, hand_rot)
 
         ee_T_hand = np.linalg.inv(base_T_ee) @ base_T_hand
         base_T_hand = base_T_ee @ ee_T_hand

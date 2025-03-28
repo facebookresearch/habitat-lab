@@ -224,22 +224,28 @@ class MurpEnv:
             "open"
         )
 
-    def get_curr_ee_pose(self, arm="right"):
+    def get_curr_ee_pose(self, arm="right", convention="rpy"):
         if arm == "left":
-            curr_ee_pos_vec, curr_ee_rot = (
+            curr_ee_pos_vec, curr_ee_rot_quat = (
                 self.env.sim.articulated_agent._robot_wrapper.ee_pose()
             )
         elif arm == "right":
-            curr_ee_pos_vec, curr_ee_rot = (
+            curr_ee_pos_vec, curr_ee_rot_quat = (
                 self.env.sim.articulated_agent._robot_wrapper.ee_right_pose()
             )
-
-        curr_ee_rot_quat = R.from_quat(
-            [*curr_ee_rot.vector, curr_ee_rot.scalar]
-        )
-        curr_ee_rot_rpy = curr_ee_rot_quat.as_euler("xyz", degrees=True)
         curr_ee_pos = np.array([*curr_ee_pos_vec])
-        return curr_ee_pos, curr_ee_rot_rpy
+
+        if convention == "rpy":
+            curr_ee_rot_quat_R = R.from_quat(
+                [*curr_ee_rot_quat.vector, curr_ee_rot_quat.scalar]
+            )
+            curr_ee_rot = curr_ee_rot_quat_R.as_euler("xyz", degrees=True)
+        elif convention == "quat":
+            curr_ee_rot = np.array(
+                [curr_ee_rot_quat.scalar, *curr_ee_rot_quat.vector]
+            )
+
+        return curr_ee_pos, curr_ee_rot
 
     def get_curr_joint_pose(self, arm="right"):
         if arm == "left":

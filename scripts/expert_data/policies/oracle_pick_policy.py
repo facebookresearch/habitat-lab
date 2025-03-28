@@ -3,6 +3,9 @@ import sys
 import numpy as np
 import torch
 from omegaconf import OmegaConf
+from scipy.spatial.transform import Rotation as R
+
+from habitat.utils.gum_utils import quat_to_axis_angle
 
 third_party_ckpt_root_folder = (
     "/opt/hpcaas/.mounts/fs-03ee9f8c6dddfba21/jtruong/repos/gum_ws/src/GUM"
@@ -11,6 +14,8 @@ sys.path.append(third_party_ckpt_root_folder)
 from gum.planning.grasp_planning.grasp_oracle import (
     SimpleApproachLiftOraclePolicy,
 )
+
+from scripts.expert_data.utils.utils import create_T_matrix
 
 
 class OraclePickPolicy:
@@ -79,18 +84,14 @@ class OraclePickPolicy:
         obs_dict["hand_trans"] = torch.tensor(hand_pos).unsqueeze(0)
         obs_dict["hand_rot"] = torch.tensor(hand_rot_npy).unsqueeze(0)
 
-        curr_ee_pos_vec, curr_ee_rot = (
-            self.env.sim.articulated_agent._robot_wrapper.ee_right_pose()
+        curr_ee_pos, curr_ee_rot_quat = self.murp_wrapper.get_curr_ee_pose(
+            convention="quat"
         )
-        curr_ee_pos = torch.tensor([*curr_ee_pos_vec]).unsqueeze(0)
-        curr_ee_rot_quat = torch.tensor(
-            [curr_ee_rot.scalar, *curr_ee_rot.vector]
-        ).unsqueeze(0)
-
+        wrist_axis_angle = quat_to_axis_angle(torch.tensor(curr_ee_rot_quat))
         # obs_dict["target_wrist"] = torch.zeros(7).unsqueeze(0)
         obs_dict["target_wrist"] = torch.cat(
-            [curr_ee_pos, curr_ee_rot_quat], dim=1
-        )
+            [torch.tensor(curr_ee_pos), wrist_axis_angle]
+        ).unsqueeze(0)
         obs_dict["target_fingers"] = self.data_cache["048_@_1.0"][
             "robot_dof_pos"
         ][0, :].unsqueeze(0)
@@ -99,3 +100,27 @@ class OraclePickPolicy:
         for k, v in obs_dict.items():
             obs_dict[k] = v.float().to("cuda:0")
         return obs_dict
+
+    def step(self, action):
+        # delta_wrist_trans, delta_wrist_axis_angle, delta_fingers
+        curr_ee_pos, curr_ee_rot = self.murp_wrapper.get_curr_ee_pose()
+        base_T_wrist = create_T_matrix(curr_ee_pos, curr_ee_rot)
+        delta_wrist_trans = action[0, :3]
+        delta_wrist_rot = action[0, 3:6]
+        delta_fingers = action[0, 6:]
+        # apply the deltas to the current wrist pose
+        delta_wrist_trans = action[0, :3]
+        base_T_delta = create_T_matrix(
+            delta_wrist_trans.cpu().numpy(), delta_wrist_rot.cpu().numpy()
+        )
+        new_wrist_T = base_T_wrist @ base_T_delta
+        new_wrist_pos = new_wrist_T[:3, -1]
+        new_wrist_rot = R.from_matrix(new_wrist_T[:3, :3]).as_quat()
+
+        curr_hand_pos = self.get_curr_hand_pose()
+        new_fingers = curr_hand_pos + delta_fingers.cpu().numpy()
+        # move the robot to the new wrist pose
+        self.murp_wrapper.move_ee_and_hand(
+            new_wrist_pos, new_wrist_rot, new_fingers
+        )
+        self.prev_targets = action

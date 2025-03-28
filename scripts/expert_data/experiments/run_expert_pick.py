@@ -47,6 +47,7 @@ def main(config):
     for i in range(100):
         obs_dict = policy_env.get_obs_dict()
         action = policy_env.policy.act(obs_dict)
+        policy_env.step(action)
         print("action: ", action)
         policy_env.progress_ctr += 1
         policy_env.prev_targets = action

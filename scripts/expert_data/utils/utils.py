@@ -1,7 +1,10 @@
 import importlib
 from typing import Callable
 
+import magnum as mn
 import numpy as np
+import torch
+from scipy.spatial.transform import Rotation as R
 
 
 def process_obs_img(obs):
@@ -21,3 +24,23 @@ def import_fn(func_name: str) -> Callable:
     args_ = func_name.split(".")
     module = importlib.import_module(".".join(args_[:-1]))
     return getattr(module, args_[-1])
+
+
+def create_T_matrix(pos, rot):
+    T_mat = np.eye(4)
+    # check dtype if it is magnum quaternion
+    if isinstance(rot, mn.Quaternion):
+        rot_quat = R.from_quat(np.array([rot.scalar, *rot.vector]))
+    elif isinstance(rot, np.ndarray):
+        # check if two dim or one dim
+        if rot.ndim == 2:
+            rot_shape = rot.shape[-1]
+        else:
+            rot_shape = rot.shape
+        if rot_shape == (4,):
+            rot_quat = R.from_quat(rot)
+        elif rot_shape == (3,):
+            rot_quat = R.from_euler("xyz", rot)
+    T_mat[:3, :3] = rot_quat.as_matrix()
+    T_mat[:, -1] = np.array([*pos, 1])
+    return T_mat
