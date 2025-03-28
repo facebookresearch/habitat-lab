@@ -594,7 +594,7 @@ class MurpRobotWrapper:
     def hand_pose(self, convention="hab"):
         """Get the current hand base link position and rotation."""
         link_poses = self.get_link_world_poses(convention=convention)
-        hand_base_id = self.get_link_id("link_0_0")
+        hand_base_id = self.get_link_id("base_link_hand")
 
         ee_pos = link_poses[0][hand_base_id]
         ee_rot = link_poses[1][hand_base_id]

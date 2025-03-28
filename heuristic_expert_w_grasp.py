@@ -273,6 +273,7 @@ class ExpertDatagen:
         return arm_joints[name]
 
     def reset_robot(self, name):
+        print("start pose: ", self.env.current_episode.start_position)
         start_position, start_rotation = (
             np.array(self.env.current_episode.start_position),
             self.env.current_episode.start_rotation,
@@ -359,7 +360,6 @@ class ExpertDatagen:
                 self.env.sim.articulated_agent._robot_wrapper._target_right_hand_joint_positions = (
                     self.get_curr_hand_pose()
                 )
-                print("using: ", self.get_curr_hand_pose())
             else:
                 self.env.sim.articulated_agent._robot_wrapper._target_right_hand_joint_positions = self.get_grasp_mode(
                     grasp
@@ -870,17 +870,18 @@ class ExpertDatagen:
             )
 
     def rl_reset(self):
-        self.object_asset_files_dict = {
-            "simple_tennis_ball": "ball.urdf",
-            "simple_cylin4cube": "cylinder4cube.urdf",
-            "000": "dexgraspnet2/meshdata/000/simplified_sdf.urdf",
-            "048": "dexgraspnet2/meshdata/048/simplified_sdf.urdf",
-        }
-        object_name = "048"
+        # self.object_asset_files_dict = {
+        #     "simple_tennis_ball": "ball.urdf",
+        #     "simple_cylin4cube": "cylinder4cube.urdf",
+        #     "000": "dexgraspnet2/meshdata/000/simplified_sdf.urdf",
+        #     "048": "dexgraspnet2/meshdata/048/simplified_sdf.urdf",
+        # } # self.object_asset_files_dict[object_name]
+        # object_name = "048"
+        object_name = self.env.current_episode.rigid_objs[0][0]
 
         pc, normals = sample_point_cloud_from_urdf(
             os.path.abspath("data/assets"),
-            self.object_asset_files_dict[object_name],
+            f"dexgraspnet2/meshdata/{object_name}/simplified_sdf.urdf",
             100,
             seed=4,
         )
@@ -926,18 +927,21 @@ class ExpertDatagen:
         self.private_info["object_restitution"] = torch.tensor(
             [np.random.uniform(0, 1.0)]
         )
-        self.obs_buf_lag_history = torch.zeros(22 * 3)
-        self.target_obs = torch.zeros(6)
-
-    def get_obs_dict(self):
-        obs_dict = {}
-        path = (
+        self.obs_buf_lag_history = torch.zeros(
+            22 * 2 * 3
+        )  # joints = 22-dim, target = 22-dim, history of 3
+        self.target_obs = torch.zeros(22)
+        self.obj_prim_path = (
             str(self.env.sim._rigid_objects[0]._prim)
             .split("<")[1]
             .split(">")[0]
         )
+
+    def get_obs_dict(self):
+        # {'obs': torch.Size([16384, 132]), 'priv_info': torch.Size([16384, 29]), 'proprio_hist': torch.Size([16384, 30, 44]), 'gt_object_point_cloud': torch.Size([16384, 100, 3]), 'progress': torch.Size([16384]), 'init_hand_dof': torch.Size([16384, 16]), 'init_fingertip_trans': torch.Size([16384, 12]), 'hand_base_pose': torch.Size([16384, 7]), 'cur_dof_pos': torch.Size([16384, 16]), 'fingertip_trans': torch.Size([16384, 12]), 'fingertip_rot': torch.Size([16384, 16]), 'fine_contact': torch.Size([16384, 30, 30, 3]), 'robot_dof_pos': torch.Size([16384, 16]), 'prev_targets': torch.Size([16384, 22]), 'last_action': torch.Size([16384, 22]), 'progress_float': torch.Size([16384, 1]), 'behavior_action': torch.Size([16384, 22]), 'behavior_masks': torch.Size([16384, 22])}
+        obs_dict = {}
         obj_trans, obj_rot = self.env.sim.get_prim_transform(
-            path, convention="quat"
+            self.obj_prim_path, convention="quat"
         )
         obj_trans = torch.tensor(obj_trans).unsqueeze(0)
         obj_rot = torch.tensor(obj_rot).unsqueeze(0)
@@ -957,31 +961,114 @@ class ExpertDatagen:
             list(self.private_info.values())
         ).unsqueeze(0)
         clip_obs = 5.0
-        prev_obs_buf = self.obs_buf_lag_history[22:]
+        prev_obs_buf = self.obs_buf_lag_history[44:]
         joints_obs = torch.tensor(
             self.env.sim.articulated_agent._robot_wrapper.right_hand_joint_pos
         )
-        cur_obs_buf = torch.cat([joints_obs, self.target_obs])
+        curr_ee_pos, curr_ee_rot_rpy = self.get_curr_ee_pose()
+        # convert to torch and concatenate
+        wrist_pose = torch.cat(
+            [torch.tensor(curr_ee_pos), torch.tensor(curr_ee_rot_rpy)]
+        )
+        cur_obs_buf = torch.cat([joints_obs, wrist_pose, self.target_obs])
         obs_buf = torch.cat([prev_obs_buf, cur_obs_buf])
         obs_dict["obs"] = torch.clamp(obs_buf, -clip_obs, clip_obs)
+        # add current observation to obs_buf_lag_history
+        self.obs_buf_lag_history = torch.cat(
+            [prev_obs_buf, cur_obs_buf]
+        ).unsqueeze(0)
+
+        for k, v in obs_dict.items():
+            obs_dict[k] = v.to("cuda:0")
 
         return obs_dict
 
+    def get_oracle_obs_dict(self):
+        # {
+        #         "hand_trans":  the hand xyx position in world frame
+        #         "hand_rot":   the hand quaternion in world frame
+        #         "target_wrist":   this can be zeros shape (B, 7)
+        #         "target_fingers":  the final target xyz where to put the fingers, this can be obtained from grasp cache
+        #         "progress":  the time step
+        #         "prev_targets":  the previous 22-dim targets that were given to the environment
+        #     }
+        obs_dict = {}
+        obj_trans, obj_rot = self.env.sim.get_prim_transform(
+            self.obj_prim_path, convention="quat"
+        )
+        obj_trans = torch.tensor(obj_trans).unsqueeze(0)
+        obs_dict["object_trans"] = obj_trans
+        hand_pos, hand_rot = (
+            self.env.sim.articulated_agent._robot_wrapper.hand_pose()
+        )
+        hand_rot_npy = np.array([hand_rot.scalar, *hand_rot.vector])
+        obs_dict["hand_trans"] = torch.tensor(hand_pos).unsqueeze(0)
+        obs_dict["hand_rot"] = torch.tensor(hand_rot_npy).unsqueeze(0)
+
+        obs_dict["target_wrist"] = torch.zeros(7).unsqueeze(0)
+        obs_dict["target_fingers"] = self.data_cache["048_@_1.0"][
+            "robot_dof_pos"
+        ][0, :].unsqueeze(0)
+        obs_dict["progress"] = torch.tensor(self.progress_ctr)
+        obs_dict["prev_targets"] = self.prev_targets
+        for k, v in obs_dict.items():
+            obs_dict[k] = v.float().to("cuda:0")
+        return obs_dict
+
+    def load_grasp_cache(self):
+        load_file = "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/data/cache/initial_grasps/misc/dexgraspnet2.pth"
+        data = torch.load(load_file, map_location="cpu")
+        data_cache = data["cache"]
+        cases = list(data_cache.keys())
+        return data_cache
+
     def test_pick(self):
-        self.load_gum_policy()
+        print(
+            "self.env.current_episode: ", self.env.current_episode.rigid_objs
+        )
+        # self.load_gum_policy()
         self.target_name = self.env.current_episode.action_target[0]
         self.reset_robot(self.target_name)
-        self.rl_reset()
 
-        obs_dict = self.get_obs_dict()
-        breakpoint()
-        mu = self.policy.model.act(obs_dict)["mus"]
-        mu = torch.clamp(mu, -1.0, 1.0)
-        print("mu: ", mu)
+        # arm control
+        target = self.env.sim._rigid_objects[0].transformation
+        rotation_matrix = np.array(
+            [
+                [target[0].x, target[0].y, target[0].z],
+                [target[1].x, target[1].y, target[1].z],
+                [target[2].x, target[2].y, target[2].z],
+            ]
+        )
+        rpy = R.from_matrix(rotation_matrix).as_euler("xyz", degrees=True)
+        ee_rot = rpy + np.array([0, 90, 0])
 
-        for _ in range(10):
-            # self.move_to_ee()
-            self.move_base(0.0, 0.0)
+        # grap control
+        self.load_gum_oracle_policy()
+        self.data_cache = self.load_grasp_cache()
+        self.progress_ctr = 0
+        self.obj_prim_path = (
+            str(self.env.sim._rigid_objects[0]._prim)
+            .split("<")[1]
+            .split(">")[0]
+        )
+
+        self.move_to_ee(
+            self.env.sim._rigid_objects[0].translation,
+            ee_rot,
+            timeout=500,
+        )
+
+        self.prev_targets = torch.zeros(22).unsqueeze(0)
+        for i in range(100):
+            obs_dict = self.get_oracle_obs_dict()
+            action = self.policy.act(obs_dict)
+            print("action: ", action)
+            self.progress_ctr += 1
+            self.prev_targets = action
+
+        # mu = self.policy.model.act(obs_dict)["mus"]
+        # mu = torch.clamp(mu, -1.0, 1.0)
+        # print("mu: ", mu)
 
     def load_gum_policy(self):
         import sys
@@ -995,13 +1082,36 @@ class ExpertDatagen:
         )
         print("loaded policy!")
 
+    def load_gum_oracle_policy(self):
+        from gum.planning.grasp_planning.grasp_oracle import (
+            SimpleApproachLiftOraclePolicy,
+        )
+        from omegaconf import OmegaConf
+
+        cfg = OmegaConf.create(
+            {
+                "wait_duration": 25,
+                "approach_duration": 50,
+                "pre_grasp_duration": 50,
+                "grasp_duration": 100,
+                "add_episode_noise": False,
+                "episode_length": 200,
+                "num_envs": 1,
+                "num_actions": 22,
+                "device": "cuda:0",
+                "seed": 0,
+            }
+        )
+        self.policy = SimpleApproachLiftOraclePolicy(cfg, device="cuda:0")
+
     def main(self):
-        for _ in range(self.env.number_of_episodes):
-            if self.skill == "pick":
-                self.test_pick()
-            elif self.skill == "open":
-                self.run_expert_w_grasp(hand="right")
-            self.env.reset()
+        self.test_pick()
+        # for _ in range(self.env.number_of_episodes):
+        #     if self.skill == "pick":
+        #         self.test_pick()
+        #     elif self.skill == "open":
+        #         self.run_expert_w_grasp(hand="right")
+        #     self.env.reset()
         print(f"saved video to: {self.save_path}")
 
 
