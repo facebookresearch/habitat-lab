@@ -69,7 +69,6 @@ class DifferentialInverseKinematics:
         result = Solve(prog)
         if result.is_success():
             
-            print("Result success")
             return result.GetSolution(qd)/30 + self.robot.q
         else:
             
