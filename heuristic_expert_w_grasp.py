@@ -238,9 +238,9 @@ class ExpertDatagen:
                 "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_freezer",
             ],
             "living_room_console": [
-                40,
-                20,
-                8,
+                30,
+                30,
+                6,
                 "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_freezer",
             ],
         }
@@ -283,6 +283,8 @@ class ExpertDatagen:
             np.array(self.env.current_episode.start_position),
             self.env.current_episode.start_rotation,
         )
+        start_position[0]+=0.5
+
 
         position = mn.Vector3(start_position)
         # rotation = mn.Quaternion.rotation(
@@ -606,26 +608,29 @@ class ExpertDatagen:
             self.close_fingers[OPEN_JOINTS] += 0.2
         else:
             if mode == "pick":
-                self.open_xyz[1] += 0.5
+                self.open_xyz[1] += 1.5
                 SECONDARY_JOINTS = [2, 6, 10, 15]
                 TERTIARY_JOINTS = [3, 7, 11]
                 OPEN_JOINTS = [1, 5, 9]
-                OPEN_JOINTS2 = [1, 5, 9, 14]
                 CURVE_JOINTS = [13]
                 BASE_THUMB_JOINT = [12]
-                self.grasp_fingers = self.target_joints.clone()
-                self.grasp_fingers[OPEN_JOINTS2] += 0.2
+                OPEN_JOINTS2 = [1, 5, 9, 14]
+                self.grasp_fingers = self.target_joints.copy()
+                self.grasp_fingers[SECONDARY_JOINTS] += 0.1
+                self.grasp_fingers[BASE_THUMB_JOINT] += 1.1
+                self.grasp_fingers[14] += 0.7
+                self.grasp_fingers[15] += 0.7
                 # self.grasp_fingers[SECONDARY_JOINTS] += 0.2
                 # self.grasp_fingers[OPEN_JOINTS] += 0.5
                 # self.grasp_fingers[TERTIARY_JOINTS] += 1.0
-                self.grasp_fingers[14] += 0.2
-                self.close_fingers = self.grasp_fingers.clone()
-                self.close_fingers[BASE_THUMB_JOINT] += 1.1
+                # self.grasp_fingers[14] += 0.2
+                self.close_fingers = self.grasp_fingers.copy()
+                # self.close_fingers[BASE_THUMB_JOINT] += 1.1
                 # self.close_fingers[CURVE_JOINTS] -=0.5
-                self.close_fingers[SECONDARY_JOINTS] += 0.7
-                self.close_fingers[TERTIARY_JOINTS] += 1.0
-                self.close_fingers[OPEN_JOINTS] += 0.7
-                self.close_fingers[14] += 1.1
+                self.close_fingers[TERTIARY_JOINTS] += 0.5
+                self.close_fingers[OPEN_JOINTS] += 0.5
+                self.close_fingers[14] += 0.2
+                self.close_fingers[15] += 0.5
             else:
                 self.open_xyz[2] -= 0.1
                 self.open_xyz[0] += 0.1
@@ -662,7 +667,7 @@ class ExpertDatagen:
         elif name == "open":
             self.open_xyz = self.get_curr_ee_pose()[0]
             if hand == "right":
-                self.open_xyz[1] += 0.5
+                self.open_xyz[1] += 1.5
                 # self.open_xyz[0] += 0.1
 
             return (
@@ -908,11 +913,37 @@ class ExpertDatagen:
         target_rot_rpy = self.target_ee_rot
         print("DELTA ROTPY",self.target_ee_rot - target_rot_rpy)
         new_target= self.current_target_xyz + act["delta_wrist_xyz"]
+        new_joints = self.current_target_fingers + act["delta_joints"]
         self.move_ee_and_hand(
-            new_target, target_rot_rpy, act["delta_joints"], timeout=10
+            new_target, target_rot_rpy, new_joints, timeout=10
         )
-        self.current_target_fingers += act["delta_joints"]
+        self.current_target_fingers += act["delta_joints"] #updating joints
+        self.current_target_xyz += act["delta_wrist_xyz"]*0.1 #updating wrist xyz
+        _current_target_rotmat = R.from_quat(self.current_target_rot).as_matrix()
+        _current_target_rotmat = torch.Tensor(_current_target_rotmat)
+        _delta_rot = rotation_conversions.axis_angle_to_matrix(act['delta_ax_ang']*dt)
+        _current_target_rotmat = torch.einsum('ij,jk->ik',_current_target_rotmat, _delta_rot)
+        self.current_target_rot = R.from_matrix(_current_target_rotmat.numpy()).as_quat() #updating wrist quat
 
+    def map_joints(self, joints, from_isaac=True):
+        # map the joints from isaac convention to habitat convention
+        # habitat convention is [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+        # isaac convention is [ 0, 1, 2, 3, 8, 9, 10, 11, 12, 13, 14, 15, 4, 5, 6, 7]
+        # map the joints from habitat convention to isaac convention
+        if from_isaac:
+            joints_hab = np.zeros(16)
+            joints_hab[:4] = joints[:4]
+            joints_hab[4:8] = joints[12:]
+            joints_hab[8:12] = joints[4:8]
+            joints_hab[12:] = joints[8:12]
+            return joints_hab
+        else:
+            joints_isaac = np.zeros(16)
+            joints_isaac[:4] = joints[:4]
+            joints_isaac[4:8] = joints[8:12]
+            joints_isaac[8:12] = joints[12:]
+            joints_isaac[12:] = joints[4:8]
+            return joints_isaac
     def execute_grasp_sequence(
         self, hand, grip_iters, open_iters, move_iters=None , mode = "pick"
     ):
@@ -948,10 +979,12 @@ class ExpertDatagen:
                 return obj_name, robot_dof, {'xyz': robot_xyz, 'quat':robot_quat}, {'xyz': obj_xyz, 'quat':obj_quat}
             
             obj_name, robot_dof, robot_pose, obj_pose = acquire_info(cases[1])
+            robot_dof=self.map_joints(robot_dof[0,:])
             self.current_target_xyz = self.target_ee_pos
+            tar_rot=R.from_euler("xyz", self.target_ee_rot, degrees=True)
+            tar_quat = tar_rot.as_quat(scalar_first=True)
             self.current_target_rot = R.from_euler('xyz', self.target_ee_rot, degrees=True).as_quat()
             target_xyz, target_ori = self.get_curr_ee_pose()
-            target_xyz[2] += 0.52
             self.current_target_xyz = target_xyz
             target_ori_rpy = R.from_euler("xyz", target_ori, degrees=True)
             target_quaternion = target_ori_rpy.as_quat(scalar_first=True)  # wxzy
@@ -960,6 +993,13 @@ class ExpertDatagen:
             )
             target_xyz = self.target_ee_pos
             target_xyz[1]-=0.1
+            self.set_targets(
+                target_w_xyz=target_xyz,
+                target_w_quat=tar_quat,
+                target_joints=robot_dof,
+                hand=hand,
+                mode=mode,
+            )
         else:
             self.current_target_xyz = self.target_ee_pos
             target_xyz, target_ori = self.get_curr_ee_pose()
@@ -969,13 +1009,13 @@ class ExpertDatagen:
             target_joints = (
                 self.env.sim.articulated_agent._robot_wrapper.right_hand_joint_pos
             )
-        self.set_targets(
-            target_w_xyz=target_xyz,
-            target_w_quat=target_quaternion,
-            target_joints=robot_dof[0,:],
-            hand=hand,
-            mode=mode,
-        )
+            self.set_targets(
+                target_w_xyz=target_xyz,
+                target_w_quat=target_quaternion,
+                target_joints=robot_dof[0,:],
+                hand=hand,
+                mode=mode,
+            )
         if move_iters:
             for _ in range(move_iters):
                 self.move_base(1.0, 0.0)
@@ -1015,7 +1055,7 @@ class ExpertDatagen:
             [target[2].x, target[2].y, target[2].z]
         ])
         rpy = R.from_matrix(rotation_matrix).as_euler('xyz', degrees=True)
-        perpendicular_rpy = rpy + np.array([0,60, 0])
+        perpendicular_rpy = rpy + np.array([90,90, 0])
         print("RPY",perpendicular_rpy)
 
 
@@ -1023,7 +1063,7 @@ class ExpertDatagen:
             self.env.sim._rigid_objects[0].translation,
             perpendicular_rpy,
         )
-        self.target_ee_pos[1]+=0.25
+        self.target_ee_pos[1]+=0.20
         self.target_ee_pos[0]+=0.0
         self.visualize_pos(self.target_ee_pos)
         grip_iters, open_iters, move_iters, _ = self.TARGET_CONFIG[
