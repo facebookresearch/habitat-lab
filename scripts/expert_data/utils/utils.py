@@ -27,10 +27,19 @@ def import_fn(func_name: str) -> Callable:
 
 
 def create_T_matrix(pos, rot, use_rotvec=False):
+    """
+    Create a 4x4 transformation matrix from position and rotation.
+    Args:
+        pos (array-like): Position vector of shape (3,).
+        rot (array-like or mn.Quaternion): Rotation vector or quaternion in x,y,z,w format.
+        use_rotvec (bool): If True, treat rot as a rotation vector.
+    Returns:
+        np.ndarray: 4x4 transformation matrix.
+    """
     T_mat = np.eye(4)
     # check dtype if it is magnum quaternion
     if isinstance(rot, mn.Quaternion):
-        rot_quat = R.from_quat(np.array([rot.scalar, *rot.vector]))
+        rot_quat = R.from_quat(np.array([*rot.vector, rot.scalar]))
     elif isinstance(rot, np.ndarray):
         # check if two dim or one dim
         if rot.ndim == 2:

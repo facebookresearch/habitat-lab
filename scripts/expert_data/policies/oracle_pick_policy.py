@@ -84,13 +84,14 @@ class OraclePickPolicy:
             .split("<")[1]
             .split(">")[0]
         )
-        self.prev_targets = np.zeros(22)
+
         self.target_fingers = self.map_joints(
             self.data_cache["048_@_1.0"]["robot_dof_pos"][0, :],
             from_isaac=True,
         )
+        self.obs_dict = None
 
-    def get_obs_dict(self):
+    def get_obs_dict(self, convention="hab"):
         # {
         #         "hand_trans":  the hand xyx position in world frame
         #         "hand_rot":   the hand quaternion in world frame
@@ -103,18 +104,19 @@ class OraclePickPolicy:
         obj_trans, obj_rot = self.env.sim.get_prim_transform(
             self.obj_prim_path, convention="quat"
         )
-        obj_trans = torch.tensor(obj_trans).unsqueeze(0)
-        obs_dict["object_trans"] = obj_trans
-        hand_pos, hand_rot = (
-            self.env.sim.articulated_agent._robot_wrapper.hand_pose()
-        )
-        hand_rot_npy = np.array([*hand_rot.vector, hand_rot.scalar])
-        obs_dict["hand_trans"] = torch.tensor(hand_pos).unsqueeze(0)
-        obs_dict["hand_rot"] = torch.tensor(hand_rot_npy).unsqueeze(0)
+        if convention == "isaac":
+            obj_trans = self.convert_position_conventions(obj_trans)
+        obs_dict["object_trans"] = torch.tensor(obj_trans).unsqueeze(0)
 
+        # quat in xyzw format
         curr_ee_pos, curr_ee_rot_quat = self.murp_wrapper.get_curr_ee_pose(
             convention="quat"
         )
+        if convention == "isaac":
+            curr_ee_pos = self.convert_position_conventions(curr_ee_pos)
+        obs_dict["hand_trans"] = torch.tensor(curr_ee_pos).unsqueeze(0)
+        obs_dict["hand_rot"] = torch.tensor(curr_ee_rot_quat).unsqueeze(0)
+
         wrist_axis_angle = quat_to_axis_angle(torch.tensor(curr_ee_rot_quat))
         # obs_dict["target_wrist"] = torch.zeros(7).unsqueeze(0)
         obs_dict["target_wrist"] = torch.cat(
@@ -124,25 +126,37 @@ class OraclePickPolicy:
             "robot_dof_pos"
         ][0, :].unsqueeze(0)
         obs_dict["progress"] = torch.tensor([self.progress_ctr])
-        print("prev_targets: ", self.prev_targets)
+
+        curr_hand_pos = self.murp_wrapper.get_curr_hand_pose()
+        if convention == "isaac":
+            self.map_joints(curr_hand_pos, from_isaac=True)
+
+        self.prev_targets = np.concatenate(
+            [curr_ee_pos, wrist_axis_angle.cpu().numpy(), curr_hand_pos]
+        )
+
         obs_dict["prev_targets"] = torch.tensor(self.prev_targets).unsqueeze(0)
+
         for k, v in obs_dict.items():
             obs_dict[k] = v.float().to("cuda:0")
+
+        self.obs_dict = obs_dict
         return obs_dict
 
     def step(self, action):
+        wrist_scale = 0.2
+        finger_scale = 0.1
         # delta_wrist_trans, delta_wrist_axis_angle, delta_fingers
         curr_ee_pos, curr_ee_rot = self.murp_wrapper.get_curr_ee_pose()
         base_T_wrist = create_T_matrix(curr_ee_pos, curr_ee_rot)
 
+        action[0, 3:6] = 0
         delta_wrist_trans = action[0, :3]
         delta_wrist_axis_angle = action[0, 3:6]
 
         # delta_wrist_mat = R.from_rotvec(delta_wrist_axis_angle.cpu().numpy())
         delta_fingers = action[0, 6:]
-        delta_fingers_hab = self.map_joints(
-            delta_fingers.cpu().numpy(), from_isaac=True
-        )
+
         # apply the deltas to the current wrist pose
         delta_wrist_trans = action[0, :3]
         # convert to habitat conventions
@@ -154,6 +168,7 @@ class OraclePickPolicy:
             delta_wrist_axis_angle.cpu().numpy(),
             use_rotvec=True,
         )
+
         new_wrist_T = base_T_wrist @ base_T_delta
         new_wrist_pos = new_wrist_T[:3, -1]
         new_wrist_rot_mat = R.from_matrix(new_wrist_T[:3, :3])
@@ -161,16 +176,43 @@ class OraclePickPolicy:
 
         new_wrist_axis_angle = new_wrist_rot_mat.as_rotvec()
         curr_hand_pos = self.murp_wrapper.get_curr_hand_pose()
-        new_fingers = curr_hand_pos + delta_fingers_hab
-        print("new_fingers: ", new_fingers)
+
+        delta_fingers_hab = self.map_joints(
+            delta_fingers.cpu().numpy(), from_isaac=True
+        )
+        new_fingers = curr_hand_pos + delta_fingers_hab * finger_scale
+        new_wrist_pos_v2 = curr_ee_pos + delta_wrist_trans_hab  # * wrist_scale
+        obj_trans, obj_rot = self.env.sim.get_prim_transform(
+            self.obj_prim_path, convention="quat"
+        )
+
+        print("curr_ee_pos: ", curr_ee_pos)
+        print("obj_trans: ", obj_trans)
+        print(
+            "delta_wrist_trans_hab: ",
+            delta_wrist_trans_hab,
+        )
+        print("new_wrist_pos: ", new_wrist_pos)
+        print("new_wrist_pos_v2: ", new_wrist_pos_v2)
+        print("")
+        print("curr_ee_rot: ", curr_ee_rot)
+        print(
+            "delta_wrist_rot: ",
+            R.from_rotvec(delta_wrist_axis_angle.cpu().numpy()).as_euler(
+                "xyz"
+            ),
+        )
+        print("new_wrist_rot_rpy: ", new_wrist_rot_rpy)
         # move the robot to the new wrist pose
-        self.murp_wrapper.move_ee_and_hand(
-            new_wrist_pos,
-            new_wrist_rot_rpy,
-            new_fingers,
-            timeout=20,
-            text="using oracle pick",
-        )
-        self.prev_targets = np.concatenate(
-            [new_wrist_pos, new_wrist_axis_angle, new_fingers]
-        )
+        if self.progress_ctr != 0:
+            self.murp_wrapper.move_ee_and_hand(
+                new_wrist_pos_v2,
+                new_wrist_rot_rpy,
+                new_fingers,
+                timeout=20,
+                text="using oracle pick",
+            )
+        self.murp_wrapper.visualize_pos(new_wrist_pos)
+        # self.prev_targets = np.concatenate(
+        #     [new_wrist_pos, new_wrist_axis_angle, new_fingers]
+        # )

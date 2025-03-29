@@ -48,7 +48,7 @@ def main(config):
     init_arm_and_hand(murp_env, policy_env)
     # grasp control
     for i in range(100):
-        obs_dict = policy_env.get_obs_dict()
+        obs_dict = policy_env.get_obs_dict(convention="isaac")
         action = policy_env.policy.act(obs_dict)
         policy_env.step(action)
         print("action: ", action)

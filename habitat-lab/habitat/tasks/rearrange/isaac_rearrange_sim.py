@@ -38,6 +38,7 @@ from habitat.datasets.rearrange.samplers.receptacle import (
     AABBReceptacle,
     find_receptacles,
 )
+from habitat.isaac_sim import isaac_prim_utils
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 from habitat.tasks.rearrange.articulated_agent_manager import (
     ArticulatedAgentData,
@@ -514,6 +515,7 @@ class IsaacRearrangeSim(HabitatSim):
         rotation: Gf.Rotation = matrix.ExtractRotation()
         quat_rotation: Gf.Quatd = matrix.ExtractRotationQuat()
         prim_trans = np.array([*translate])
+        prim_trans_hab = isaac_prim_utils.usd_to_habitat_position(prim_trans)
         if convention == "rpy":
             prim_rot = rotation.GetAngle()
             return translate, prim_rot
@@ -521,7 +523,7 @@ class IsaacRearrangeSim(HabitatSim):
             scalar = quat_rotation.GetReal()
             vector = quat_rotation.GetImaginary()
             prim_rot = np.array([scalar, vector[0], vector[1], vector[2]])
-        return prim_trans, prim_rot
+        return prim_trans_hab, prim_rot
 
     @add_perf_timing_func()
     def _setup_semantic_ids(self):

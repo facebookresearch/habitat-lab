@@ -239,10 +239,10 @@ class MurpEnv:
             curr_ee_rot_quat_R = R.from_quat(
                 [*curr_ee_rot_quat.vector, curr_ee_rot_quat.scalar]
             )
-            curr_ee_rot = curr_ee_rot_quat_R.as_euler("xyz", degrees=True)
+            curr_ee_rot = curr_ee_rot_quat_R.as_euler("xyz", degrees=False)
         elif convention == "quat":
             curr_ee_rot = np.array(
-                [curr_ee_rot_quat.scalar, *curr_ee_rot_quat.vector]
+                [*curr_ee_rot_quat.vector, curr_ee_rot_quat.scalar]
             )
 
         return curr_ee_pos, curr_ee_rot
