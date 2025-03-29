@@ -190,7 +190,7 @@ class ResNetEncoder(nn.Module):
             observation_space.spaces[k].shape[2] for k in self.visual_keys
         )
 
-        if normalize_visual_inputs:
+        if normalize_visual_inputs and not self.is_blind:
             self.running_mean_and_var: nn.Module = RunningMeanAndVar(
                 self._n_input_channels
             )
