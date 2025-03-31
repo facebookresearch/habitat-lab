@@ -26,13 +26,15 @@ class AppStateSimViewer(AppState):
         self._lookat_pos = None
         self._cam_transform = None
 
+        hitl_config = self._app_service.hitl_config
         self._camera_helper = CameraHelper(
-            self._app_service.hitl_config, self._app_service.gui_input
+            hitl_config, self._app_service.gui_input
         )
 
+        sim_viewer_config = self._app_service.config.sim_viewer
         self._app_service.reconfigure_sim(
-            "data/hssd-hab/hssd-hab-articulated.scene_dataset_config.json",
-            "102817140.scene_instance.json",
+            sim_viewer_config.dataset,
+            sim_viewer_config.scene,
         )
 
     def _init_lookat_pos(self):
