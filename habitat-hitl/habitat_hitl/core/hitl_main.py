@@ -117,6 +117,7 @@ def hitl_headed_main(hitl_config, app_config, create_app_state_lambda):
         text_drawer_kwargs=text_drawer_kwargs,
     )
 
+    # TODO: Move to LabDriver
     if hitl_config.driver == "LabDriver":
         app_config = patch_config(app_config)
         update_config(
@@ -215,6 +216,7 @@ def hitl_headless_main(hitl_config, app_config, create_app_state_lambda=None):
         debug_third_person_height,
     ) = _parse_debug_third_person(hitl_config)
 
+    # TODO: Move to LabDriver
     if hitl_config.driver == "LabDriver":
         app_config = patch_config(app_config)
         update_config(

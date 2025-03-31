@@ -48,6 +48,9 @@ class SimDriver(AppDriver):
         text_drawer: AbstractTextDrawer,
         create_app_state_lambda: Callable,
     ):
+        """
+        HITL application driver that instantiates a `habitat-sim` simulator, without a `habitat-lab` environment.
+        """
         if "habitat_hitl" not in config:
             raise RuntimeError(
                 "Required parameter 'habitat_hitl' not found in config. See hitl_defaults.yaml."
