@@ -30,7 +30,6 @@ from habitat_hitl.app_states.app_state_abc import AppState
 from habitat_hitl.core.client_message_manager import ClientMessageManager
 from habitat_hitl.core.gui_drawer import GuiDrawer
 from habitat_hitl.core.gui_input import GuiInput
-from habitat_hitl.core.hydra_utils import omegaconf_to_object
 from habitat_hitl.core.remote_client_state import RemoteClientState
 from habitat_hitl.core.serialize_utils import BaseRecorder, save_as_gzip
 from habitat_hitl.core.text_drawer import AbstractTextDrawer
@@ -51,12 +50,13 @@ class SimDriver(AppDriver):
         """
         HITL application driver that instantiates a `habitat-sim` simulator, without a `habitat-lab` environment.
         """
-        if "habitat_hitl" not in config:
-            raise RuntimeError(
-                "Required parameter 'habitat_hitl' not found in config. See hitl_defaults.yaml."
-            )
-        self._hitl_config = omegaconf_to_object(config.habitat_hitl)
-        self._gui_input = gui_input
+        super().__init__(
+            config=config,
+            gui_input=gui_input,
+            line_render=line_render,
+            text_drawer=text_drawer,
+            create_app_state_lambda=create_app_state_lambda,
+        )
         self.habitat_env: habitat.Env = None
 
         cfg_settings = habitat_sim.utils.settings.default_sim_settings.copy()
