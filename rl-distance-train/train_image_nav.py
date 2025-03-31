@@ -15,7 +15,7 @@ def build_PPO_config(args):
     OmegaConf.set_readonly(config, False)
     config.habitat_baselines.checkpoint_folder = "rl-distance-train/PPO-Img-Nav-checkpoints/policy-${now:%Y-%m-%d}_${now:%H-%M-%S}"
     config.habitat_baselines.tensorboard_dir = "rl-distance-train/tb/PPO-Img-Nav-${now:%Y-%m-%d}_${now:%H-%M-%S}"
-    if args.depth_only or args.use_pretrained_encoder:
+    if args.depth_only:
         config.habitat_baselines.rl.policy.main_agent.depth_only = True
 
     return config
