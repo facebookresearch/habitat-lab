@@ -66,6 +66,7 @@ class MurpEnv:
         aux = self.env.reset()
         self.target_name = self.env.current_episode.action_target[0]
         self.skill = self.config.skill
+        os.makedirs("results", exist_ok=True)
         self.save_path = (
             f"results/output_env_murp_{self.skill}_{self.target_name}.mp4"
         )
