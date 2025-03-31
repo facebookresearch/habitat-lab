@@ -8,33 +8,18 @@
 See README.md in this directory.
 """
 
-import json
 from typing import Any, Callable, Dict, List, Optional
 
 import magnum as mn
 
-import habitat
 import habitat_sim
 import habitat_sim.utils.settings
 from habitat_hitl._internal.app_driver import AppDriver
-from habitat_hitl._internal.networking.interprocess_record import (
-    InterprocessRecord,
-)
-from habitat_hitl._internal.networking.keyframe_utils import get_empty_keyframe
-from habitat_hitl._internal.networking.networking_process import (
-    launch_networking_process,
-    terminate_networking_process,
-)
 from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.app_states.app_state_abc import AppState
-from habitat_hitl.core.client_message_manager import ClientMessageManager
-from habitat_hitl.core.gui_drawer import GuiDrawer
 from habitat_hitl.core.gui_input import GuiInput
-from habitat_hitl.core.remote_client_state import RemoteClientState
 from habitat_hitl.core.serialize_utils import BaseRecorder, save_as_gzip
 from habitat_hitl.core.text_drawer import AbstractTextDrawer
-from habitat_hitl.core.types import KeyframeAndMessages
-from habitat_hitl.core.user_mask import Users
 from habitat_sim.gfx import DebugLineRender
 
 
@@ -50,15 +35,7 @@ class SimDriver(AppDriver):
         """
         HITL application driver that instantiates a `habitat-sim` simulator, without a `habitat-lab` environment.
         """
-        super().__init__(
-            config=config,
-            gui_input=gui_input,
-            line_render=line_render,
-            text_drawer=text_drawer,
-            create_app_state_lambda=create_app_state_lambda,
-        )
-        self.habitat_env: habitat.Env = None
-
+        # Initialize simulator.
         cfg_settings = habitat_sim.utils.settings.default_sim_settings.copy()
         # keyword "NONE" initializes a scene with no scene mesh
         cfg_settings["scene"] = "NONE"
@@ -71,7 +48,16 @@ class SimDriver(AppDriver):
         hab_cfg = habitat_sim.utils.settings.make_cfg(cfg_settings)
         # required for HITL apps
         hab_cfg.sim_cfg.enable_gfx_replay_save = True
-        self._bare_sim = habitat_sim.Simulator(hab_cfg)
+        sim = habitat_sim.Simulator(hab_cfg)
+
+        # Initialize driver.
+        super().__init__(
+            config=config,
+            gui_input=gui_input,
+            line_render=line_render,
+            text_drawer=text_drawer,
+            sim=sim,
+        )
 
         assert self.get_sim().renderer is None
 
@@ -104,40 +90,16 @@ class SimDriver(AppDriver):
 
         self._episode_helper = None
 
-        if line_render:
-            line_render.set_line_width(self._hitl_config.debug_line_width)
-
-        # Create a user container.
-        # In local mode, there is always 1 active user.
-        # In remote mode, use 'activate_user()' and 'deactivate_user()' when handling connections.
-        users = Users(
-            max_user_count=max(
-                self._hitl_config.networking.max_client_count, 1
-            ),
-            activate_users=not self._hitl_config.networking.enable,
-        )
-
-        self._client_message_manager = None
-        if self.network_server_enabled:
-            self._client_message_manager = ClientMessageManager(users)
-
-        gui_drawer = GuiDrawer(line_render, self._client_message_manager)
-        gui_drawer.set_line_width(self._hitl_config.debug_line_width)
-
-        self._check_init_server(gui_drawer, gui_input, users)
-
-        # TODO: Dependency injection
-        text_drawer._client_message_manager = self._client_message_manager
-
         self._app_service = AppService(
             config=config,
             hitl_config=self._hitl_config,
             gui_input=gui_input,
             remote_client_state=self._remote_client_state,
-            gui_drawer=gui_drawer,
+            gui_drawer=self._gui_drawer,
             text_drawer=text_drawer,
+            ui_manager=self._ui_manager,
             get_anim_fraction=lambda: self._viz_anim_fraction,
-            env=self.habitat_env,
+            env=None,
             sim=self.get_sim(),
             reconfigure_sim=lambda dataset, scene: self._reconfigure_sim(
                 dataset, scene
@@ -151,31 +113,14 @@ class SimDriver(AppDriver):
             client_message_manager=self._client_message_manager,
             gui_agent_controllers=[],
             all_agent_controllers=[],
-            ui_manager=None,
-            users=users,
+            users=self._users,
         )
 
         self._app_state: AppState = None
         assert create_app_state_lambda is not None
         self._app_state = create_app_state_lambda(self._app_service)
 
-        # Limit the number of float decimals in JSON transmissions
-        if hasattr(
-            self.get_sim().gfx_replay_manager, "set_max_decimal_places"
-        ):
-            self.get_sim().gfx_replay_manager.set_max_decimal_places(4)
-
         self._reset_environment()
-
-    def close(self):
-        self._check_terminate_server()
-
-    @property
-    def network_server_enabled(self) -> bool:
-        return (
-            self._hitl_config.networking.enable
-            and self._hitl_config.networking.max_client_count > 0
-        )
 
     def _reconfigure_sim(self, dataset: Optional[str], scene: Optional[str]):
         cfg_settings = habitat_sim.utils.settings.default_sim_settings.copy()
@@ -189,34 +134,9 @@ class SimDriver(AppDriver):
         hab_cfg = habitat_sim.utils.settings.make_cfg(cfg_settings)
         # required for HITL apps
         hab_cfg.sim_cfg.enable_gfx_replay_save = True
-        self._bare_sim.reconfigure(hab_cfg)
+        self.get_sim().reconfigure(hab_cfg)
 
         assert self.get_sim().renderer is None
-
-    def _check_init_server(
-        self, gui_drawer: GuiDrawer, server_gui_input: GuiInput, users: Users
-    ):
-        self._remote_client_state = None
-        self._interprocess_record = None
-        if self.network_server_enabled:
-            self._interprocess_record = InterprocessRecord(
-                self._hitl_config.networking
-            )
-            launch_networking_process(self._interprocess_record)
-            self._remote_client_state = RemoteClientState(
-                hitl_config=self._hitl_config,
-                client_message_manager=self._client_message_manager,
-                interprocess_record=self._interprocess_record,
-                gui_drawer=gui_drawer,
-                users=users,
-            )
-            # Bind the server input to user 0
-            if self._hitl_config.networking.client_sync.server_input:
-                self._remote_client_state.bind_gui_input(server_gui_input, 0)
-
-    def _check_terminate_server(self):
-        if self.network_server_enabled:
-            terminate_networking_process()
 
     def _reset_environment(self):
         if self.network_server_enabled:
@@ -225,10 +145,6 @@ class SimDriver(AppDriver):
         self._app_state.on_environment_reset(self._episode_recorder_dict)
 
         self.get_sim().gfx_replay_manager.save_keyframe()
-
-    # trying to get around mypy complaints about missing sim attributes
-    def get_sim(self) -> Any:
-        return self._bare_sim
 
     def _save_recorded_keyframes_to_file(self):
         if not self._recording_keyframes:
@@ -319,32 +235,3 @@ class SimDriver(AppDriver):
             self._send_keyframes(keyframes)
 
         return post_sim_update_dict
-
-    def _send_keyframes(self, keyframes_json: List[str]):
-        assert self.network_server_enabled
-
-        keyframes = []
-        for keyframe_json in keyframes_json:
-            obj = json.loads(keyframe_json)
-            assert "keyframe" in obj
-            keyframe_obj = obj["keyframe"]
-            keyframes.append(keyframe_obj)
-
-        # If messages need to be sent, but no keyframe is available, create an empty keyframe.
-        if self._client_message_manager.any_message() and len(keyframes) == 0:
-            keyframes.append(get_empty_keyframe())
-
-        for keyframe in keyframes:
-            # Remove rigs from keyframe if skinning is disabled.
-            if not self._hitl_config.networking.client_sync.skinning:
-                if "rigCreations" in keyframe:
-                    del keyframe["rigCreations"]
-                if "rigUpdates" in keyframe:
-                    del keyframe["rigUpdates"]
-            # Insert server->client message into the keyframe.
-            messages = self._client_message_manager.get_messages()
-            self._client_message_manager.clear_messages()
-            # Send the keyframe.
-            self._interprocess_record.send_keyframe_to_networking_thread(
-                KeyframeAndMessages(keyframe, messages)
-            )
