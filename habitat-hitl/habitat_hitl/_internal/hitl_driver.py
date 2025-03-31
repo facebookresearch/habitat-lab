@@ -8,7 +8,6 @@
 See README.md in this directory.
 """
 
-import abc
 import json
 from datetime import datetime
 from functools import wraps
@@ -21,6 +20,7 @@ import habitat
 import habitat.gym
 import habitat.tasks.rearrange.rearrange_task
 import habitat_sim
+from habitat_hitl._internal.app_driver import AppDriver
 from habitat_hitl._internal.networking.interprocess_record import (
     InterprocessRecord,
 )
@@ -70,21 +70,13 @@ def requires_habitat_sim_with_bullet(callable_):
     return wrapper
 
 
-class AppDriver:
-    # todo: rename to just "update"?
-    @abc.abstractmethod
-    def sim_update(self, dt):
-        pass
-
-
 @requires_habitat_sim_with_bullet
 class HitlDriver(AppDriver):
     def __init__(
         self,
-        *,
         config,
         gui_input: GuiInput,
-        debug_line_drawer: Optional[DebugLineRender],
+        line_render: Optional[DebugLineRender],
         text_drawer: AbstractTextDrawer,
         create_app_state_lambda: Callable,
     ):
@@ -189,7 +181,7 @@ class HitlDriver(AppDriver):
         if self.network_server_enabled:
             self._client_message_manager = ClientMessageManager(users)
 
-        gui_drawer = GuiDrawer(debug_line_drawer, self._client_message_manager)
+        gui_drawer = GuiDrawer(line_render, self._client_message_manager)
         gui_drawer.set_line_width(self._hitl_config.debug_line_width)
 
         self._check_init_server(gui_drawer, gui_input, users)
@@ -486,7 +478,7 @@ class HitlDriver(AppDriver):
     def _set_cursor_style(self, cursor_style):
         self._pending_cursor_style = cursor_style
 
-    def sim_update(self, dt):
+    def sim_update(self, dt: float):
         post_sim_update_dict: Dict[str, Any] = {}
 
         if self._remote_client_state:
