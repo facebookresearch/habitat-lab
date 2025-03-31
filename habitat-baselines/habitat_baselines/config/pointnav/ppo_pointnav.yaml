@@ -54,3 +54,10 @@ habitat_baselines:
       # when environment time is similar or larger than
       # policy inference time during rollout generation
       use_double_buffered_sampler: False
+
+    policy:
+      main_agent:
+        action_distribution_type: "categorical"
+        noise_coefficient: 0.1  
+    auxiliary_losses:
+      AuxL2Loss: {}

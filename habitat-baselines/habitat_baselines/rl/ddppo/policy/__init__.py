@@ -8,3 +8,7 @@ from .resnet_policy import (  # noqa: F401.
     PointNavResNetNet,
     PointNavResNetPolicy,
 )
+from .ppo_distance_policy import ( # noqa: F401.
+    PointNavGoalDistancePolicy,
+    AuxL2Loss
+)
