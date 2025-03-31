@@ -5,5 +5,5 @@ defaults:
   - _self_
 
 type: InstanceImageNav-v1 # PointNav-v1
-split: val
+split: train
 data_path: data/datasets/pointnav/hm3d/v2/{split}/{split}.json.gz

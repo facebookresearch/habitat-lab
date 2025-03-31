@@ -9,7 +9,7 @@ defaults:
 
 habitat:
   environment:
-    max_episode_steps: 600
+    max_episode_steps: 1000
   simulator:
     turn_angle: 15
     scene_dataset: "/cluster/work/rsl/lmilikic/hm3d/hm3d_annotated_basis.scene_dataset_config.json"
@@ -31,7 +31,7 @@ habitat:
         height: 1.41
         radius: 0.17
     habitat_sim_v0:
-      gpu_device_id: 0
+      # gpu_device_id: 0
       allow_sliding: True
   dataset:
     scenes_dir: "/cluster/work/rsl/lmilikic/hm3d"

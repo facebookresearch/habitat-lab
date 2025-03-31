@@ -16,12 +16,12 @@ habitat:
     slack_reward: -1e-3
 
 habitat_baselines:
-  torch_gpu_id: 0
+  # torch_gpu_id: 0
   tensorboard_dir: tb
   video_dir: video_dir
   test_episode_count: -1
   eval_ckpt_path_dir: data/new_checkpoints
-  num_environments: 4
+  num_environments: 8
   checkpoint_folder: data/new_checkpoints
   trainer_name: ddppo
   num_updates: -1

@@ -1,7 +1,7 @@
 # @package _global_
 
 defaults:
-  - /benchmark/nav/pointnav: pointnav_gibson
+  - /benchmark/nav/pointnav: pointnav_hm3d
   - /habitat_baselines: habitat_baselines_rl_config_base
   - _self_
 
@@ -13,7 +13,7 @@ habitat_baselines:
   video_dir: "video_dir"
   test_episode_count: -1
   eval_ckpt_path_dir: "data/new_checkpoints"
-  num_environments: 4
+  num_environments: 16
   checkpoint_folder: "data/new_checkpoints"
   num_updates: -1
   total_num_steps: 2.5e9
@@ -23,10 +23,14 @@ habitat_baselines:
   # this improves performance considerably
   force_torch_single_threaded: True
 
+  eval:
+    split: val
+
   rl:
     policy:
       main_agent:
         name: "PointNavResNetPolicy"
+        noise_coefficient: 0.0
 
     ppo:
       # ppo params
@@ -72,5 +76,8 @@ habitat_baselines:
 
       # Model parameters
       backbone: resnet50
-      rnn_type: LSTM
+      rnn_type: GRU
       num_recurrent_layers: 2
+    
+    auxiliary_losses:
+      AuxL2Loss: {}

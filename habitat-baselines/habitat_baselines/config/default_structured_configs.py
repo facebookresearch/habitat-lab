@@ -281,6 +281,7 @@ class PolicyConfig(HabitatBaselinesBaseConfig):
     obs_transforms: Dict[str, ObsTransformConfig] = field(default_factory=dict)
     hierarchical_policy: HierarchicalPolicyConfig = MISSING
     noise_coefficient: float = 0.1
+    depth_only: bool = False
 
 
 @dataclass
