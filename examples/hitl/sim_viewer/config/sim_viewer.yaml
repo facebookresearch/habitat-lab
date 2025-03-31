@@ -1,0 +1,11 @@
+# @package _global_
+
+defaults:
+  - hitl_defaults
+  - _self_
+
+habitat_hitl:
+  driver: "HitlBareSimDriver"
+  disable_policies_and_stepping: True
+  window:
+    title: "Sim Viewer"
