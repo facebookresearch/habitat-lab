@@ -1,0 +1,157 @@
+#!/usr/bin/env python3
+
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
+import argparse
+import os
+import shutil
+import cv2
+import numpy as np
+import random
+import pickle
+
+import utils
+import agent
+from env import SimpleRLEnv
+
+import habitat
+from habitat.sims.habitat_simulator.actions import HabitatSimActions
+from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
+from habitat.utils.visualizations import maps
+from habitat.utils.visualizations.utils import images_to_video
+from habitat.utils.geometry_utils import quaternion_to_list
+from habitat.config import read_write
+
+MIN_STEPS_TO_SAVE = 10
+
+IMAGE_DIR = os.path.join("examples", "images")
+if not os.path.exists(IMAGE_DIR):
+    os.makedirs(IMAGE_DIR)
+
+def shortest_path_navigation(args):
+    overrides = [
+        # "+habitat/task/measurements@habitat.task.measurements.top_down_map=top_down_map",
+    ]
+
+    config = habitat.get_config(
+        config_path=os.path.join("benchmark/nav/pointnav", args.env_config),
+        overrides=overrides
+    )
+
+    with read_write(config):
+        config.habitat.dataset.split = args.split
+
+    if args.every_view:
+        with read_write(config):
+            config.habitat.environment.max_episode_steps = 100000
+
+    random.seed(42)
+
+    with SimpleRLEnv(config=config) as env:
+        goal_radius = env.episodes[0].goals[0].radius
+        if goal_radius is None:
+            goal_radius = config.habitat.simulator.forward_step_size
+        
+        follower = ShortestPathFollower(
+            env.habitat_env.sim, goal_radius, False
+        )
+
+        turn_angle = config.habitat.simulator.turn_angle
+
+        if args.verbose:
+            print("Environment creation successful")
+        
+        for episode in range(len(env.episodes)):
+            observations, info = env.reset(return_info=True)
+
+            if random.random() < args.sample:
+                continue
+            
+            goal = env.habitat_env.current_episode.goals[0]
+            if hasattr(goal, "view_points"):
+                max_dist, view_n = 0, 0
+                for i, view in enumerate(env.habitat_env.current_episode.goals[0].view_points):
+                    # choose the furthest one because the object of interest is much better visible on the goal image in that case
+                    if max_dist < np.linalg.norm(np.array(view.agent_state.position) - np.array(goal.position)):
+                        max_dist = np.linalg.norm(np.array(view.agent_state.position) - np.array(goal.position))
+                        view_n = i
+
+                env.habitat_env.current_episode.goals[0].position = env.habitat_env.current_episode.goals[0].view_points[view_n].agent_state.position
+                follower = agent.ImageNavShortestPathFollower(
+                    env.habitat_env.sim, goal_radius, env.habitat_env.current_episode.goals[0].view_points[view_n].agent_state.rotation, False
+                )
+
+            if args.verbose:
+                print("Agent stepping around inside environment.")
+
+            images, actions, distances, views = [], [], [], []
+            while not env.habitat_env.episode_over:
+                best_action = follower.get_next_action(
+                    env.habitat_env.current_episode.goals[0].position
+                )
+                if best_action is None:
+                    break
+
+                images.append(observations["rgb"])
+                distances.append(observations["pointgoal_with_gps_compass"][0])
+                actions.append(best_action)
+
+                if args.every_view and best_action == HabitatSimActions.move_forward:
+                    original_state = env.habitat_env.sim.get_agent_state()
+                    position_views = []
+                    while True:
+                        observations, reward, done, info = env.step(HabitatSimActions.turn_left)
+                        position_views.append(observations["rgb"])
+                        current_state = env.habitat_env.sim.get_agent_state()
+                        if np.allclose(quaternion_to_list(current_state.rotation), quaternion_to_list(original_state.rotation), rtol=1e-04, atol=1e-05):
+                            break
+                    
+                    rot_steps = 360 // turn_angle
+                    views.append(position_views[-rot_steps:])
+                        
+                observations, reward, done, info = env.step(best_action)
+
+                if args.verbose:
+                    print("Destination, distance: {:3f}, theta(radians): {:.2f}".format(
+                        observations["pointgoal_with_gps_compass"][0],
+                        observations["pointgoal_with_gps_compass"][1]))
+            
+            assert len(images) == len(distances)
+            assert len(images) == len(actions)
+            if len(images) >= MIN_STEPS_TO_SAVE:
+                dirname = os.path.join(args.save_dir, f"%0{len(str(len(env.episodes)))}d" % episode)
+                
+                if os.path.exists(dirname):
+                    shutil.rmtree(dirname)
+                os.makedirs(dirname)
+
+                images_to_video(images, dirname, "trajectory")
+                with open(f"{dirname}/distances.pkl", "wb") as f:
+                    pickle.dump(distances, f)
+                with open(f"{dirname}/actions.pkl", "wb") as f:
+                        pickle.dump(actions, f)
+
+                if args.every_view:
+                    with open(f"{dirname}/views.pkl", "wb") as f:
+                        pickle.dump(views, f)
+
+            if args.verbose:
+                print("Episode finished")
+
+
+def main(args):
+    shortest_path_navigation(args)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--save-dir", type=str, required=True)
+    parser.add_argument("--env-config", type=str, default="pointnav_hm3d.yaml")
+    parser.add_argument("--split", type=str, default="val")
+    parser.add_argument("--every-view", action="store_true", default=False)
+    parser.add_argument("--sample", type=float, default=0.0)
+    parser.add_argument("--verbose", action="store_true", default=False)
+    args = parser.parse_args()
+    main(args)
