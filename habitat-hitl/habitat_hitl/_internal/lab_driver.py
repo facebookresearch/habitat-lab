@@ -71,7 +71,7 @@ def requires_habitat_sim_with_bullet(callable_):
 
 
 @requires_habitat_sim_with_bullet
-class HitlDriver(AppDriver):
+class LabDriver(AppDriver):
     def __init__(
         self,
         config,

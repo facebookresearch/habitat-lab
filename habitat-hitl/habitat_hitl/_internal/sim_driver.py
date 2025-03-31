@@ -39,7 +39,7 @@ from habitat_hitl.core.user_mask import Users
 from habitat_sim.gfx import DebugLineRender
 
 
-class HitlBareSimDriver(AppDriver):
+class SimDriver(AppDriver):
     def __init__(
         self,
         config,
@@ -74,7 +74,7 @@ class HitlBareSimDriver(AppDriver):
 
         data_collection_config = self._hitl_config.data_collection
 
-        # There is no episode record when using HitlBareSimDriver
+        # There is no episode record when using SimDriver
         assert not data_collection_config.save_episode_record
 
         # not yet supported
@@ -91,7 +91,7 @@ class HitlBareSimDriver(AppDriver):
         )
         self._recording_keyframes: List[str] = []
 
-        # unsupported for HitlBareSimDriver
+        # unsupported for SimDriver
         assert self._hitl_config.disable_policies_and_stepping
 
         self._debug_images = self._hitl_config.debug_images
@@ -262,7 +262,7 @@ class HitlBareSimDriver(AppDriver):
 
         self._app_state.sim_update(dt, post_sim_update_dict)
 
-        # sloppy: we aren't currently stepping the sim for our current use case (gfx_replay_viewer), so we manually save a keyframe here after every app_state.sim_update (on the assumption that the app state updated the scene). Future use cases of HitlBareSimDriver may require stepping the sim (e.g. viewing a live physics simulation). We'll need to decide who is responsible for stepping the simulator (HitlBareSimDriver or the AppState). And we'll need to update this line of code. The equivalent logic in HitlDriver is AppService.compute_action_and_step_env, which is called by AppStates but implemented by the driver.
+        # sloppy: we aren't currently stepping the sim for our current use case (gfx_replay_viewer), so we manually save a keyframe here after every app_state.sim_update (on the assumption that the app state updated the scene). Future use cases of SimDriver may require stepping the sim (e.g. viewing a live physics simulation). We'll need to decide who is responsible for stepping the simulator (SimDriver or the AppState). And we'll need to update this line of code. The equivalent logic in LabDriver is AppService.compute_action_and_step_env, which is called by AppStates but implemented by the driver.
         self.get_sim().gfx_replay_manager.save_keyframe()
 
         if self._pending_cursor_style:
