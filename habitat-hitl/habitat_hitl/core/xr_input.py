@@ -19,6 +19,7 @@ class XRController:
     """
     State of a single XR controller.
     """
+
     def __init__(self):
         self._buttons_held: set[XRButton] = set()
         self._buttons_down: set[XRButton] = set()
@@ -74,6 +75,7 @@ class XRInput:
     """
     State of the XR input system (HMD and controllers).
     """
+
     def __init__(self):
         self._controllers: list[XRController] = []
         for _ in range(NUM_CONTROLLERS):
