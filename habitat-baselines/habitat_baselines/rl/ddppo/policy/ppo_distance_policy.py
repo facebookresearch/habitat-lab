@@ -77,8 +77,7 @@ class PointNavGoalDistancePolicy(nn.Module, Policy):
         self._num_rnn_layers = num_rnn_layers
         self._rnn_type = rnn_type
         self._n_input_goal = 1
-        self._n_prev_action = hidden_size
-        
+
         self.actor = PointNavGoalDistanceActor(
             observation_space=observation_space,
             hidden_size=hidden_size,
@@ -300,25 +299,27 @@ class PointNavGoalDistanceActor(nn.Module):
         noise_coefficient: float = 0.1,
     ) -> None:
         super().__init__()
+        rnn_input_size = 0
         
         self.prev_action_embedding = nn.Embedding(
-            get_num_actions(action_space) + 1, hidden_size
+            get_num_actions(action_space) + 1, 32
         )
         self.prev_action_embedding.weight.data.uniform_(-3e-3, 3e-3)
+        rnn_input_size += 32
         
         self._hidden_size = hidden_size
         self._num_rnn_layers = num_rnn_layers
         self._rnn_type = rnn_type
         self._n_input_goal = 3
-        self._n_prev_action = hidden_size
         self.noise_coefficient = noise_coefficient
         
         assert IntegratedPointGoalGPSAndCompassSensor.cls_uuid in observation_space.spaces
         
-        self.tgt_embedding = nn.Linear(self._n_input_goal, self._hidden_size)
+        self.tgt_embedding = nn.Linear(self._n_input_goal, 32)
+        rnn_input_size += 32
         
         self.state_encoder = build_rnn_state_encoder(
-            self._hidden_size + self._n_prev_action,
+            rnn_input_size,
             self._hidden_size,
             rnn_type=rnn_type,
             num_layers=self._num_rnn_layers,
@@ -375,9 +376,6 @@ class PointNavGoalDistanceActor(nn.Module):
         out = self.head(self.gelu(latent))
         return out, rnn_hidden_states, latent
     
-    def _goal_dist_noise(self, goal_dist):
-        return goal_dist + torch.randn_like(goal_dist) * self.noise_coefficient
-    
     def _goal_dist_noise(self, goal_dist, coeff):
         return goal_dist + torch.randn_like(goal_dist) * coeff
     
@@ -391,24 +389,23 @@ class PointNavGoalDistanceCritic(nn.Module):
     ) -> None:
         super().__init__()
         
+        self.input_size = 0
         self.prev_action_embedding = nn.Embedding(
-            get_num_actions(action_space) + 1, hidden_size
+            get_num_actions(action_space) + 1, 32
         )
+        self.input_size += 32
         self.prev_action_embedding.weight.data.uniform_(-3e-3, 3e-3)
         
         self._hidden_size = hidden_size
         self._n_input_goal = 3
-        self._n_prev_action = hidden_size  
         
         assert IntegratedPointGoalGPSAndCompassSensor.cls_uuid in observation_space.spaces
         
-        self.tgt_embedding = nn.Linear(self._n_input_goal, self._hidden_size)
-        self.feature_mixing = nn.Linear(2 * self._hidden_size, self._hidden_size)
+        self.tgt_embedding = nn.Linear(self._n_input_goal, 32)
+        self.input_size += 32
+        self.feature_mixing = nn.Linear(self.input_size, self._hidden_size)
         
-        self.fc = nn.Linear(self._hidden_size, 1)
-        nn.init.orthogonal_(self.fc.weight)
-        nn.init.constant_(self.fc.bias, 0)
-        
+        self.fc = nn.Linear(self._hidden_size, 1)        
         self.gelu = nn.GELU()
         
         self.train()
@@ -446,7 +443,8 @@ class PointNavGoalDistanceCritic(nn.Module):
         x.append(prev_actions)
         
         latent = torch.cat(x, dim=1)
-        latent = self.gelu(self.feature_mixing(latent))
+        latent = self.feature_mixing(latent)
+        out = self.fc(self.gelu(latent))
         
-        return self.fc(latent), latent
+        return out, latent
         
