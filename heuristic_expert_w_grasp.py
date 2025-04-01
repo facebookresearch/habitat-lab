@@ -238,7 +238,7 @@ class ExpertDatagen:
                 "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_freezer",
             ],
             "living_room_console": [
-                30,
+                40,
                 30,
                 6,
                 "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_freezer",
@@ -283,7 +283,7 @@ class ExpertDatagen:
             np.array(self.env.current_episode.start_position),
             self.env.current_episode.start_rotation,
         )
-        start_position[0]+=0.5
+        start_position[0]+=0.1
 
 
         position = mn.Vector3(start_position)
@@ -608,29 +608,57 @@ class ExpertDatagen:
             self.close_fingers[OPEN_JOINTS] += 0.2
         else:
             if mode == "pick":
-                self.open_xyz[1] += 1.5
+                # self.open_xyz[1] += 1.5
+                # SECONDARY_JOINTS = [2, 6, 10, 15]
+                # TERTIARY_JOINTS = [3, 7, 11]
+                # OPEN_JOINTS = [1, 5, 9]
+                # CURVE_JOINTS = [13]
+                # BASE_THUMB_JOINT = [12]
+                # OPEN_JOINTS2 = [1, 5, 9, 14]
+                # self.grasp_fingers = self.target_joints.copy()
+                # self.grasp_fingers[SECONDARY_JOINTS] += 0.1
+                # self.grasp_fingers[BASE_THUMB_JOINT] += 1.1
+                # self.grasp_fingers[14] += 0.7
+                # self.grasp_fingers[15] += 0.7
+                # # self.grasp_fingers[SECONDARY_JOINTS] += 0.2
+                # # self.grasp_fingers[OPEN_JOINTS] += 0.5
+                # # self.grasp_fingers[TERTIARY_JOINTS] += 1.0
+                # # self.grasp_fingers[14] += 0.2
+                # self.close_fingers = self.grasp_fingers.copy()
+                # # self.close_fingers[BASE_THUMB_JOINT] += 1.1
+                # # self.close_fingers[CURVE_JOINTS] -=0.5
+                # self.close_fingers[TERTIARY_JOINTS] += 0.5
+                # self.close_fingers[OPEN_JOINTS] += 0.5
+                # self.close_fingers[14] += 0.2
+                # self.close_fingers[15] += 0.5
                 SECONDARY_JOINTS = [2, 6, 10, 15]
                 TERTIARY_JOINTS = [3, 7, 11]
                 OPEN_JOINTS = [1, 5, 9]
                 CURVE_JOINTS = [13]
                 BASE_THUMB_JOINT = [12]
-                OPEN_JOINTS2 = [1, 5, 9, 14]
+                OPEN_JOINTS2 = [1, 5, 9]
                 self.grasp_fingers = self.target_joints.copy()
-                self.grasp_fingers[SECONDARY_JOINTS] += 0.1
-                self.grasp_fingers[BASE_THUMB_JOINT] += 1.1
-                self.grasp_fingers[14] += 0.7
-                self.grasp_fingers[15] += 0.7
-                # self.grasp_fingers[SECONDARY_JOINTS] += 0.2
-                # self.grasp_fingers[OPEN_JOINTS] += 0.5
+                self.grasp_fingers[OPEN_JOINTS2] -= 0.6
+                self.grasp_fingers[TERTIARY_JOINTS] -= 0.3
+                # self.grasp_fingers[SECONDARY_JOINTS] -= 0.3
+                self.grasp_fingers[13] -= 90.0
+                self.grasp_fingers[12] += 1.8
+                self.grasp_fingers[14] += 0.2
+                # self.grasp_fingers[15] += 0.2
+                # self.grasp_fingers[OPEN_JOINTS] -= 0.5
                 # self.grasp_fingers[TERTIARY_JOINTS] += 1.0
                 # self.grasp_fingers[14] += 0.2
                 self.close_fingers = self.grasp_fingers.copy()
-                # self.close_fingers[BASE_THUMB_JOINT] += 1.1
+                # self.close_fingers[BASE_THUMB_JOINT] += 0.2
+                self.close_fingers[13] -= 90.0
                 # self.close_fingers[CURVE_JOINTS] -=0.5
-                self.close_fingers[TERTIARY_JOINTS] += 0.5
-                self.close_fingers[OPEN_JOINTS] += 0.5
-                self.close_fingers[14] += 0.2
-                self.close_fingers[15] += 0.5
+                # self.close_fingers[TERTIARY_JOINTS] -= 0.3
+                self.close_fingers[OPEN_JOINTS] += 1.8
+                # self.close_fingers[SECONDARY_JOINTS] += 0.5
+                # self.close_fingers[OPEN_JOINTS2] += 0.7
+
+                self.close_fingers[14] += 1.9
+                # self.close_fingers[15] += 0.5
             else:
                 self.open_xyz[2] -= 0.1
                 self.open_xyz[0] += 0.1
@@ -667,7 +695,7 @@ class ExpertDatagen:
         elif name == "open":
             self.open_xyz = self.get_curr_ee_pose()[0]
             if hand == "right":
-                self.open_xyz[1] += 1.5
+                self.open_xyz[1] += 0.5
                 # self.open_xyz[0] += 0.1
 
             return (
@@ -918,7 +946,7 @@ class ExpertDatagen:
             new_target, target_rot_rpy, new_joints, timeout=10
         )
         self.current_target_fingers += act["delta_joints"] #updating joints
-        self.current_target_xyz += act["delta_wrist_xyz"]*0.1 #updating wrist xyz
+        self.current_target_xyz += act["delta_wrist_xyz"]*dt #updating wrist xyz
         _current_target_rotmat = R.from_quat(self.current_target_rot).as_matrix()
         _current_target_rotmat = torch.Tensor(_current_target_rotmat)
         _delta_rot = rotation_conversions.axis_angle_to_matrix(act['delta_ax_ang']*dt)
@@ -992,7 +1020,7 @@ class ExpertDatagen:
                 self.env.sim.articulated_agent._robot_wrapper.right_hand_joint_pos
             )
             target_xyz = self.target_ee_pos
-            target_xyz[1]-=0.1
+            target_xyz[1]-=0.20
             self.set_targets(
                 target_w_xyz=target_xyz,
                 target_w_quat=tar_quat,
