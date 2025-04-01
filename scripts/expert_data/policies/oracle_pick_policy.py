@@ -199,10 +199,9 @@ class OraclePickPolicy:
         new_wrist_pos_v2 = curr_ee_pos + delta_wrist_trans_hab
 
         print("curr_ee_pos: ", curr_ee_pos)
-        print("obj_trans: ", obj_trans)
         print(
             "delta_wrist_trans_hab: ",
-            delta_wrist_trans_hab * wrist_scale,
+            delta_wrist_trans_hab,
         )
         print("new_wrist_pos: ", new_wrist_pos)
         print("new_wrist_pos_v2: ", new_wrist_pos_v2)
