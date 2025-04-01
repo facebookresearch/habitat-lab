@@ -225,14 +225,18 @@ class MurpEnv:
             "open"
         )
 
-    def get_curr_ee_pose(self, arm="right", convention="rpy"):
+    def get_curr_ee_pose(self, arm="right", convention="rpy", use_global=True):
         if arm == "left":
             curr_ee_pos_vec, curr_ee_rot_quat = (
-                self.env.sim.articulated_agent._robot_wrapper.ee_pose()
+                self.env.sim.articulated_agent._robot_wrapper.ee_pose(
+                    use_global=use_global
+                )
             )
         elif arm == "right":
             curr_ee_pos_vec, curr_ee_rot_quat = (
-                self.env.sim.articulated_agent._robot_wrapper.ee_right_pose()
+                self.env.sim.articulated_agent._robot_wrapper.ee_right_pose(
+                    use_global=use_global
+                )
             )
         curr_ee_pos = np.array([*curr_ee_pos_vec])
 
@@ -245,8 +249,30 @@ class MurpEnv:
             curr_ee_rot = np.array(
                 [*curr_ee_rot_quat.vector, curr_ee_rot_quat.scalar]
             )
+        elif convention == "mat":
+            curr_ee_rot = R.from_quat(
+                [*curr_ee_rot_quat.vector, curr_ee_rot_quat.scalar]
+            )
 
         return curr_ee_pos, curr_ee_rot
+
+    def get_base_pose(self, convention="rpy"):
+        base_pos, base_rot_quat = (
+            self.env.sim.articulated_agent._robot_wrapper.base_pose()
+        )
+        base_pos = np.array([*base_pos])
+        if convention == "rpy":
+            base_rot_quat_R = R.from_quat(
+                [*base_rot_quat.vector, base_rot_quat.scalar]
+            )
+            base_rot = base_rot_quat_R.as_euler("xyz", degrees=False)
+        elif convention == "quat":
+            base_rot = np.array([*base_rot_quat.vector, base_rot_quat.scalar])
+        elif convention == "mat":
+            base_rot = R.from_quat(
+                [*base_rot_quat.vector, base_rot_quat.scalar]
+            )
+        return base_pos, base_rot
 
     def get_curr_joint_pose(self, arm="right"):
         if arm == "left":

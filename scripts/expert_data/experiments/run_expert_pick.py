@@ -17,11 +17,13 @@ def init_arm_and_hand(murp_env, policy_env):
         ]
     )
     rpy = R.from_matrix(rotation_matrix).as_euler("xyz", degrees=True)
-    ee_rot = rpy + np.array([0, 90, 0])
-    print("target_fingers: ", policy_env.target_fingers)
+    ee_rot = np.array([0, 90, 0])
+    ee_rot_rad = np.deg2rad(ee_rot)
+    pick_location = murp_env.env.sim._rigid_objects[0].translation
+    pick_location[1] += 0.2
     murp_env.move_ee_and_hand(
-        murp_env.env.sim._rigid_objects[0].translation,
-        ee_rot,
+        pick_location,
+        ee_rot_rad,
         policy_env.target_fingers,
         timeout=300,
         text="using arm controller",

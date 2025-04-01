@@ -555,20 +555,39 @@ class MurpRobotWrapper:
         right_finger_ids = [74, 79, 84, 89]
         return self.get_fingertip_pose(right_finger_ids, convention)
 
-    def get_ee_pose(self, link_id, convention="hab"):
-        """Get the current ee position and rotation."""
+    def get_link_world_pose(self, link_id, convention="hab"):
+        """Get the current link position and rotation."""
         link_poses = self.get_link_world_poses(convention=convention)
 
-        ee_pos = link_poses[0][link_id]
-        ee_rot = link_poses[1][link_id]
+        pos = link_poses[0][link_id]
+        rot = link_poses[1][link_id]
 
-        return ee_pos, ee_rot
+        return pos, rot
 
-    def ee_pose(self, convention="hab"):
-        return self.get_ee_pose(self.ee_link_id)
+    def get_link_local_pose(self, link_id, convention="hab"):
+        world_pos, world_rot = self.get_link_world_pose(link_id, convention)
+        # Convert to local pose
+        base_pos, base_rot = self.base_pose(convention=convention)
+        # Convert to local position
+        local_pos = base_rot.inverted().transform_vector(world_pos - base_pos)
+        # Convert to local rotation
+        local_rot = base_rot.inverted() * world_rot
+        return local_pos, local_rot
 
-    def ee_right_pose(self, convention="hab"):
-        return self.get_ee_pose(self.right_ee_link_id)
+    def ee_pose(self, convention="hab", use_global=True):
+        if use_global:
+            return self.get_link_world_pose(self.ee_link_id, convention)
+        else:
+            return self.get_link_local_pose(self.ee_link_id, convention)
+
+    def ee_right_pose(self, convention="hab", use_global=True):
+        if use_global:
+            return self.get_link_world_pose(self.right_ee_link_id, convention)
+        else:
+            return self.get_link_local_pose(self.right_ee_link_id, convention)
+
+    def base_pose(self, convention="hab"):
+        return self.get_link_world_pose(0, convention)
 
     def get_articulation_links(self, prim_path: str):
         """Function to get link names which articulation can be applied

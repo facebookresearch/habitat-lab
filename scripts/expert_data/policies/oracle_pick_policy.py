@@ -144,10 +144,21 @@ class OraclePickPolicy:
         return obs_dict
 
     def step(self, action):
+
         wrist_scale = 0.2
         finger_scale = 0.1
         # delta_wrist_trans, delta_wrist_axis_angle, delta_fingers
-        curr_ee_pos, curr_ee_rot = self.murp_wrapper.get_curr_ee_pose()
+        curr_ee_pos, curr_ee_rot_global = self.murp_wrapper.get_curr_ee_pose(
+            convention="rpy"
+        )
+        curr_ee_pos_local, curr_ee_rot = self.murp_wrapper.get_curr_ee_pose(
+            convention="rpy", use_global=False
+        )
+
+        if self.progress_ctr == 0:
+            # self.rest_ori = curr_ee_rot
+            self.rest_ori = np.array([-1.57079633, 1.57079633, -1.57079621])
+
         base_T_wrist = create_T_matrix(curr_ee_pos, curr_ee_rot)
 
         action[0, 3:6] = 0
@@ -181,7 +192,7 @@ class OraclePickPolicy:
             delta_fingers.cpu().numpy(), from_isaac=True
         )
         new_fingers = curr_hand_pos + delta_fingers_hab * finger_scale
-        new_wrist_pos_v2 = curr_ee_pos + delta_wrist_trans_hab  # * wrist_scale
+        new_wrist_pos_v2 = curr_ee_pos + delta_wrist_trans_hab * wrist_scale
         obj_trans, obj_rot = self.env.sim.get_prim_transform(
             self.obj_prim_path, convention="quat"
         )
@@ -190,7 +201,7 @@ class OraclePickPolicy:
         print("obj_trans: ", obj_trans)
         print(
             "delta_wrist_trans_hab: ",
-            delta_wrist_trans_hab,
+            delta_wrist_trans_hab * wrist_scale,
         )
         print("new_wrist_pos: ", new_wrist_pos)
         print("new_wrist_pos_v2: ", new_wrist_pos_v2)
@@ -203,16 +214,17 @@ class OraclePickPolicy:
             ),
         )
         print("new_wrist_rot_rpy: ", new_wrist_rot_rpy)
+        # breakpoint()
         # move the robot to the new wrist pose
         if self.progress_ctr != 0:
             self.murp_wrapper.move_ee_and_hand(
                 new_wrist_pos_v2,
-                new_wrist_rot_rpy,
-                new_fingers,
+                self.rest_ori,
+                curr_hand_pos,
                 timeout=20,
                 text="using oracle pick",
             )
-        self.murp_wrapper.visualize_pos(new_wrist_pos)
+        # self.murp_wrapper.visualize_pos(new_wrist_pos)
         # self.prev_targets = np.concatenate(
         #     [new_wrist_pos, new_wrist_axis_angle, new_fingers]
         # )
