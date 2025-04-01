@@ -631,6 +631,7 @@ class ExpertDatagen:
                 # self.close_fingers[OPEN_JOINTS] += 0.5
                 # self.close_fingers[14] += 0.2
                 # self.close_fingers[15] += 0.5
+                #NEW changes
                 SECONDARY_JOINTS = [2, 6, 10, 15]
                 TERTIARY_JOINTS = [3, 7, 11]
                 OPEN_JOINTS = [1, 5, 9]
@@ -639,25 +640,25 @@ class ExpertDatagen:
                 OPEN_JOINTS2 = [1, 5, 9]
                 self.grasp_fingers = self.target_joints.copy()
                 self.grasp_fingers[OPEN_JOINTS2] -= 0.6
-                self.grasp_fingers[TERTIARY_JOINTS] -= 0.3
+                # self.grasp_fingers[TERTIARY_JOINTS] -= 0.3
                 # self.grasp_fingers[SECONDARY_JOINTS] -= 0.3
-                self.grasp_fingers[13] -= 90.0
-                self.grasp_fingers[12] += 1.8
-                self.grasp_fingers[14] += 0.2
+                # self.grasp_fingers[13] -= 90.0
+                # self.grasp_fingers[12] += 1.8
+                # self.grasp_fingers[14] += 0.2
                 # self.grasp_fingers[15] += 0.2
                 # self.grasp_fingers[OPEN_JOINTS] -= 0.5
                 # self.grasp_fingers[TERTIARY_JOINTS] += 1.0
                 # self.grasp_fingers[14] += 0.2
                 self.close_fingers = self.grasp_fingers.copy()
                 # self.close_fingers[BASE_THUMB_JOINT] += 0.2
-                self.close_fingers[13] -= 90.0
+                # self.close_fingers[13] -= 90.0
                 # self.close_fingers[CURVE_JOINTS] -=0.5
                 # self.close_fingers[TERTIARY_JOINTS] -= 0.3
-                self.close_fingers[OPEN_JOINTS] += 1.8
+                self.close_fingers[OPEN_JOINTS2] += 0.8
                 # self.close_fingers[SECONDARY_JOINTS] += 0.5
                 # self.close_fingers[OPEN_JOINTS2] += 0.7
 
-                self.close_fingers[14] += 1.9
+                # self.close_fingers[14] += 1.9
                 # self.close_fingers[15] += 0.5
             else:
                 self.open_xyz[2] -= 0.1
@@ -956,14 +957,14 @@ class ExpertDatagen:
     def map_joints(self, joints, from_isaac=True):
         # map the joints from isaac convention to habitat convention
         # habitat convention is [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
-        # isaac convention is [ 0, 1, 2, 3, 8, 9, 10, 11, 12, 13, 14, 15, 4, 5, 6, 7]
+        # isaac convention is [ 0, 1, 2, 3, 12, 13, 14, 15, 4, 5, 6, 7, 8, 9, 10, 11]
         # map the joints from habitat convention to isaac convention
         if from_isaac:
             joints_hab = np.zeros(16)
             joints_hab[:4] = joints[:4]
-            joints_hab[4:8] = joints[12:]
-            joints_hab[8:12] = joints[4:8]
-            joints_hab[12:] = joints[8:12]
+            joints_hab[4:8] = joints[8:12]
+            joints_hab[8:12] = joints[12:]
+            joints_hab[12:] = joints[4:8]
             return joints_hab
         else:
             joints_isaac = np.zeros(16)
