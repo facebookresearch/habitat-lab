@@ -17,8 +17,8 @@ defaults:
   - lab_sensors:
       - instance_imagegoal_sensor
       - instance_imagegoal_hfov_sensor
-      # - compass_sensor
-      # - gps_sensor
+      - compass_sensor
+      - gps_sensor
       - pointgoal_with_gps_compass_sensor
   - _self_
 
