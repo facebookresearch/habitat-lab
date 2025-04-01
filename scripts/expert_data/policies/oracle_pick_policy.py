@@ -157,9 +157,11 @@ class OraclePickPolicy:
 
         if self.progress_ctr == 0:
             # self.rest_ori = curr_ee_rot
-            self.rest_ori = np.array([-1.57079633, 1.57079633, -1.57079621])
+            self.open_loop_rot = np.array(
+                [-1.57079633, 1.57079633, -1.57079621]
+            )
 
-        base_T_wrist = create_T_matrix(curr_ee_pos, curr_ee_rot)
+        base_T_wrist = create_T_matrix(curr_ee_pos, self.open_loop_rot)
 
         action[0, 3:6] = 0
         delta_wrist_trans = action[0, :3]
@@ -171,8 +173,9 @@ class OraclePickPolicy:
         # apply the deltas to the current wrist pose
         delta_wrist_trans = action[0, :3]
         # convert to habitat conventions
-        delta_wrist_trans_hab = self.convert_position_conventions(
-            delta_wrist_trans.cpu().numpy()
+        delta_wrist_trans_hab = (
+            self.convert_position_conventions(delta_wrist_trans.cpu().numpy())
+            * wrist_scale
         )
         base_T_delta = create_T_matrix(
             delta_wrist_trans_hab,
@@ -184,6 +187,7 @@ class OraclePickPolicy:
         new_wrist_pos = new_wrist_T[:3, -1]
         new_wrist_rot_mat = R.from_matrix(new_wrist_T[:3, :3])
         new_wrist_rot_rpy = new_wrist_rot_mat.as_euler("xyz")
+        self.open_loop_rot = new_wrist_rot_rpy
 
         new_wrist_axis_angle = new_wrist_rot_mat.as_rotvec()
         curr_hand_pos = self.murp_wrapper.get_curr_hand_pose()
@@ -192,10 +196,7 @@ class OraclePickPolicy:
             delta_fingers.cpu().numpy(), from_isaac=True
         )
         new_fingers = curr_hand_pos + delta_fingers_hab * finger_scale
-        new_wrist_pos_v2 = curr_ee_pos + delta_wrist_trans_hab * wrist_scale
-        obj_trans, obj_rot = self.env.sim.get_prim_transform(
-            self.obj_prim_path, convention="quat"
-        )
+        new_wrist_pos_v2 = curr_ee_pos + delta_wrist_trans_hab
 
         print("curr_ee_pos: ", curr_ee_pos)
         print("obj_trans: ", obj_trans)
@@ -215,11 +216,12 @@ class OraclePickPolicy:
         )
         print("new_wrist_rot_rpy: ", new_wrist_rot_rpy)
         # breakpoint()
+
         # move the robot to the new wrist pose
         if self.progress_ctr != 0:
             self.murp_wrapper.move_ee_and_hand(
                 new_wrist_pos_v2,
-                self.rest_ori,
+                self.open_loop_rot,
                 curr_hand_pos,
                 timeout=20,
                 text="using oracle pick",
