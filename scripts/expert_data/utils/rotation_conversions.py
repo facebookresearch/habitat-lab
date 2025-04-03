@@ -642,6 +642,7 @@ def axis_angle_to_quaternion(axis_angle: torch.Tensor) -> torch.Tensor:
     Returns:
         quaternions with real part first, as tensor of shape (..., 4).
     """
+    axis_angle =  torch.tensor(axis_angle,dtype=torch.float32) if not isinstance(axis_angle,torch.Tensor) else axis_angle
     angles = torch.norm(axis_angle, p=2, dim=-1, keepdim=True)
     half_angles = 0.5 * angles
     eps = 1e-6
