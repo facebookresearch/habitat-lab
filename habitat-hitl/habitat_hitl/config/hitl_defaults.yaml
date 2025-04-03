@@ -40,6 +40,11 @@ habitat_hitl:
       code_available: 200  # "Ok"
       code_unavailable: 503  # "Service Unavailable"
 
+    # HITL clients may emit UDP broadcasts to auto-discover an available HITL server on the local network. If the discovery server is enabled, the HITL port will be given as a response to these broadcasts allowing for a simplified connection flow.
+    discovery_server:
+      enable: True
+      port: 12345
+
     # Optionally kick an idle client after n seconds.
     client_max_idle_duration: ~
 
