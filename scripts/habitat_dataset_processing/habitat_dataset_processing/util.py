@@ -13,6 +13,7 @@ def resolve_relative_path(path: str) -> str:
     """
     Remove './' and '../' from path.
     """
+    trailing_slash = "/" if path[0] == "/" else ""
     components = path.split("/")
     output_path: list[str] = []
     for component in components:
@@ -25,7 +26,7 @@ def resolve_relative_path(path: str) -> str:
             output_path.pop()
         else:
             output_path.append(component)
-    return os.path.join("", *output_path)
+    return os.path.join(trailing_slash, *output_path)
 
 
 def resolve_relative_path_with_wildcard(path: str) -> str:

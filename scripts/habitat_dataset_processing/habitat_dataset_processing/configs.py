@@ -41,8 +41,7 @@ class GroupType(Enum):
     """
 
 
-@dataclass
-class Operation:
+class Operation(Enum):
     IGNORE = 0
     """Skip the asset."""
 
@@ -137,6 +136,15 @@ class AssetSource:
 
 @dataclass
 class Config:
+    input_dir: str
+    """Path of the input `data/` folder to process."""
+
+    data_folder_name: str
+    """Name of the input `data/` folder."""
+
+    output_dir: str
+    """Path to the output directory."""
+
     verbose: bool
     """Increase verbosity."""
 

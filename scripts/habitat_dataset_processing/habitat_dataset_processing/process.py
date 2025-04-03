@@ -9,9 +9,9 @@ from pathlib import Path
 from threading import Lock
 from typing import Any
 
+from habitat_dataset_processing import magnum_decimation
 from habitat_dataset_processing.configs import Config, Operation
 from habitat_dataset_processing.job import Job
-from habitat_dataset_processing.magnum_decimation import decimate
 
 METADATA_FILE_VERSION = 1
 OMIT_BLACK_LIST = False
@@ -57,6 +57,7 @@ def create_metadata_file(groups: dict[str, list[str]], output_dir: str):
         )
 
     # Save file.
+    os.makedirs(output_dir, exist_ok=True)
     output_path = os.path.join(output_dir, OUTPUT_METADATA_FILE_NAME)
     with open(output_path, "w") as f:
         json.dump(content, f, ensure_ascii=False)
@@ -121,7 +122,11 @@ def process_model(args: AssetProcessorArgs):
 
     elif operation == Operation.PROCESS:
         try:
-            source_tris, target_tris, simplified_tris = decimate.decimate(
+            (
+                source_tris,
+                target_tris,
+                simplified_tris,
+            ) = magnum_decimation.decimate(
                 inputFile=job.source_path,
                 outputFile=job.dest_path,
                 quiet=not verbose,
@@ -131,11 +136,15 @@ def process_model(args: AssetProcessorArgs):
             )
         except Exception:
             try:
-                decimate.close()
+                magnum_decimation.close()
                 print(
                     f"Unable to decimate: {job.source_path}. Trying without decimation."
                 )
-                source_tris, target_tris, simplified_tris = decimate.decimate(
+                (
+                    source_tris,
+                    target_tris,
+                    simplified_tris,
+                ) = magnum_decimation.decimate(
                     inputFile=job.source_path,
                     outputFile=job.dest_path,
                     quiet=not verbose,
@@ -143,7 +152,7 @@ def process_model(args: AssetProcessorArgs):
                     simplify=False,
                 )
             except Exception:
-                decimate.close()
+                magnum_decimation.close()
                 print(
                     f"Unable to decimate: {job.source_path}. Copying as-is to output."
                 )

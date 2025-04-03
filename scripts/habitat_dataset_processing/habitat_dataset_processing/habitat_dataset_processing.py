@@ -19,14 +19,15 @@ from habitat_dataset_processing.configs import (
     ProcessingSettings,
 )
 from habitat_dataset_processing.job import Job
-from habitat_dataset_processing.process import create_metadata_file, simplify_models
+from habitat_dataset_processing.process import (
+    create_metadata_file,
+    simplify_models,
+)
 from habitat_dataset_processing.util import (
     get_dependencies,
     resolve_relative_path,
     resolve_relative_path_with_wildcard,
 )
-
-DEFAULT_OUTPUT_DIR = "data/_processing_output/"
 
 
 def file_is_render_asset_config(filepath: str) -> bool:
@@ -166,13 +167,24 @@ class AssetPipeline:
         self,
         datasets: list[HabitatDatasetSource],
         additional_assets: list[AssetSource],
-        output_dir: str = DEFAULT_OUTPUT_DIR,
+        output_subdir: str = "",
     ):
-        self._output_dir = output_dir
+        self._output_subdir = output_subdir
 
         # Parse CLI arguments.
         parser = argparse.ArgumentParser(
             description="Process Habitat datasets for usage in external engines.",
+        )
+        parser.add_argument(
+            "--input",
+            type=str,
+            help="Path of the input `data/` folder to process.",
+        )
+        parser.add_argument(
+            "--output",
+            type=str,
+            default="_data_processing_output",
+            help="Output directory. Will be created if it doesn't exist.",
         )
         parser.add_argument(
             "--verbose",
@@ -184,11 +196,18 @@ class AssetPipeline:
             "--debug",
             action="store_true",
             default=False,
-            help="Disable multiprocessing.",
+            help="Disable multiprocessing to allow for the debugger to step in.",
         )
         args = parser.parse_args()
 
+        assert os.path.exists(
+            args.input
+        ), f"The specified `--data` directory does not exist: `{args.data}`."
+
         self._config = Config(
+            input_dir=args.input,
+            data_folder_name=Path(args.input).name,
+            output_dir=args.output,
             verbose=args.verbose,
             use_multiprocessing=not args.debug,
             datasets=datasets,
@@ -198,9 +217,13 @@ class AssetPipeline:
         self._databases: list[AssetDatabase] = []
 
     def _load_habitat_dataset(self, source: HabitatDatasetSource):
-        dataset_config_path = source.dataset_config
+        dataset_config_path = os.path.join(
+            self._config.input_dir, source.dataset_config
+        )
         data = load_json(dataset_config_path)
-        assert data is not None, f"Invalid dataset config: {dataset_config_path}"
+        assert (
+            data is not None
+        ), f"Invalid dataset config: {dataset_config_path}"
         database = AssetDatabase(source.name)
 
         whitelist = source.scene_whitelist
@@ -257,20 +280,23 @@ class AssetPipeline:
                 assert data is not None, "Invalid scene config."
                 for object_instance in data.get("object_instances", []):
                     assert "template_name" in object_instance
-                    output.add(object_instance["template_name"])
+                    template_name = object_instance["template_name"]
+                    template_name = get_template_name(template_name)
+                    output.add(template_name)
                 for object_instance in data.get(
                     "articulated_object_instances", []
                 ):
                     assert "template_name" in object_instance
-                    output.add(object_instance["template_name"])
+                    template_name = object_instance["template_name"]
+                    template_name = get_template_name(template_name)
+                    output.add(template_name)
                 if "stage_instance" in data:
                     assert "template_name" in data["stage_instance"]
                     # Note: The stage template names may sometimes contain a relative path.
-                    template_name: str = data["stage_instance"][
-                        "template_name"
-                    ]
+                    template_name = data["stage_instance"]["template_name"]
                     if "/" in template_name:
                         template_name = template_name.split("/")[-1]
+                    get_template_name(template_name)
                     output.add(template_name)
                 return list(output)
 
@@ -285,7 +311,9 @@ class AssetPipeline:
                 template_names = get_all_template_names_in_scene(scene_path)
                 for template_name in template_names:
                     asset = database.find_asset_by_template_name(template_name)
-                    assert asset is not None, f"Template name {template_name} could not be resolved."
+                    assert (
+                        asset is not None
+                    ), f"Template name {template_name} could not be resolved."
                     asset.scenes.add(scene_name)
         else:
             assert (
@@ -322,11 +350,16 @@ class AssetPipeline:
                 return s, "*"
 
         for asset_search_pattern in source.assets:
+            asset_search_pattern = os.path.join(
+                self._config.input_dir, asset_search_pattern
+            )
             if "*" in asset_search_pattern:
                 directory, glob = split_string_at_first_asterisk(
                     asset_search_pattern
                 )
-                asset_paths = list(Path(directory).rglob(glob))
+                asset_paths = [
+                    str(path) for path in Path(directory).rglob(glob)
+                ]
             else:
                 asset_paths = [asset_search_pattern]
             for asset_path in asset_paths:
@@ -334,7 +367,7 @@ class AssetPipeline:
                     asset_path
                 ), f"Invalid asset path: '{asset_path}'."
                 database.register_asset(
-                    str(asset_path), str(asset_path), source.settings
+                    asset_path, asset_path, source.settings
                 )
 
         self._databases.append(database)
@@ -357,6 +390,9 @@ class AssetPipeline:
         max_chunk_size = 10
         chunk_index = 0
         current_chunk_length = 0
+        output_dir = os.path.join(
+            config.output_dir, self._output_subdir, config.data_folder_name
+        )
         for database_index in range(len(self._databases)):
             database = self._databases[database_index]
 
@@ -367,10 +403,13 @@ class AssetPipeline:
 
             for asset in database._template_name_to_asset.values():
                 for asset_path in asset.dependencies.union([asset.path]):
+                    dest_path = os.path.join(
+                        output_dir, asset_path[len(config.input_dir) + 1 :]
+                    )
                     jobs.append(
                         Job(
                             asset_path=asset_path,
-                            output_dir=self._output_dir,
+                            dest_path=dest_path,
                             operation=asset.settings.operation,
                             simplify=asset.settings.decimate,
                         )
@@ -411,4 +450,4 @@ class AssetPipeline:
                                 chunk_index += 1
 
         simplify_models(jobs, config)
-        create_metadata_file(groups, self._output_dir)
+        create_metadata_file(groups, output_dir)
