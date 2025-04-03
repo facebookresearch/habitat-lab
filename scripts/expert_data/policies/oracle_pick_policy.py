@@ -56,14 +56,14 @@ class OraclePickPolicy:
     def map_joints(self, joints, from_isaac=True):
         # map the joints from isaac convention to habitat convention
         # habitat convention is [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
-        # isaac convention is [ 0, 1, 2, 3, 8, 9, 10, 11, 12, 13, 14, 15, 4, 5, 6, 7]
+        # isaac convention is [ 0, 1, 2, 3, 12, 13, 14, 15, 4, 5, 6, 7, 8, 9, 10, 11]
         # map the joints from habitat convention to isaac convention
         if from_isaac:
             joints_hab = np.zeros(16)
             joints_hab[:4] = joints[:4]
-            joints_hab[4:8] = joints[12:]
-            joints_hab[8:12] = joints[4:8]
-            joints_hab[12:] = joints[8:12]
+            joints_hab[4:8] = joints[8:12]
+            joints_hab[8:12] = joints[12:]
+            joints_hab[12:] = joints[4:8]
             return joints_hab
         else:
             joints_isaac = np.zeros(16)
@@ -129,10 +129,10 @@ class OraclePickPolicy:
 
         curr_hand_pos = self.murp_wrapper.get_curr_hand_pose()
         if convention == "isaac":
-            self.map_joints(curr_hand_pos, from_isaac=True)
+            curr_hand_pos_hab = self.map_joints(curr_hand_pos, from_isaac=True)
 
         self.prev_targets = np.concatenate(
-            [curr_ee_pos, wrist_axis_angle.cpu().numpy(), curr_hand_pos]
+            [curr_ee_pos, wrist_axis_angle.cpu().numpy(), curr_hand_pos_hab]
         )
 
         obs_dict["prev_targets"] = torch.tensor(self.prev_targets).unsqueeze(0)
@@ -197,24 +197,6 @@ class OraclePickPolicy:
         )
         new_fingers = curr_hand_pos + delta_fingers_hab * finger_scale
         new_wrist_pos_v2 = curr_ee_pos + delta_wrist_trans_hab
-
-        print("curr_ee_pos: ", curr_ee_pos)
-        print(
-            "delta_wrist_trans_hab: ",
-            delta_wrist_trans_hab,
-        )
-        print("new_wrist_pos: ", new_wrist_pos)
-        print("new_wrist_pos_v2: ", new_wrist_pos_v2)
-        print("")
-        print("curr_ee_rot: ", curr_ee_rot)
-        print(
-            "delta_wrist_rot: ",
-            R.from_rotvec(delta_wrist_axis_angle.cpu().numpy()).as_euler(
-                "xyz"
-            ),
-        )
-        print("new_wrist_rot_rpy: ", new_wrist_rot_rpy)
-        # breakpoint()
 
         # move the robot to the new wrist pose
         if self.progress_ctr != 0:
