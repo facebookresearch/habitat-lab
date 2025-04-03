@@ -28,7 +28,20 @@ def init_arm_and_hand(murp_env, policy_env):
         timeout=300,
         text="using arm controller",
     )
+def heurestic_step(murp_env,config,policy):
+    hand = config.hand
+    
+    murp_env.reset_robot(config.target_name)
 
+    grip_iters, open_iters, move_iters, _ = policy.TARGET_CONFIG[
+        config.target_name
+    ]
+    if config.hand == "left":
+        move_iters = None
+    policy.execute_grasp_sequence(
+        config.hand, grip_iters, open_iters, move_iters
+    )
+    print("saved video to: ", murp_env.save_path)
 
 def main(config):
     config = OmegaConf.load(config)
@@ -40,23 +53,28 @@ def main(config):
         )
     elif config.policy_cls == "RLPickPolicy":
         from scripts.expert_data.policies.rl_pick_policy import RLPickPolicy
+    elif config.policy_cls == "HeuristicPickPolicy":
+        from scripts.expert_data.policies.heurestic_pick_policy import HeuristicPickPolicy
+        
     policy_env = eval(config.policy_cls)(murp_env)
+    if config.policy_cls == "HeuristicPickPolicy":
+        heurestic_step(murp_env,config,policy_env)
+    else:
+        hand = config.hand
 
-    hand = config.hand
+        murp_env.reset_robot(murp_env.env.current_episode.action_target[0])
 
-    murp_env.reset_robot(murp_env.env.current_episode.action_target[0])
-
-    # arm control
-    init_arm_and_hand(murp_env, policy_env)
-    # grasp control
-    for i in range(100):
-        obs_dict = policy_env.get_obs_dict(convention="isaac")
-        action = policy_env.policy.act(obs_dict)
-        policy_env.step(action)
-        print("action: ", action)
-        policy_env.progress_ctr += 1
-        # policy_env.prev_targets = action
-    print("saved video to: ", murp_env.save_path)
+        # arm control
+        init_arm_and_hand(murp_env, policy_env)
+        # grasp control
+        for i in range(100):
+            obs_dict = policy_env.get_obs_dict(convention="isaac")
+            action = policy_env.policy.act(obs_dict)
+            policy_env.step(action)
+            print("action: ", action)
+            policy_env.progress_ctr += 1
+            # policy_env.prev_targets = action
+        print("saved video to: ", murp_env.save_path)
 
 
 if __name__ == "__main__":
