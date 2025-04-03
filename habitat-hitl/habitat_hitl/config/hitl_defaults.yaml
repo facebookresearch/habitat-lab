@@ -4,6 +4,8 @@ habitat_baselines:
   num_environments: 1
 
 habitat_hitl:
+  # LabDriver or SimDriver. LabDriver creates a Habitat-lab env. SimDriver only creates a Habitat-sim simulator.
+  driver: "LabDriver"
   window:
     # title displayed in application title bar GUI
     title: "Habitat HITL Application"

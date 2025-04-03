@@ -5,18 +5,20 @@
 # LICENSE file in the root directory of this source tree.
 
 import os
+from typing import Any
 
 import magnum as mn
 
 from habitat.config.default import patch_config
 from habitat_hitl._internal.config_helper import update_config
-from habitat_hitl._internal.hitl_driver import HitlDriver
+from habitat_hitl._internal.lab_driver import LabDriver
 from habitat_hitl._internal.networking.average_rate_tracker import (
     AverageRateTracker,
 )
 from habitat_hitl._internal.networking.frequency_limiter import (
     FrequencyLimiter,
 )
+from habitat_hitl._internal.sim_driver import SimDriver
 from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.hydra_utils import omegaconf_to_object
 
@@ -52,8 +54,6 @@ def hitl_main(app_config, create_app_state_lambda=None):
             "HITL apps expect 'data/' directory to exist. "
             "Either run from habitat-lab directory or symlink data/ folder to your HITL app working directory"
         )
-
-    app_config = patch_config(app_config)
 
     hitl_config = omegaconf_to_object(app_config.habitat_hitl)
 
@@ -117,21 +117,28 @@ def hitl_headed_main(hitl_config, app_config, create_app_state_lambda):
         text_drawer_kwargs=text_drawer_kwargs,
     )
 
-    update_config(
+    # TODO: Move to LabDriver
+    if hitl_config.driver == "LabDriver":
+        app_config = patch_config(app_config)
+        update_config(
+            app_config,
+            show_debug_third_person=show_debug_third_person,
+            debug_third_person_width=debug_third_person_width,
+            debug_third_person_height=debug_third_person_height,
+        )
+
+    drivers = {
+        "LabDriver": LabDriver,
+        "SimDriver": SimDriver,
+    }
+    driver_class: Any = drivers[hitl_config.driver]
+
+    driver = driver_class(
         app_config,
-        show_debug_third_person=show_debug_third_person,
-        debug_third_person_width=debug_third_person_width,
-        debug_third_person_height=debug_third_person_height,
-    )
-
-    debug_line_drawer = app_renderer._replay_renderer.debug_line_render(0)
-
-    driver = HitlDriver(
-        config=app_config,
-        gui_input=gui_app_wrapper.get_sim_input(),
-        debug_line_drawer=debug_line_drawer,
-        text_drawer=app_renderer._text_drawer,
-        create_app_state_lambda=create_app_state_lambda,
+        gui_app_wrapper.get_sim_input(),
+        app_renderer._replay_renderer.debug_line_render(0),
+        app_renderer._text_drawer,
+        create_app_state_lambda,
     )
 
     gui_app_wrapper.set_driver_and_renderer(driver, app_renderer)
@@ -195,7 +202,7 @@ def _headless_app_loop(hitl_config, driver):
     driver.close()
 
 
-def hitl_headless_main(hitl_config, config, create_app_state_lambda=None):
+def hitl_headless_main(hitl_config, app_config, create_app_state_lambda=None):
     from habitat_hitl.core.text_drawer import HeadlessTextDrawer
 
     if hitl_config.window is not None:
@@ -209,17 +216,34 @@ def hitl_headless_main(hitl_config, config, create_app_state_lambda=None):
         debug_third_person_height,
     ) = _parse_debug_third_person(hitl_config)
 
-    update_config(
-        config,
-        show_debug_third_person=show_debug_third_person,
-        debug_third_person_width=debug_third_person_width,
-        debug_third_person_height=debug_third_person_height,
-    )
+    # TODO: Move to LabDriver
+    if hitl_config.driver == "LabDriver":
+        app_config = patch_config(app_config)
+        update_config(
+            app_config,
+            show_debug_third_person=show_debug_third_person,
+            debug_third_person_width=debug_third_person_width,
+            debug_third_person_height=debug_third_person_height,
+        )
 
-    driver = HitlDriver(
-        config=config,
+    drivers = {
+        "LabDriver": LabDriver,
+        "SimDriver": SimDriver,
+    }
+
+    driver_class: Any = drivers[hitl_config.driver]
+
+    class DoNothingMock:
+        def __getattr__(self, name):
+            def do_nothing(*args, **kwargs):
+                pass
+
+            return do_nothing
+
+    driver = driver_class(
+        config=app_config,
         gui_input=GuiInput(),
-        debug_line_drawer=None,
+        line_render=DoNothingMock(),
         text_drawer=HeadlessTextDrawer(),
         create_app_state_lambda=create_app_state_lambda,
     )

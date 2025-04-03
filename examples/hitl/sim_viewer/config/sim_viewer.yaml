@@ -1,0 +1,15 @@
+# @package _global_
+
+defaults:
+  - hitl_defaults
+  - _self_
+
+habitat_hitl:
+  driver: "SimDriver"
+  disable_policies_and_stepping: True
+  window:
+    title: "Sim Viewer"
+
+sim_viewer:
+  dataset: "data/hssd-hab/hssd-hab-articulated.scene_dataset_config.json"
+  scene: "102817140.scene_instance.json"
