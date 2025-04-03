@@ -36,6 +36,30 @@ import traceback
 
 import habitat_sim  # unfortunately we can't import this earlier
 
+def quat_multiply(q1, q2):
+    w1, x1, y1, z1 = q1
+    w2, x2, y2, z2 = q2
+    w = w1*w2 - x1*x2 - y1*y2 - z1*z2
+    x = w1*x2 + x1*w2 + y1*z2 - z1*y2
+    y = w1*y2 - x1*z2 + y1*w2 + z1*x2
+    z = w1*z2 + x1*y2 - y1*x2 + z1*w2
+    return np.array([w, x, y, z])
+
+def quat_transpose(q):
+    """Returns the transpose (inverse) of a unit quaternion (w, x, y, z)."""
+    w, x, y, z = q
+    return np.array([w, -x, -y, -z])  # Conjugate of the quaternion
+
+def quat_apply_velocity(q, omega, dt):
+    """Applies an angular velocity vector (omega) to a quaternion (q) over timestep dt."""
+    omega_quat = np.hstack([[0], omega])  # (0, ωx, ωy, ωz)
+    delta_q = 0.5 * dt * quat_multiply(q, omega_quat)  # First-order integration
+    return q + delta_q  # Approximate next step
+
+def quat_to_angle(q):
+    """Computes the rotation angle (in degrees) from a unit quaternion error."""
+    w = np.clip(q[0], -1.0, 1.0)  # Avoid precision issues
+    return np.degrees(2 * np.arccos(w))  # Convert from radians to degrees
 
 def bind_physics_material_to_hierarchy(stage, root_prim, material_name, static_friction, dynamic_friction, restitution):
     
@@ -581,7 +605,10 @@ class AppStateIsaacSimViewer(AppState):
 
         approx_app_fps = 30
         num_steps = int(1.0 / (approx_app_fps * self._mj_dt))
-        self._mj_wrapper.step(num_steps=num_steps)
+        for _ in range(num_steps):
+            self.mujoco_update_metahand_from_art_hand(self._mj_dt)
+            self._mj_wrapper.step(num_steps=1)
+
         self._mj_wrapper._visualizer.flush_to_hab_sim()
 
         # data = self._mj_wrapper.data
@@ -602,8 +629,7 @@ class AppStateIsaacSimViewer(AppState):
         # body_orientation = data.xquat[body_id]  # Quaternion (w, x, y, z)
 
         # temp move hand to match cursor
-
-        if not self._do_camera_follow_spot:
+        if False:  # not self._do_camera_follow_spot:
             # hand_mocap_id = 0  # sloppy: assume id 0
             cursor_pos_usd = isaac_prim_utils.habitat_to_usd_position([self._cursor_pos.x, self._cursor_pos.y, self._cursor_pos.z])
             # self._mj_wrapper._data.mocap_pos[hand_mocap_id] = cursor_pos_usd
@@ -1032,7 +1058,7 @@ class AppStateIsaacSimViewer(AppState):
     
     def get_art_hand_positions_rotations(self, hand_idx):
 
-        use_recorded = False
+        use_recorded = True
 
         if use_recorded:
             return self.get_art_hand_positions_rotations_from_playback(hand_idx)
@@ -1050,13 +1076,17 @@ class AppStateIsaacSimViewer(AppState):
 
 
 
-    # def draw_hand_helper(self, hand_idx):
+    def draw_hand_helper(self, hand_idx, visual_offset=None):
 
-    #     positions, rotations = self.get_art_hand_positions_rotations(hand_idx)
-    #     if not positions:
-    #         return
+        positions, rotations = self.get_art_hand_positions_rotations(hand_idx)
+        if not positions:
+            return
         
-    #     self.draw_hand(positions, rotations)
+        if visual_offset is not None:
+            for pos in positions:
+                pos += visual_offset
+
+        self.draw_hand(positions, rotations)
 
     def update_play_back_remote_hands(self):
 
@@ -1179,6 +1209,115 @@ class AppStateIsaacSimViewer(AppState):
                 print(f"Error calling the function: {e}")
                 traceback.print_exc()  
             self._did_function_load_fail = True      
+
+    def mujoco_update_metahand_from_art_hand(self, dt):
+
+        hand_idx = 1  # right hand
+        art_hand_positions, art_hand_rotations = self.get_art_hand_positions_rotations(hand_idx=hand_idx)
+        if not art_hand_positions:
+            return
+
+        offset = mn.Vector3(0.25, 0.0, 0.0)
+        visual_offset = offset + mn.Vector3(0.0, 0.0, 0.25)
+
+        self.draw_hand_helper(hand_idx=hand_idx, visual_offset=visual_offset)
+
+        for pos in art_hand_positions:
+            pos += offset
+
+        target_pos_hab = art_hand_positions[0]
+        target_quat = isaac_prim_utils.habitat_to_usd_rotation(isaac_prim_utils.magnum_quat_to_list_wxyz(art_hand_rotations[0]))
+
+        target_pos = np.array(isaac_prim_utils.habitat_to_usd_position([target_pos_hab.x, target_pos_hab.y, target_pos_hab.z]))
+
+        # temp use cursor
+        # target_pos = isaac_prim_utils.habitat_to_usd_position([self._cursor_pos.x, self._cursor_pos.y, self._cursor_pos.z])
+
+        data = self._mj_wrapper._data
+        model = self._mj_wrapper._model
+
+        # Get current position
+        import mujoco
+        # base_x_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "base_x")
+        # base_y_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "base_y")
+        # base_z_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "base_z")
+
+        # base_roll_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "base_roll")
+        # base_pitch_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "base_pitch")
+        # base_yaw_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "base_yaw")
+
+        # Get actuator indices by name
+        # base_x_ctrl_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, "base_x_vel")
+        # assert base_x_ctrl_id != -1
+        # base_y_ctrl_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, "base_y_vel")
+        # assert base_y_ctrl_id != -1
+        # base_z_ctrl_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, "base_z_vel")
+        # assert base_z_ctrl_id != -1
+
+        # base_roll_ctrl_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, "base_roll_pos")
+        # assert base_roll_ctrl_id != -1
+        # base_pitch_ctrl_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, "base_pitch_pos")
+        # assert base_pitch_ctrl_id != -1
+        # base_yaw_ctrl_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_ACTUATOR, "base_yaw_pos")            
+        # assert base_yaw_ctrl_id != -1
+
+        # current_pos = data.qpos[[base_x_id, base_y_id, base_z_id]]
+
+        free_joint_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "base_link_free_joint")
+
+        # Get the starting index in qpos
+        qpos_index = model.jnt_qposadr[free_joint_id]
+
+            # Extract the position dynamically
+        current_pos = data.qpos[qpos_index:qpos_index + 3]
+
+        # Compute position error
+        position_error = target_pos - current_pos
+        error_magnitude = np.linalg.norm(position_error)
+
+        dt_fudge = 4  # use > 1 to have smoother, slower correction
+
+        teleport_dist_threshold = 0.5  # meters
+        if error_magnitude > teleport_dist_threshold:
+            # Snap to the target position
+            data.qpos[qpos_index:qpos_index + 3] = target_pos
+            data.qvel[qpos_index:qpos_index + 3] = 0  # Reset velocity to prevent jumps
+        else:
+            # Compute exact velocity to reach target in one step
+            velocity_command = position_error / (dt * dt_fudge)
+            data.qvel[qpos_index:qpos_index + 3] = velocity_command  # Apply velocity command
+
+
+        # Threshold for snapping (in radians, 30 degrees = 0.52 rad)
+        snap_threshold = 0.52  
+
+        # --- ORIENTATION CONTROL ---
+        current_quat = data.qpos[qpos_index + 3:qpos_index + 7]
+
+        # Compute quaternion error
+        quat_error = quat_multiply(target_quat, quat_transpose(current_quat))
+
+        # Extract rotation angle theta for velocity computation
+        w, x, y, z = quat_error
+        theta = 2 * np.arccos(np.clip(w, -1.0, 1.0))  # Clamp to avoid NaN issues
+
+        if theta < 1e-6:
+            angular_velocity_command = np.array([0.0, 0.0, 0.0])  # No correction needed
+        else:
+            angular_velocity_command = (theta / (dt * dt_fudge)) * np.array([x, y, z]) / np.sin(theta / 2)
+
+        # rotate angular command from world space to body space
+        if True:
+            # Get world-to-local rotation matrix
+            body_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "palm")
+            world_to_local = data.xmat[body_id].reshape(3, 3).T  # Transpose to get world → local
+
+            # Transform angular velocity to local frame
+            angular_velocity_local = world_to_local @ angular_velocity_command
+
+            # Apply transformed qvel
+            data.qvel[qpos_index + 3:qpos_index + 6] = angular_velocity_local            
+         
 
     def update_metahand_from_art_hand(self, use_identify_root_transform=False, extra_rot=None, extra_pos=None):
 
@@ -1417,19 +1556,9 @@ class AppStateIsaacSimViewer(AppState):
 
         # self.update_record_remote_hands()
 
-        # self.update_play_back_remote_hands()
+        self.update_play_back_remote_hands()
 
         # extra_rot = mn.Quaternion([0.0, 0.0, 0.0], 1.0)  # mn.Quaternion([0.5, 0.5, 0.5], 0.5)
-        # self.draw_hand_helper(hand_idx=1, use_identify_root_transform=True,
-        #     extra_rot=extra_rot,
-        #     extra_pos=extra_pos)
-
-        # self.draw_hand_helper(hand_idx=0, use_identify_root_transform=False,
-        #     extra_rot=extra_rot,
-        #     extra_pos=extra_pos)
-
-        # self.draw_hand_helper(hand_idx=1)
-        
         # extra_pos = [-7.0, 1.0, -2.75]
         # self.update_metahand_from_art_hand(use_identify_root_transform=True, extra_pos=extra_pos)
         # self.update_metahand_from_art_hand(use_identify_root_transform=False, extra_pos=mn.Vector3(0.2, 0.00, 0.0))

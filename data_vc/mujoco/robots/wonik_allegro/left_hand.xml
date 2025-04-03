@@ -124,9 +124,11 @@
   </asset>
 
   <worldbody>
-    <body name="palm" quat="1 0 0 0" childclass="allegro_left" pos="0 0 0" gravcomp="2">
+    <body name="palm" quat="1 0 0 0" childclass="allegro_left" pos="0 0 0">
     
-      <!--<joint name="palm_joint" type="free" />-->
+      <joint name="base_link_free_joint" type="free" />
+
+      <!--
       <joint name="base_x" type="slide" axis="1 0 0"/>
       <joint name="base_y" type="slide" axis="0 1 0"/>
       <joint name="base_z" type="slide" axis="0 0 1"/>
@@ -134,6 +136,7 @@
       <joint name="base_roll" type="hinge" axis="1 0 0"/>
       <joint name="base_pitch" type="hinge" axis="0 1 0"/>
       <joint name="base_yaw" type="hinge" axis="0 0 1"/>
+      -->
 
       <geom quat="1 -1 0 0" class="palm_visual" mesh="base_link_left"/>
       <geom class="palm_collision"/>
@@ -266,6 +269,7 @@
     <position name="tha2" joint="thj2" class="thumb_medial"/>
     <position name="tha3" joint="thj3" class="thumb_distal"/>
 
+    <!--
     <velocity name="base_x_vel" joint="base_x" kv="50"/>
     <velocity name="base_y_vel" joint="base_y" kv="50"/>
     <velocity name="base_z_vel" joint="base_z" kv="50"/>
@@ -273,11 +277,23 @@
     <position name="base_roll_pos" joint="base_roll" kp="50"/>
     <position name="base_pitch_pos" joint="base_pitch" kp="50"/>
     <position name="base_yaw_pos" joint="base_yaw" kp="50"/>
+    -->
 
     <!--
     <general name="base_rot_x" joint="palm_joint" dyntype="filter" gainprm="5" biastype="affine" gear="0 0 0 1 0 0"/>
     <general name="base_rot_y" joint="palm_joint" dyntype="filter" gainprm="5" biastype="affine" gear="0 0 0 0 1 0"/>
     <general name="base_rot_z" joint="palm_joint" dyntype="filter" gainprm="5" biastype="affine" gear="0 0 0 0 0 1"/>
     -->
+
+    <!-- Linear movement (force-based) -->
+    <!-- <motor name="motor_tx" joint="base_link_free_joint" gear="1 0 0 0 0 0"/>
+    <motor name="motor_ty" joint="base_link_free_joint" gear="0 1 0 0 0 0"/>
+    <motor name="motor_tz" joint="base_link_free_joint" gear="0 0 1 0 0 0"/> -->
+    
+    <!-- Rotational movement (torque-based) -->
+    <!-- <motor name="motor_rx" joint="base_link_free_joint" gear="0 0 0 1 0 0" ctrllimited="true" ctrlrange="-1 1"/>
+    <motor name="motor_ry" joint="base_link_free_joint" gear="0 0 0 0 1 0" ctrllimited="true" ctrlrange="-1 1"/>
+    <motor name="motor_rz" joint="base_link_free_joint" gear="0 0 0 0 0 1" ctrllimited="true" ctrlrange="-1 1"/> -->
+        
   </actuator>
 </mujoco>
