@@ -101,6 +101,7 @@ class MurpRobotWrapper:
 
         # beware this poses the object
         self._xform_prim_view = self._create_xform_prim_view()
+        self.teleport = False
 
     @property
     def robot(self) -> Robot:
@@ -441,6 +442,13 @@ class MurpRobotWrapper:
                 )
             )
 
+    def teleport_right_arm(self, step_size):
+
+        self._robot.set_joint_positions(
+            self._target_right_arm_joint_positions,
+            joint_indices=self._right_arm_joint_indices,
+        )
+
     def drive_hand(self, step_size):
 
         if np.array(self._target_hand_joint_positions).any():
@@ -467,6 +475,13 @@ class MurpRobotWrapper:
                 )
             )
 
+    def teleport_right_hand(self, step_size):
+
+        self._robot.set_joint_positions(
+            self._target_right_hand_joint_positions,
+            joint_indices=self._right_hand_joint_indices,
+        )
+
     def fix_base(self, step_size, base_position, base_orientation):
 
         self.fix_base_height_via_linear_vel_z(
@@ -480,8 +495,12 @@ class MurpRobotWrapper:
         base_position, base_orientation = self._robot.get_world_pose()
         self.fix_base(step_size, base_position, base_orientation)
         # self.drive_arm(step_size)
-        self.drive_right_arm(step_size)
+        if self.teleport:
+            self.teleport_right_arm(step_size)
+        else:
+            self.drive_right_arm(step_size)
         # self.drive_hand(step_size)
+        # self.teleport_right_hand(step_size)
         self.drive_right_hand(step_size)
         self._step_count += 1
 

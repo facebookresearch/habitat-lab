@@ -26,9 +26,17 @@ class RLPickPolicy:
         self.config = murp_env.config
 
         self.convention = "isaac"
+        self.debug = murp_env.config.debug
+        if self.debug:
+            self.traj = self.load_traj()
+
         self.reset()
         self.checkpoint_path = self.config.pick_ckpt_path
         self.policy = self.load_checkpoint()
+
+    def load_traj(self):
+        data = torch.load(self.config.traj_path, map_location="cpu")
+        return data
 
     def load_checkpoint(self):
         return PPO.from_checkpoint(self.checkpoint_path)
@@ -267,20 +275,19 @@ class RLPickPolicy:
         ).unsqueeze(0)
         for k, v in obs_dict.items():
             obs_dict[k] = v.float().to("cuda:0")
-            print(k, v.shape)
+            # print(k, v.shape)
 
-        print("obs_dict: ", obs_dict)
+        # print("obs_dict: ", obs_dict)
         return obs_dict
 
     def step(self, action):
-
+        if self.debug:
+            action = self.traj[self.progress_ctr + 1]["act"]
         wrist_scale = 0.2
-        finger_scale = 0.1
+        finger_scale = 0.05  # 0.005
         # delta_wrist_trans, delta_wrist_axis_angle, delta_fingers
-        curr_ee_pos, curr_ee_rot_global = self.murp_wrapper.get_curr_ee_pose(
-            convention="rpy"
-        )
-        curr_ee_pos_local, curr_ee_rot = self.murp_wrapper.get_curr_ee_pose(
+        curr_ee_pos, _ = self.murp_wrapper.get_curr_ee_pose(convention="rpy")
+        _, curr_ee_rot = self.murp_wrapper.get_curr_ee_pose(
             convention="rpy", use_global=False
         )
 
@@ -328,13 +335,16 @@ class RLPickPolicy:
         new_wrist_pos_v2 = curr_ee_pos + delta_wrist_trans_hab
 
         # move the robot to the new wrist pose
-        if self.progress_ctr != 0:
-            self.murp_wrapper.move_ee_and_hand(
-                new_wrist_pos_v2,
-                self.open_loop_rot,
-                new_fingers,
-                timeout=20,
-                text="using RL pick controller",
-            )
-        print("action: ", action.shape)
+        if self.debug:
+            new_wrist_pos_v2 = self.murp_wrapper.env.sim._rigid_objects[
+                0
+            ].translation
+            new_wrist_pos_v2[1] += 0.2
+        self.murp_wrapper.move_ee_and_hand(
+            new_wrist_pos_v2,
+            self.open_loop_rot,
+            new_fingers,
+            timeout=1,
+            text="using RL pick controller",
+        )
         self.behavior_action = action

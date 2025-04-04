@@ -1,16 +1,28 @@
 data_path: "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/data/"
-urdf_path: "murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_with_hand_2_vyshnav.urdf"
-arm_urdf_path: "murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_right_arm.urdf"
+urdf_path: "murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_with_hand.urdf"
+arm_urdf_path: "murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_tmr_right_arm_only.urdf"
 usda_path: "usd/robots/franka_with_hand_right.usda"
 
-episode_json: "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/habitat-lab/habitat/tasks/rearrange/task_pick.json.gz"
+
+# episode_json: "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/habitat-lab/habitat/tasks/rearrange/task_pick.json.gz"
+episode_json: "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/results/task_pick_luis.json.gz"
 
 skill: "pick"
 instruction: "Pick the object"
 target_name: "fridge"
 hand: "right"
-policy_cls: "OraclePickPolicy"
+policy_cls: "RLPickPolicy"
 
 
 grasp_cache_path: "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/data/cache/initial_grasps/misc/dexgraspnet2.pth"
-pick_ckpt_path: "/opt/hpcaas/.mounts/fs-03ee9f8c6dddfba21/jtruong/repos/gum_ws/src/GUM/results/experiment_8/run5/best_reward_3340.29.pth"
+# pick_ckpt_path: "/fsx-siro/jtruong/repos/gum_ws/src/GUM/results/experiment_8/run5/best_reward_3340.29.pth"
+# pick_ckpt_path: "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/results/experiment_11/run1/best_reward_2409.13.pth"
+pick_ckpt_path: "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/results/experiment_11/run6/best_reward_9094.34.pth" # hand frame
+traj_path: "/fsx-siro/jtruong/repos/vla-physics/habitat-lab/results/experiment_11/run6/traj.pth"
+debug: True
+
+object_scales: [0.77, 0.79, 0.81, 0.83, 0.84]
+friction: [0.3, 1.0] # if not null, bounds for uniform sampling
+restitution: [0.0, 1.0] # if not null, bounds for uniform sampling (only used if friction is not null)
+object_center_of_mass: [-0.01, 0.01]
+object_mass: [0.04, 0.08]

@@ -18,14 +18,38 @@ def init_arm_and_hand(murp_env, policy_env):
     )
     rpy = R.from_matrix(rotation_matrix).as_euler("xyz", degrees=True)
     ee_rot = np.array([0, 90, 0])
+    # ee_rot = np.array([0, -263.6623610500003, -278.87338539])
     ee_rot_rad = np.deg2rad(ee_rot)
     pick_location = murp_env.env.sim._rigid_objects[0].translation
-    pick_location[1] += 0.2
+    pick_location[1] += 0.22  # add z offset
+    # murp_env.visualize_pos(pick_location)
+    murp_env.env.sim.articulated_agent._robot_wrapper.teleport = True
     murp_env.move_ee_and_hand(
         pick_location,
         ee_rot_rad,
         policy_env.target_fingers,
-        timeout=300,
+        timeout=1,
+        text="using arm controller",
+    )
+    _, curr_ee_rot = murp_env.get_curr_ee_pose(
+        convention="rpy", use_global=False
+    )
+    print("STARTING EE ROTATION: ", curr_ee_rot)
+
+
+def lift_arm_and_hand(murp_env, policy_env):
+    curr_ee_pos, _ = murp_env.get_curr_ee_pose(convention="rpy")
+    _, curr_ee_rot = murp_env.get_curr_ee_pose(
+        convention="rpy", use_global=False
+    )
+    curr_hand_pos = murp_env.get_curr_hand_pose()
+    target_ee_pos = curr_ee_pos.copy()
+    target_ee_pos[1] += 0.3
+    murp_env.move_ee_and_hand(
+        target_ee_pos,
+        policy_env.open_loop_rot,
+        curr_hand_pos,
+        timeout=50,
         text="using arm controller",
     )
 def heurestic_step(murp_env,config,policy):
@@ -64,6 +88,7 @@ def main(config):
 
         murp_env.reset_robot(murp_env.env.current_episode.action_target[0])
 
+<<<<<<< HEAD
         # arm control
         init_arm_and_hand(murp_env, policy_env)
         # grasp control
@@ -75,6 +100,27 @@ def main(config):
             policy_env.progress_ctr += 1
             # policy_env.prev_targets = action
         print("saved video to: ", murp_env.save_path)
+=======
+    murp_env.reset_robot(murp_env.env.current_episode.action_target[0])
+
+    # arm control
+    init_arm_and_hand(murp_env, policy_env)
+    # grasp control
+    murp_env.env.sim.articulated_agent._robot_wrapper.teleport = False
+
+    max_steps = 99
+    if policy_env.debug:
+        max_steps = len(policy_env.traj)
+    for i in range(99):
+        obs_dict = policy_env.get_obs_dict(convention="isaac")
+        action = policy_env.policy.act(obs_dict)
+        policy_env.step(action)
+        # print("action: ", action)
+        policy_env.progress_ctr += 1
+        # policy_env.prev_targets = action
+    lift_arm_and_hand(murp_env, policy_env)
+    print("saved video to: ", murp_env.save_path)
+>>>>>>> f87554e75 (add trajectory replay to rl policy)
 
 
 if __name__ == "__main__":
