@@ -52,9 +52,11 @@ def lift_arm_and_hand(murp_env, policy_env):
         timeout=50,
         text="using arm controller",
     )
-def heurestic_step(murp_env,config,policy):
+
+
+def heurestic_step(murp_env, config, policy):
     hand = config.hand
-    
+
     murp_env.reset_robot(config.target_name)
 
     grip_iters, open_iters, move_iters, _ = policy.TARGET_CONFIG[
@@ -67,6 +69,7 @@ def heurestic_step(murp_env,config,policy):
     )
     print("saved video to: ", murp_env.save_path)
 
+
 def main(config):
     config = OmegaConf.load(config)
     murp_env = MurpEnv(config)
@@ -78,29 +81,18 @@ def main(config):
     elif config.policy_cls == "RLPickPolicy":
         from scripts.expert_data.policies.rl_pick_policy import RLPickPolicy
     elif config.policy_cls == "HeuristicPickPolicy":
-        from scripts.expert_data.policies.heurestic_pick_policy import HeuristicPickPolicy
-        
+        from scripts.expert_data.policies.heurestic_pick_policy import (
+            HeuristicPickPolicy,
+        )
+
     policy_env = eval(config.policy_cls)(murp_env)
     if config.policy_cls == "HeuristicPickPolicy":
-        heurestic_step(murp_env,config,policy_env)
+        heurestic_step(murp_env, config, policy_env)
     else:
         hand = config.hand
 
         murp_env.reset_robot(murp_env.env.current_episode.action_target[0])
 
-<<<<<<< HEAD
-        # arm control
-        init_arm_and_hand(murp_env, policy_env)
-        # grasp control
-        for i in range(100):
-            obs_dict = policy_env.get_obs_dict(convention="isaac")
-            action = policy_env.policy.act(obs_dict)
-            policy_env.step(action)
-            print("action: ", action)
-            policy_env.progress_ctr += 1
-            # policy_env.prev_targets = action
-        print("saved video to: ", murp_env.save_path)
-=======
     murp_env.reset_robot(murp_env.env.current_episode.action_target[0])
 
     # arm control
@@ -120,7 +112,6 @@ def main(config):
         # policy_env.prev_targets = action
     lift_arm_and_hand(murp_env, policy_env)
     print("saved video to: ", murp_env.save_path)
->>>>>>> f87554e75 (add trajectory replay to rl policy)
 
 
 if __name__ == "__main__":
