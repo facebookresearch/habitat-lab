@@ -477,6 +477,8 @@ class IsaacRearrangeSim(HabitatSim):
         # self._rigid_objects = []
         # self.add_or_reset_rigid_objects()
         self._pick_target_rigid_object_idx = None
+        self.target_joints=ep_info.target_joints
+
 
         stage = self._isaac_wrapper.service.world.stage
         prim = stage.GetPrimAtPath("/World")
@@ -524,6 +526,35 @@ class IsaacRearrangeSim(HabitatSim):
             vector = quat_rotation.GetImaginary()
             prim_rot = np.array([scalar, vector[0], vector[1], vector[2]])
         return prim_trans_hab, prim_rot
+    def get_result_rate(self,filename=" ",episode_name=" "):
+        root_prim ="/World/rigid_objects"
+        isaac_world = self._isaac_wrapper.service.world
+        stage = self._isaac_wrapper.service.world.stage
+        for prim in list(stage.Traverse()):
+            if prim.IsValid() and prim.GetName().startswith("obj_"):
+                prim = self._isaac_wrapper.service.world.stage.GetPrimAtPath(root_prim +'/'+ prim.GetName())
+                matrix: Gf.Matrix4d = omni.usd.get_world_transform_matrix(prim)
+                translate: Gf.Vec3d = matrix.ExtractTranslation()
+                rotation: Gf.Rotation = matrix.ExtractRotation()
+                # breakpoint()
+                matrix_obj = list(self.obj_to_load.values())[0]
+                if translate[1] > matrix_obj[3][1]:
+                    string="Success"
+                else:
+                    string="Failure"
+        if os.path.exists("./results.json"):
+            with open("./results.json", "r") as f:
+                try:
+                    data = json.load(f)
+                except json.JSONDecodeError:
+                    data = {}  
+        else:
+            data = {}
+
+        data[episode_name] = string
+        with open("results.json", "w") as f:
+            json.dump(data, f, indent=2)
+
 
     @add_perf_timing_func()
     def _setup_semantic_ids(self):
@@ -1198,15 +1229,17 @@ class IsaacRearrangeSim(HabitatSim):
             obj_name,
             obj_pose,
         ) in self.obj_to_load.items():  # Iterate over the dictionary
-            obj_pose = np.array(
-                obj_pose
-            )  # Passing Rot here flips the object so just taking pos and allowing it to compute rot
+            # obj_pose = np.array(
+            #     obj_pose
+            # )  # Passing Rot here flips the object so just taking pos and allowing it to compute rot
+            obj_pose = mn.Matrix4(obj_pose)
             objects_to_add.append(
                 (
                     f"{path_to_configs}/OBJECT_{obj_name}_textured.usda",
-                    mn.Vector3(
-                        obj_pose[0, 3], obj_pose[1, 3], obj_pose[2, 3]
-                    ),  # Use the stored pose directly
+                    obj_pose
+                    # mn.Vector3(
+                    #     obj_pose[0, 3], obj_pose[1, 3], obj_pose[2, 3]
+                    # ),  # Use the stored pose directly
                 )
             )
 
@@ -1225,8 +1258,11 @@ class IsaacRearrangeSim(HabitatSim):
                 ro = self._rigid_objects[i]
 
             # rotation = mn.Quaternion.rotation(-mn.Deg(90), mn.Vector3.x_axis())
-            rotation1 = mn.Quaternion.rotation(mn.Deg(90), mn.Vector3.x_axis())
-            rotation2 = mn.Quaternion.rotation(mn.Deg(90), mn.Vector3.z_axis())
-            rotation = rotation1 * rotation2
-            trans = mn.Matrix4.from_(rotation.to_matrix(), position)
-            ro.transformation = trans
+            #Uncomment if you dont have object orientation
+            # rotation1 = mn.Quaternion.rotation(mn.Deg(90), mn.Vector3.x_axis())
+            # rotation2 = mn.Quaternion.rotation(mn.Deg(90), mn.Vector3.z_axis())
+            # rotation = rotation1 * rotation2
+            # trans = mn.Matrix4.from_(rotation.to_matrix(), position)
+            # ro.transformation = trans
+            ro.transformation = position
+

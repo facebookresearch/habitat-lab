@@ -44,6 +44,7 @@ class RearrangeEpisode(Episode):
     action_target: List[Tuple[str, np.ndarray, np.ndarray]] = []
     targets: Dict[str, np.ndarray]
     markers: List[Dict[str, Any]] = []
+    target_joints:List[float]
     target_receptacles: List[Tuple[str, int]] = []
     goal_receptacles: List[Tuple[str, int]] = []
     name_to_receptacle: Dict[str, str] = {}

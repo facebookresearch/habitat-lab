@@ -40,9 +40,10 @@ class IsaacRigidObjectWrapper:
             [translation.x, translation.y, translation.z]
         )
         vec = rotation_quat.vector
-        rotation_quat_wxyz_usd = isaac_prim_utils.habitat_to_usd_rotation(
-            [rotation_quat.scalar, vec.x, vec.y, vec.z]
-        )
+        # rotation_quat_wxyz_usd = isaac_prim_utils.habitat_to_usd_rotation(
+        #     [rotation_quat.scalar, vec.x, vec.y, vec.z]
+        # )
+        rotation_quat_wxyz_usd = [rotation_quat.scalar, vec.x, vec.y, vec.z]
 
         isaac_prim_utils.set_rotation(
             self._prim, rotation_quat_wxyz=rotation_quat_wxyz_usd

@@ -234,9 +234,12 @@ class HeuristicPickPolicy:
             [target[1].x, target[1].y, target[1].z],
             [target[2].x, target[2].y, target[2].z]
         ])
+        # rpy = R.from_matrix(rotation_matrix).as_euler('xyz', degrees=True)
+        # perpendicular_rpy = rpy + np.array([90,90,0])
+        # print("RPY",perpendicular_rpy)
         rpy = R.from_matrix(rotation_matrix).as_euler('xyz', degrees=True)
-        perpendicular_rpy = rpy + np.array([90,90,0])
-        print("RPY",perpendicular_rpy)
+        diffs= np.array([-1.76995723,89.79812903,-89.99673813]) - rpy
+        perpendicular_rpy = rpy + diffs
 
         self.target_ee_pos, self.target_ee_rot = (
             self.env.sim._rigid_objects[0].translation,
@@ -263,7 +266,7 @@ class HeuristicPickPolicy:
         data_cache = data['cache']
         cases = list(data_cache.keys())
         obj_name, robot_dof, robot_pose, obj_pose = self.acquire_info(data_cache,cases[1])
-        robot_dof=self.map_joints(robot_dof[0,:])
+        robot_dof=self.map_joints(self.env.sim.target_joints)
         # self.current_target_xyz = self.target_ee_pos
         tar_rot=R.from_euler("xyz", self.target_ee_rot, degrees=True)
         tar_quat = tar_rot.as_quat(scalar_first=True)
