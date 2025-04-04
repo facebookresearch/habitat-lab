@@ -338,7 +338,7 @@ class MurpEnv:
     def move_hand_joints(self, target_hand_pos, timeout=100):
         curr_hand_pos = self.get_curr_hand_pose()
         ctr = 0
-        while not np.allclose(curr_hand_pos, target_hand_pos, atol=0.1):
+        while not np.allclose(curr_hand_pos, target_hand_pos, atol=0.0001):
             action = {
                 "action": "base_velocity_action",
                 "action_args": {
