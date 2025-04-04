@@ -4,12 +4,10 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import json
 import math
 import os
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
 import hydra
 import magnum as mn
 from hydra import compose
@@ -17,6 +15,7 @@ from omegaconf import DictConfig
 
 import habitat.sims.habitat_simulator.sim_utilities as sutils
 import habitat_sim  # unfortunately we can't import this earlier
+from habitat.datasets.rearrange.navmesh_utils import get_largest_island_index
 from habitat_hitl._internal.networking.average_rate_tracker import (
     AverageRateTracker,
 )
@@ -30,27 +29,43 @@ from habitat_hitl.core.hydra_utils import (
 from habitat_hitl.core.key_mapping import KeyCode, MouseButton
 from habitat_hitl.core.text_drawer import TextOnScreenAlignment
 from habitat_hitl.environment.camera_helper import CameraHelper
-from habitat_sim.gfx import DebugLineRender
-
-from scripts.robot import Robot
 from scripts.DoFeditor import DoFEditor
-from scripts.quest_reader import QuestReader
 from scripts.ik import DifferentialInverseKinematics
-import time
+from scripts.quest_reader import pos as to_ik_pose
+from scripts.robot import Robot
+from scripts.xr_pose_adapter import XRPose, XRPoseAdapter, XRTrajectory
 
 # path to this example app directory
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 # TODO LIST:
-# - attach robots to navmesh using multi-point abstraction and configuration
 # - define API for switching between saved poses (e.g. for grip poses)
 # - setup constraint management API
 # - setup pymomentum IK API
-# - setup the Meta hand and define a few standard "grasp" poses
-# - setup a VR interface for IK tracking EF
-#   - use controllers for toggling things or mouse interchange
-#   - use hand state for direct manipulation of the Meta Hand
 
+# TODO Apr 4th:
+
+# GRASPING
+# - Add robot.py function for caching and loading a pose subset (e.g. only consider dofs for a set of links)
+# - Use robot hand link ids to construct and cache a "pre-grasp" hand pose
+# - Add UI to toggle the pre-grasp pose w/ default (XR button)
+# - Add geom grasp "sensor" which uses fingertip raycasts between thumb and other fingers to provide a "can grasp" signal for objects
+#   - hook this up with a visual representation
+# - Add a grasp manager API to constrain an object in the palm's coordinate space with successful pre-grasp and update the constraint frame when moving
+# - Add a "release grasp" control to toggle default hand pose and break the constraint
+# - bind the above UI to "index trigger" on each hand
+
+# IK:
+# - get IK frame aligned (Asjad)
+# - test and stabilize IK (Asjad)
+
+# COMBINE:
+# - use ik to guide the wrist and try grasping objects
+# - try grasping furniture
+# - try "hand off" cycles
+
+# BASE CONTROL
+# hook up a constraint to lock the base to the navmesh which is controlled by a target. Should be more stable for dynamic interactions.
 
 
 class HitDetails:
@@ -112,9 +127,8 @@ class HitObjectInfo:
         Return whether or not the hit index provided was the STAGE.
         Defaults to first hit.
         """
-        if self.has_hits:
-            if self.hits[hit_ix] == habitat_sim.stage_id:
-                return True
+        if self.has_hits and self.hits[hit_ix] == habitat_sim.stage_id:
+            return True
         return False
 
     def hit_obj(
@@ -181,7 +195,6 @@ class AppStateRobotTeleopViewer(AppState):
         self._app_service = app_service
         self._sim = app_service.sim
         self._current_scene_index = 0
-        
 
         # bind the app specific config values
         self._app_cfg: DictConfig = omegaconf_to_object(
@@ -203,12 +216,26 @@ class AppStateRobotTeleopViewer(AppState):
         self._hide_gui = False
 
         # set with SPACE, when true cursor is locked on robot
-        self.cursor_follow_robot = False
+        self.cursor_follow_robot = True
 
         self.robot: Optional[Robot] = None
         self.dof_editor: Optional[DoFEditor] = None
-        self._quest_reader: Optional[QuestReader] = QuestReader(self._app_service)
-        self._ik: Optional[DifferentialInverseKinematics] = DifferentialInverseKinematics()
+        # self._quest_reader: Optional[QuestReader] = QuestReader(self._app_service)
+        self.xr_origin_offset = mn.Vector3(0, 0, 0)
+        self.xr_origin_rotation = mn.Quaternion()
+        self.xr_pose_adapter = XRPoseAdapter()
+
+        # API for recording and playing back XR trajectories
+        self.xr_traj: XRTrajectory = XRTrajectory()
+
+        # debug xr replay
+        self.replay_xr_traj = False
+        self.recording_xr_traj = False
+        self.xr_replay_frame = 0
+
+        self._ik: Optional[
+            DifferentialInverseKinematics
+        ] = DifferentialInverseKinematics()
         self._cursor_pos = mn.Vector3(0.0, 0.0, 0.0)
         self.navmesh_lines: Optional[
             List[Tuple[mn.Vector3, mn.Vector3]]
@@ -217,7 +244,11 @@ class AppStateRobotTeleopViewer(AppState):
         # setup the simulator
         self.set_scene(self._current_scene_index)
 
-
+        # DEBUG: if replaying from start, sync at start
+        if self.replay_xr_traj:
+            # set the initial sync state for testing
+            self.xr_traj.load_json("test_xr_pose.json")
+            self.sync_xr_local_state(self.xr_traj.get_pose(0))
 
         self._sps_tracker = AverageRateTracker(2.0)
         self._do_pause_physics = False
@@ -241,25 +272,28 @@ class AppStateRobotTeleopViewer(AppState):
         self.set_aos_dynamic()
         # import and setup the robot from config
         self.import_robot()
+
+        # set the initial state of the UI cursor to the "top" of the robot
         self._cursor_pos = self.robot.ao.transformation.transform_point(
             self.robot.ao.aabb.center()
+            + mn.Vector3(0, self.robot.ao.aabb.size_y() / 2.0, 0)
         )
+
         self._camera_helper.update(self._cursor_pos, 0.0)
         self.dof_editor = None
         self.navmesh_lines = None
         print(f"Loaded scene: {scene}.")
 
-        
         client_message_manager = self._app_service._client_message_manager
         if client_message_manager is not None:
             client_message_manager.signal_scene_change()
-            
-            if True: # TODO: If in VR...
+
+            if True:  # TODO: If in VR...
                 self.recompute_navmesh()
                 user_pos = AppStateRobotTeleopViewer._find_navmesh_position_near_target(
                     target=self._cursor_pos,
                     distance_from_target=1.2,
-                    pathfinder=self._sim.pathfinder
+                    pathfinder=self._sim.pathfinder,
                 )
                 if user_pos is not None:
                     client_message_manager.change_humanoid_position(user_pos)
@@ -272,9 +306,7 @@ class AppStateRobotTeleopViewer(AppState):
         largest_island_index = get_largest_island_index(
             self._sim.pathfinder, self._sim, allow_outdoor=False
         )
-        pts = self._sim.pathfinder.build_navmesh_vertices(
-            largest_island_index
-        )
+        pts = self._sim.pathfinder.build_navmesh_vertices(largest_island_index)
         assert len(pts) > 0
         assert len(pts) % 3 == 0
         assert len(pts[0]) == 3
@@ -425,6 +457,14 @@ class AppStateRobotTeleopViewer(AppState):
                 mouse_cast_results_text += (
                     f" > {hit_details.link_id} {hit_details.link_name}"
                 )
+                if (
+                    self.robot is not None
+                    and hit_details.obj_name == self.robot.ao.handle
+                ):
+                    link_dof = self.robot.ao.get_link_joint_pos_offset(
+                        hit_details.link_id
+                    )
+                    mouse_cast_results_text += f"--{link_dof}"
 
         controls_str = (
             help_text + cursor_cast_results_text + mouse_cast_results_text
@@ -484,17 +524,18 @@ class AppStateRobotTeleopViewer(AppState):
             radial_angle = i * 2.0 * math.pi / float(sample_count)
             dist_x = math.sin(radial_angle) * distance_from_target
             dist_z = math.cos(radial_angle) * distance_from_target
-            candidate = mn.Vector3(target.x + dist_x, target.y, target.z + dist_z)
+            candidate = mn.Vector3(
+                target.x + dist_x, target.y, target.z + dist_z
+            )
             if pathfinder.is_navigable(candidate, 3.0):
-                dist_to_closest_obstacle = pathfinder.distance_to_closest_obstacle(
-                    candidate, 2.0
+                dist_to_closest_obstacle = (
+                    pathfinder.distance_to_closest_obstacle(candidate, 2.0)
                 )
                 if dist_to_closest_obstacle > max_dist_to_obstacle:
                     max_dist_to_obstacle = dist_to_closest_obstacle
                     navigable_point = candidate
 
         return navigable_point
-
 
     def move_robot_on_navmesh(self) -> None:
         """
@@ -568,9 +609,9 @@ class AppStateRobotTeleopViewer(AppState):
         if gui_input.get_key_down(KeyCode.ESC):
             post_sim_update_dict["application_exit"] = True
 
-        if gui_input.get_key(KeyCode.SPACE):
+        if gui_input.get_key_down(KeyCode.SPACE):
             self.cursor_follow_robot = not self.cursor_follow_robot
-            # self.set_physics_paused(not self._do_pause_physics)
+            print(f"cursor_follow_robot = {self.cursor_follow_robot}")
 
         if gui_input.get_key_down(KeyCode.H):
             self._hide_gui = not self._hide_gui
@@ -589,16 +630,206 @@ class AppStateRobotTeleopViewer(AppState):
                 self.build_navmesh_lines()
 
         # robot pose caching and loading
-        if gui_input.get_key_down(KeyCode.P):
-            if self.robot is not None:
-                self.robot.cache_pose()
-        if gui_input.get_key_down(KeyCode.O):
-            if self.robot is not None:
-                self.robot.set_cached_pose()
+        if gui_input.get_key_down(KeyCode.P) and self.robot is not None:
+            self.robot.cache_pose()
+        if gui_input.get_key_down(KeyCode.O) and self.robot is not None:
+            self.robot.set_cached_pose()
 
         # Load next scene
         if gui_input.get_key_down(KeyCode.ZERO):
             self.next_scene()
+
+    def sync_xr_local_state(self, xr_pose: XRPose = None):
+        """
+        Sets a local offset variable to transform XR headset and controller origin into the local robot space.
+        Should be run once when the quest user reaches a comfortable pose.
+        If no XRPose is provided, the current state is used.
+        """
+        if xr_pose is None:
+            xr_pose = XRPose(
+                remote_client_state=self._app_service.remote_client_state
+            )
+
+        if not xr_pose.valid:
+            print(
+                "Cannot set origin, no valid XR state. Is the XR user connected?"
+            )
+            return
+
+        # the following lines construct a local correction frame which uses the headset pose as the origin
+        # align the XR headset orientation with the x axis
+        align_z_to_x = mn.Quaternion.rotation(
+            mn.Rad(mn.math.pi / 2.0), mn.Vector3(0, 1, 0)
+        )
+        self.xr_origin_rotation = xr_pose.rot_head.inverted() * align_z_to_x
+        # align the headset position with the origin
+        self.xr_origin_offset = self.xr_origin_rotation.transform_vector(
+            -xr_pose.pos_head
+        )
+        # TODO: try setting the VR user state to align with the robot
+        # TODO: waiting for Unity control pathway for setting XR offset transformation
+        # client_message_manager = self._app_service.client_message_manager
+        # if client_message_manager is not None and self.robot is not None:
+        #    client_message_manager.change_humanoid_position(self.robot.ao.translation)
+
+    def handle_xr_input(self, dt: float):
+        xr_input = self._app_service.remote_client_state.get_xr_input(0)
+        left = xr_input.left_controller
+        right = xr_input.right_controller
+        from habitat_hitl.core.xr_input import XRButton
+
+        if left.get_buttons_down(XRButton.ONE):
+            print("pressed one left")
+            self.sync_xr_local_state()
+            print("synced headset state...")
+        if left.get_buttons_down(XRButton.TWO):
+            print("pressed two left")
+
+        # RIGHT CONTROLLER BUTTONS
+        if right.get_buttons_down(XRButton.ONE):
+            print("pressed one right")
+            print("Starting to record a new trajectory")
+            self.xr_traj = XRTrajectory()
+            self.recording_xr_traj = True
+            self.replay_xr_traj = False
+        if right.get_buttons_up(XRButton.ONE):
+            print("released one right")
+            self.recording_xr_traj = False
+            self.xr_traj.save_json()
+            print(
+                f"Saved the trajectory with {len(self.xr_traj.traj)} poses to 'xr_pose.json'."
+            )
+        if right.get_buttons_down(XRButton.TWO):
+            print("pressed two right")
+            self.replay_xr_traj = not self.replay_xr_traj
+            self.recording_xr_traj = False
+            print(f"XR Traj playback = {self.replay_xr_traj}")
+
+        # construct the xr -> robot frame alignment transform
+        # first construct a 4x4 with the local correction components from sync_xr_local_state
+        local_correction_tform = mn.Matrix4().from_(
+            self.xr_origin_rotation.to_matrix(), self.xr_origin_offset
+        )
+        # sync the aligned local XR state with the robot's orientation and cursor position
+        local_to_robot = mn.Matrix4().from_(
+            self.robot.ao.rotation.to_matrix(), self._cursor_pos
+        )
+        # cache the combined XR local to global transform
+        self.xr_pose_adapter.xr_local_to_global = local_to_robot.__matmul__(
+            local_correction_tform
+        )
+
+        # TODO: example of freezing the replay at a known frame
+        # self.xr_replay_frame =1
+
+        # test IK with replay motion frames
+        if (
+            self.replay_xr_traj
+            and len(self.xr_traj.traj) > 0
+            and self.xr_replay_frame < len(self.xr_traj.traj)
+        ):
+            xr_replay_pose = self.xr_traj.get_pose(self.xr_replay_frame)
+            global_xr_pose = self.xr_pose_adapter.get_global_xr_pose(
+                xr_replay_pose
+            )
+            _cur_angles = self.robot.ao.joint_positions
+            # right hand
+            robot_right_base_link = 43
+            arm_base_link_t = self.robot.ao.get_link_scene_node(
+                robot_right_base_link
+            ).transformation.inverted()
+            xr_pose_in_robot_frame = self.xr_pose_adapter.xr_pose_transformed(
+                global_xr_pose, arm_base_link_t
+            )
+            pose_right = to_ik_pose(
+                (
+                    xr_pose_in_robot_frame.pos_right,
+                    xr_pose_in_robot_frame.rot_right,
+                )
+            )
+            _cur_angles[23:30] = self._ik.inverse_kinematics(
+                pose_right, _cur_angles[23:30]
+            )
+            self.robot.ao.joint_positions = _cur_angles
+            # TODO: activate motor control
+            # self.robot.ao.update_all_motor_targets(_cur_angles)
+
+            # left hand
+            robot_left_base_link = 1
+            arm_base_link_t = self.robot.ao.get_link_scene_node(
+                robot_left_base_link
+            ).transformation.inverted()
+            xr_pose_in_robot_frame = self.xr_pose_adapter.xr_pose_transformed(
+                global_xr_pose, arm_base_link_t
+            )
+            pose_left = to_ik_pose(
+                (
+                    xr_pose_in_robot_frame.pos_left,
+                    xr_pose_in_robot_frame.rot_left,
+                )
+            )
+            _cur_angles[0:7] = self._ik.inverse_kinematics(
+                pose_left, _cur_angles[0:7]
+            )
+            self.robot.ao.joint_positions = _cur_angles
+            # TODO: activate motor control
+            # self.robot.ao.update_all_motor_targets(_cur_angles)
+
+        # IK for each hand when trigger is pressed
+        xr_pose = XRPose(
+            remote_client_state=self._app_service.remote_client_state
+        )
+        if xr_pose.valid:
+            global_xr_pose = self.xr_pose_adapter.get_global_xr_pose(xr_pose)
+            # print(right.get_hand_trigger())
+            if right.get_hand_trigger() > 0:
+                robot_right_base_link = 43
+                xr_pose_in_robot_frame = (
+                    self.xr_pose_adapter.xr_pose_transformed(
+                        global_xr_pose,
+                        self.robot.ao.get_link_scene_node(
+                            robot_right_base_link
+                        ).transformation.inverted(),
+                    )
+                )
+                _cur_angles = self.robot.ao.joint_positions
+                pose_right = to_ik_pose(
+                    (
+                        xr_pose_in_robot_frame.pos_right,
+                        xr_pose_in_robot_frame.rot_right,
+                    )
+                )
+                _cur_angles[23:30] = self._ik.inverse_kinematics(
+                    pose_right, _cur_angles[23:30]
+                )
+                self.robot.ao.joint_positions = _cur_angles
+                self.robot.ao.update_all_motor_targets(_cur_angles)
+            if left.get_hand_trigger() > 0:
+                robot_left_base_link = 1
+                xr_pose_in_robot_frame = (
+                    self.xr_pose_adapter.xr_pose_transformed(
+                        global_xr_pose,
+                        self.robot.ao.get_link_scene_node(
+                            robot_left_base_link
+                        ).transformation.inverted(),
+                    )
+                )
+                _cur_angles = self.robot.ao.joint_positions
+                pose_left = to_ik_pose(
+                    (
+                        xr_pose_in_robot_frame.pos_left,
+                        xr_pose_in_robot_frame.rot_left,
+                    )
+                )
+                _cur_angles[0:7] = self._ik.inverse_kinematics(
+                    pose_left, _cur_angles[0:7]
+                )
+                self.robot.ao.joint_positions = _cur_angles
+                self.robot.ao.update_all_motor_targets(_cur_angles)
+
+            # record XR state if necessary
+            if self.recording_xr_traj:
+                self.xr_traj.add_pose(xr_pose)
 
     def handle_mouse_press(self) -> None:
         """
@@ -661,7 +892,31 @@ class AppStateRobotTeleopViewer(AppState):
                 self._sim.cast_ray(ray), self._sim
             )
 
- 
+    def debug_draw_quest(self) -> None:
+        """
+        Debug draw the quest controller and headset poses as axis frames.
+        """
+        dblr = self._app_service.gui_drawer
+
+        if self.replay_xr_traj and len(self.xr_traj.traj) > 0:
+            if self.xr_replay_frame >= len(self.xr_traj.traj):
+                self.xr_replay_frame = 0
+            xr_replay_pose = self.xr_traj.get_pose(self.xr_replay_frame)
+
+            xr_replay_pose.draw_pose(
+                dblr, transform=self.xr_pose_adapter.xr_local_to_global
+            )
+
+            self.xr_replay_frame += 1
+        else:
+            current_xr_pose = XRPose(
+                remote_client_state=self._app_service.remote_client_state
+            )
+            if current_xr_pose.valid:
+                current_xr_pose.draw_pose(
+                    dblr, transform=self.xr_pose_adapter.xr_local_to_global
+                )
+
     # this is where connect with the thread for controller positions
     def sim_update(
         self, dt: float, post_sim_update_dict: Dict[str, Any]
@@ -673,23 +928,15 @@ class AppStateRobotTeleopViewer(AppState):
 
         self._sps_tracker.increment()
 
-
         # IO handling
         self.handle_keys(dt, post_sim_update_dict)
         self.handle_mouse_press()
-        self._update_cursor_pos()
+        self.handle_xr_input(dt)
         self.move_robot_on_navmesh()
-        poseLeft, poseRight = self._quest_reader.quest_reader()
+        self._update_cursor_pos()
 
-        if poseLeft is not None:
-            _cur_angles = self.robot.ao.joint_positions
-            _cur_angles[0:7] = self._ik.inverse_kinematics(poseLeft, _cur_angles[0:7])
-            self.robot.ao.joint_positions = _cur_angles
-        if poseRight is not None:
-            _cur_angles = self.robot.ao.joint_positions
-            _cur_angles[23:30] = self._ik.inverse_kinematics(poseRight, _cur_angles[23:30])
-            self.robot.ao.joint_positions = _cur_angles
-
+        # TODO: step the simulator
+        # self._sim.step_physics(dt)
 
         # update the camera position
         self._camera_helper.update(self._cursor_pos, dt)
@@ -722,18 +969,21 @@ class AppStateRobotTeleopViewer(AppState):
             )
             if self.robot is not None:
                 hit_details = self.mouse_cast_results.get_hit_details()
-                if hit_details.obj_name == self.robot.ao.handle:
-                    # hit the robot, so try to draw the link
-                    if hit_details.link_id is not None:
-                        self.robot.draw_dof(
-                            dblr,
-                            hit_details.link_id,
-                            self._cam_transform.translation,
-                        )
+                # hit the robot, so try to draw the link
+                if (
+                    hit_details.obj_name == self.robot.ao.handle
+                    and hit_details.link_id is not None
+                ):
+                    self.robot.draw_dof(
+                        dblr,
+                        hit_details.link_id,
+                        self._cam_transform.translation,
+                    )
 
         # NOTE: do debug drawing here
         # draw lookat ring
         self.draw_lookat()
+        self.debug_draw_quest()
         self.robot.draw_debug(dblr)
         if self.dof_editor is not None:
             self.dof_editor.debug_draw(dblr, self._cam_transform.translation)

@@ -135,8 +135,8 @@ class CameraHelper:
 
         # two ways for camera pitch and yaw control for UX comparison:
         # 1) press/hold ADIK keys
-        self._camera_pitch_and_yaw_wasd_control()
-        # 2) press left mouse button and move mouse
+        # self._camera_pitch_and_yaw_wasd_control()
+        # 2) press either middle mouse button or 'R' and move mouse
         self._camera_pitch_and_yaw_mouse_control()
 
         self._eye_pos, self._lookat_pos = self._get_eye_and_lookat(base_pos)

@@ -29,26 +29,40 @@ Clone and install this [eundersander/isaacsim_viewer](https://github.com/faceboo
 
 ```
 #start from your project root directory
-git clone --branch 0mdc/sim_teleop https://github.com/facebookresearch/habitat-lab.git
+git clone --branch asjad/sim_teleop https://github.com/facebookresearch/habitat-lab.git
 
 cd habitat-lab
 pip install -e habitat-lab
 pip install -e habitat-hitl
+pip install -e habitat-baselines
 
 #optionally symblink your data directory to habitat-sim/data
 ln -s ../habitat-sim/data data/
 ```
 
+Install additional dependencies for IK/quest integration
+```
+pip install spatialmath-python
+pip install drake
+pip install roboticstoolbox-python
+```
+
 ## (optional) Install pymomentum for Inverse Kinematics
 https://github.com/facebookincubator/momentum
 
-*NOTE: waiting on IK feature to be added to the framework. ETA early March.*
+*NOTE: build seems incompatible with habitat-baselines on main.*
 
 > Momentum provides foundational algorithms for human kinematic motion and numerical optimization solvers to apply human motion in various applications.
 
+Directly installing momentum may install pytorch CPU version and import may crash. You should first install the correct cuda torch version for your system manually before installing pymomentum:
+```
+pip3 install torch torchvision torchaudio
+pip install pytorch
+```
+
 Installing pymomentum from conda-forge :
 ```
-mamba install -c conda-forge pymomentum=0.1.29
+mamba install -c conda-forge pymomentum=0.1.33
 #need to downgrade numpy for Habitat compatibility.
 mamba install numpy=1.26.4
 ```
@@ -130,11 +144,3 @@ VR support is still under development. Follow the instructions in the [quest_rea
 ```bash
 python examples/hitl/robot_teleop/robot_teleop.py --config-name robot_teleop_vr.yaml
 ```
-
-# TODOs
-Items not yet implemented but intended to be added
-- Additional murp robot platform configs
-- IK via pymomentum
-- meta hand integration and piecewise pose setting (for grasps)
-- robot sensor config and visualization
-- fixed base via constraint would be more dynamically stable than kinematic fixed base. Consider adding this.
