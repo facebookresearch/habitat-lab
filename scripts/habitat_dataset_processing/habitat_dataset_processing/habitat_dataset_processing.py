@@ -178,7 +178,7 @@ class AssetPipeline:
         parser.add_argument(
             "--input",
             type=str,
-            help="Path of the input `data/` folder to process.",
+            help="Path of the `data/` directory to process.",
         )
         parser.add_argument(
             "--output",
@@ -196,7 +196,7 @@ class AssetPipeline:
             "--debug",
             action="store_true",
             default=False,
-            help="Disable multiprocessing to allow for the debugger to step in.",
+            help="Disable multiprocessing to allow for debugging.",
         )
         args = parser.parse_args()
 
