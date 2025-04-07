@@ -17,8 +17,8 @@ def init_arm_and_hand(murp_env, policy_env):
         ]
     )
     rpy = R.from_matrix(rotation_matrix).as_euler("xyz", degrees=True)
+    # ee_rot_rad = np.array([1.70754709e-05, 9.00000171e01, -8.99999829e01])
     ee_rot = np.array([0, 90, 0])
-    # ee_rot = np.array([0, -263.6623610500003, -278.87338539])
     ee_rot_rad = np.deg2rad(ee_rot)
     pick_location = murp_env.env.sim._rigid_objects[0].translation
     pick_location[1] += 0.22  # add z offset
@@ -49,7 +49,7 @@ def lift_arm_and_hand(murp_env, policy_env):
         target_ee_pos,
         policy_env.open_loop_rot,
         curr_hand_pos,
-        timeout=50,
+        timeout=10,
         text="using arm controller",
     )
 
@@ -89,29 +89,24 @@ def main(config):
     if config.policy_cls == "HeuristicPickPolicy":
         heurestic_step(murp_env, config, policy_env)
     else:
-        hand = config.hand
-
         murp_env.reset_robot(murp_env.env.current_episode.action_target[0])
+        # arm control
+        init_arm_and_hand(murp_env, policy_env)
+        # grasp control
+        murp_env.env.sim.articulated_agent._robot_wrapper.teleport = False
 
-    murp_env.reset_robot(murp_env.env.current_episode.action_target[0])
-
-    # arm control
-    init_arm_and_hand(murp_env, policy_env)
-    # grasp control
-    murp_env.env.sim.articulated_agent._robot_wrapper.teleport = False
-
-    max_steps = 99
-    if policy_env.debug:
-        max_steps = len(policy_env.traj)
-    for i in range(99):
-        obs_dict = policy_env.get_obs_dict(convention="isaac")
-        action = policy_env.policy.act(obs_dict)
-        policy_env.step(action)
-        # print("action: ", action)
-        policy_env.progress_ctr += 1
-        # policy_env.prev_targets = action
-    lift_arm_and_hand(murp_env, policy_env)
-    print("saved video to: ", murp_env.save_path)
+        max_steps = 99
+        if policy_env.debug:
+            max_steps = len(policy_env.traj)
+        for i in range(99):
+            obs_dict = policy_env.get_obs_dict(convention="isaac")
+            action = policy_env.policy.act(obs_dict)
+            policy_env.step(action)
+            # print("action: ", action)
+            policy_env.progress_ctr += 1
+            # policy_env.prev_targets = action
+        lift_arm_and_hand(murp_env, policy_env)
+        print("saved video to: ", murp_env.save_path)
 
 
 if __name__ == "__main__":

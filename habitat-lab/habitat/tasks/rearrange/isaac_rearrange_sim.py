@@ -503,7 +503,9 @@ class IsaacRearrangeSim(HabitatSim):
                 stage.RemovePrim(prim.GetPath())
                 print(f"Removed prim: {prim.GetPath()}")
 
-    def get_prim_transform(self, asset_path=None, convention="rpy"):
+    def get_prim_transform(
+        self, asset_path=None, coord_convention="hab", convention="rpy"
+    ):
         """Get Scene prim's position and rotation."""
         if asset_path is None:
             asset_path = self.world_asset_path
@@ -515,15 +517,22 @@ class IsaacRearrangeSim(HabitatSim):
         rotation: Gf.Rotation = matrix.ExtractRotation()
         quat_rotation: Gf.Quatd = matrix.ExtractRotationQuat()
         prim_trans = np.array([*translate])
-        prim_trans_hab = isaac_prim_utils.usd_to_habitat_position(prim_trans)
         if convention == "rpy":
             prim_rot = rotation.GetAngle()
             return translate, prim_rot
-        else:
+        elif convention == "quat":
             scalar = quat_rotation.GetReal()
             vector = quat_rotation.GetImaginary()
             prim_rot = np.array([scalar, vector[0], vector[1], vector[2]])
-        return prim_trans_hab, prim_rot
+
+        if coord_convention == "hab":
+            prim_trans_hab = isaac_prim_utils.usd_to_habitat_position(
+                prim_trans
+            )
+            prim_rot_hab = isaac_prim_utils.usd_to_habitat_rotation(prim_rot)
+            return prim_trans_hab, prim_rot_hab
+
+        return prim_trans, prim_rot
 
     @add_perf_timing_func()
     def _setup_semantic_ids(self):

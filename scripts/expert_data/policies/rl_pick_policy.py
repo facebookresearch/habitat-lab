@@ -18,6 +18,8 @@ third_party_ckpt_root_folder = (
 sys.path.append(third_party_ckpt_root_folder)
 from gum.planning.rl.ppo import PPO
 
+from habitat.isaac_sim import isaac_prim_utils
+
 
 class RLPickPolicy:
     def __init__(self, murp_env):
@@ -41,48 +43,21 @@ class RLPickPolicy:
     def load_checkpoint(self):
         return PPO.from_checkpoint(self.checkpoint_path)
 
-    def convert_to_obj_frame(
-        self, translation, rotation, rotation_convention="wxyz"
+    def convert_to_ref_frame(
+        self,
+        translation,
+        rotation,
+        global_T_ref_frame,
+        rotation_convention="wxyz",
     ):
         if rotation_convention == "wxyz":
-            rotation = np.array(
-                [rotation[3], rotation[0], rotation[1], rotation[2]]
-            )
+            # convert from wxyz to xyzw
+            rotation = self.wxyz_to_xyzw(rotation)
 
         self.global_T_asset = create_T_matrix(translation, rotation)
         # invert and multiply
-        obj_T_asset = np.linalg.inv(self.global_T_obj) @ self.global_T_asset
-        return obj_T_asset[:3, -1], obj_T_asset[:3, :3]
-
-    def get_fingertip_poses(self, convention="local"):
-        finger_poses, finger_rots = (
-            self.env.sim.articulated_agent._robot_wrapper.fingertip_right_pose()
-        )
-
-        if convention != "local":
-            return finger_poses, finger_rots
-        else:
-            finger_pos_split = np.array(finger_poses).reshape(-1, 3).tolist()
-            finger_rot_split = np.array(finger_rots).reshape(-1, 4).tolist()
-            # get position and rotation for each finger
-            obj_T_ee_poses, obj_T_ee_rots = [], []
-            num_fingers = 4
-            for i in range(len(finger_pos_split)):
-                if self.convention == "isaac":
-                    finger_pos_split[i] = self.convert_position_conventions(
-                        finger_pos_split[i]
-                    )
-
-                ee_pos, ee_rot = self.convert_to_obj_frame(
-                    finger_pos_split[i], finger_rot_split[i]
-                )
-
-                obj_T_ee_poses.extend(ee_pos)
-                # convert from 3x3 rotation matrix to 4-dim quaternion
-                ee_rot = R.from_matrix(ee_rot).as_quat()
-                obj_T_ee_rots.extend(ee_rot)
-                # increment by 3 for each finger
-            return obj_T_ee_poses, obj_T_ee_rots
+        ref_T_asset = np.linalg.inv(global_T_ref_frame) @ self.global_T_asset
+        return ref_T_asset[:3, -1], ref_T_asset[:3, :3]
 
     def convert_position_conventions(self, position):
         x, y, z = position
@@ -108,39 +83,8 @@ class RLPickPolicy:
             joints_isaac[12:] = joints[4:8]
             return joints_isaac
 
-    def reset(self):
-        self.progress_ctr = 0
-        self.obj_prim_path = (
-            str(self.env.sim._rigid_objects[0]._prim)
-            .split("<")[1]
-            .split(">")[0]
-        )
-        self.object_name = self.env.current_episode.rigid_objs[0][0]
-        self.target_fingers = np.zeros(16)
-        pc, normals = sample_point_cloud_from_urdf(
-            os.path.abspath("data/assets"),
-            f"dexgraspnet2/meshdata/{self.object_name}/simplified_sdf.urdf",
-            100,
-            seed=4,
-        )
-        self.gt_object_point_clouds__object = torch.tensor(pc).unsqueeze(0)
+    def get_priv_info(self):
         self.private_info = {}
-
-        # quat in wxyz format
-        obj_trans, obj_rot = self.env.sim.get_prim_transform(
-            self.obj_prim_path, convention="quat"
-        )
-        if self.convention == "isaac":
-            obj_trans = self.convert_position_conventions(obj_trans)
-        obj_rot_wxyz = np.array(
-            [obj_rot[3], obj_rot[0], obj_rot[1], obj_rot[2]]
-        )
-        self.global_T_obj = create_T_matrix(obj_trans, obj_rot_wxyz)
-        obj_T_obj_pos, obj_T_obj_rot = self.convert_to_obj_frame(
-            obj_trans, obj_rot
-        )
-        self.private_info["object_trans"] = obj_T_obj_pos
-
         # randomly sample the object scale, mass, and friction
         self.private_info["object_scale"] = torch.tensor(
             [np.random.choice([0.77, 0.79, 0.81, 0.83, 0.84])]
@@ -158,71 +102,286 @@ class RLPickPolicy:
                 np.random.uniform(-0.01, 0.01),
             ]
         )
-        self.private_info["object_rot"] = obj_T_obj_rot.flatten()
-        self.private_info["object_angvel"] = torch.tensor(
-            self.env.sim._rigid_objects[0]._rigid_prim.get_angular_velocity()
-        )
-
-        obj_T_ee_poses, obj_T_ee_rots = self.get_fingertip_poses(
-            convention="local"
-        )
-        self.private_info["fingertip_trans"] = torch.tensor(obj_T_ee_poses)
         self.private_info["object_restitution"] = torch.tensor(
             [np.random.uniform(0, 1.0)]
         )
 
-        curr_ee_pos, curr_ee_rot_quat = self.murp_wrapper.get_curr_ee_pose(
-            convention="quat"
-        )
-        if self.convention == "isaac":
-            curr_ee_pos = self.convert_position_conventions(curr_ee_pos)
-        wrist_axis_angle = quat_to_axis_angle(torch.tensor(curr_ee_rot_quat))
+        # initialize object and fingertips to zeros
+        self.private_info["object_trans"] = torch.zeros(3)
+        self.private_info["object_rot"] = torch.zeros(4)
+        self.private_info["object_angvel"] = torch.zeros(3)
 
-        curr_hand_pos = self.murp_wrapper.get_curr_hand_pose()
-        if self.convention == "isaac":
-            curr_hand_pos = self.map_joints(curr_hand_pos, from_isaac=True)
+        self.private_info["fingertip_trans"] = torch.zeros(12)
 
-        targets = np.concatenate(
-            [curr_ee_pos, wrist_axis_angle.cpu().numpy(), curr_hand_pos]
+    def xyzw_to_wxyz(self, quat_xyzw):
+        # convert from xyzw to wxyz
+        return np.array(
+            [quat_xyzw[3], quat_xyzw[0], quat_xyzw[1], quat_xyzw[2]]
         )
+
+    def wxyz_to_xyzw(self, quat_wxyz):
+        # convert from wxyz to xyzw
+        return np.array(
+            [quat_wxyz[1], quat_wxyz[2], quat_wxyz[3], quat_wxyz[0]]
+        )
+
+    def get_obj_T_matrix(self):
+        # quat in wxyz format
+        hab_global_T_obj_trans, hab_global_T_obj_rot_xyzw = (
+            self.env.sim.get_prim_transform(
+                self.obj_prim_path, convention="quat"
+            )
+        )
+        hab_global_T_obj_rot_wxyz = self.xyzw_to_wxyz(
+            hab_global_T_obj_rot_xyzw
+        )
+        # if self.convention == "isaac":
+        #     isaac_global_T_obj_trans = (
+        #         isaac_prim_utils.habitat_to_usd_position(
+        #             hab_global_T_obj_trans
+        #         )
+        #     )
+        #     hab_global_T_obj_rot_wxyz = self.xyzw_to_wxyz(
+        #         hab_global_T_obj_rot_xyzw
+        #     )
+        #     isaac_global_T_obj_rot_wxyz = (
+        #         isaac_prim_utils.habitat_to_usd_rotation(
+        #             hab_global_T_obj_rot_wxyz
+        #         )
+        #     )
+        #     isaac_global_T_obj_rot_xyzw = self.wxyz_to_xyzw(
+        #         isaac_global_T_obj_rot_wxyz
+        #     )
+
+        isaac_global_T_obj_trans, isaac_global_T_obj_rot_wxyz = (
+            self.env.sim.get_prim_transform(
+                self.obj_prim_path, coord_convention="isaac", convention="quat"
+            )
+        )
+        self.isaac_global_T_obj = create_T_matrix(
+            isaac_global_T_obj_trans, isaac_global_T_obj_rot_wxyz
+        )
+        self.hab_global_T_obj = create_T_matrix(
+            hab_global_T_obj_trans, hab_global_T_obj_rot_wxyz
+        )
+
+    def habitat_to_isaac(self, hab_trans, hab_quat, convention="xyzw"):
+        isaac_trans = isaac_prim_utils.habitat_to_usd_position(hab_trans)
+        if convention == "xyzw":
+            hab_quat = self.xyzw_to_wxyz(hab_quat)
+        isaac_quat_wyxz = isaac_prim_utils.habitat_to_usd_rotation(hab_quat)
+        isaac_quat_xyzw = self.wxyz_to_xyzw(isaac_quat_wyxz)
+        return isaac_trans, isaac_quat_xyzw
+
+    def get_hand_pose(self):
+        isaac_global_T_ee_trans, isaac_global_T_ee_rot_quat_xyzw = (
+            self.murp_wrapper.get_curr_ee_pose(
+                coord_convention="usd", convention="quat"
+            )
+        )
+        # hab_global_T_ee_trans, hab_global_T_ee_rot_quat_xyzw = (
+        #     self.murp_wrapper.get_curr_ee_pose(
+        #         coord_convention="usd", convention="quat"
+        #     )
+        # )
+        # isaac_global_T_ee_trans, isaac_global_T_ee_rot_quat_xyzw = (
+        #     self.habitat_to_isaac(
+        #         hab_global_T_ee_trans,
+        #         hab_global_T_ee_rot_quat_xyzw,
+        #         convention="xyzw",
+        #     )
+        # )
+
+        isaac_obj_T_ee_trans, isaac_obj_T_ee_rot_mat = (
+            self.convert_to_ref_frame(
+                isaac_global_T_ee_trans,
+                isaac_global_T_ee_rot_quat_xyzw,
+                self.isaac_global_T_obj,
+                rotation_convention="xyzw",
+            )
+        )
+        isaac_obj_T_ee_rot_quat_xyzw = R.from_matrix(
+            isaac_obj_T_ee_rot_mat
+        ).as_quat()
+
+        self.isaac_global_T_hand = create_T_matrix(
+            isaac_obj_T_ee_trans, isaac_obj_T_ee_rot_quat_xyzw
+        )
+        return isaac_obj_T_ee_trans, isaac_obj_T_ee_rot_quat_xyzw
+
+    def get_obj_transform(self):
+        # hab_global_T_obj_trans, hab_global_T_obj_rot_quat_wxyz = (
+        #     self.env.sim.get_prim_transform(
+        #         self.obj_prim_path, convention="quat"
+        #     )
+        # )
+        # isaac_global_T_obj_trans, isaac_global_T_obj_rot_quat_wxyz = (
+        #     self.habitat_to_isaac(
+        #         hab_global_T_obj_trans,
+        #         hab_global_T_obj_rot_quat_wxyz,
+        #         convention="wxyz",
+        #     )
+        # )
+        isaac_global_T_obj_trans, isaac_global_T_obj_rot_quat_wxyz = (
+            self.env.sim.get_prim_transform(
+                self.obj_prim_path, coord_convention="isaac", convention="quat"
+            )
+        )
+
+        isaac_obj_T_hand_trans, isaac_obj_T_hand_rot_mat = (
+            self.convert_to_ref_frame(
+                isaac_global_T_obj_trans,
+                isaac_global_T_obj_rot_quat_wxyz,
+                self.isaac_global_T_hand,
+            )
+        )
+        isaac_obj_T_hand_rot_quat_xyzw = R.from_matrix(
+            isaac_obj_T_hand_rot_mat
+        ).as_quat()
+        return isaac_obj_T_hand_trans, isaac_obj_T_hand_rot_quat_xyzw
+
+    def get_fingertip_poses(self):
+        # hab_global_T_finger_trans, hab_global_T_finger_rot_ = (
+        #     self.env.sim.articulated_agent._robot_wrapper.fingertip_right_pose()
+        # )
+        isaac_global_T_finger_trans, isaac_global_T_finger_rot_wxyz = (
+            self.env.sim.articulated_agent._robot_wrapper.fingertip_right_pose(
+                convention="isaac"
+            )
+        )
+
+        isaac_global_T_finger_trans_split = (
+            np.array(isaac_global_T_finger_trans).reshape(-1, 3).tolist()
+        )
+        isaac_global_T_finger_rot_wxyz_split = (
+            np.array(isaac_global_T_finger_rot_wxyz).reshape(-1, 4).tolist()
+        )
+        # get position and rotation for each finger
+        isaac_finger_T_obj_translations, isaac_finger_T_obj_rotations = [], []
+        num_fingers = 4
+        for i in range(len(isaac_global_T_finger_trans_split)):
+            isaac_finger_T_obj_trans, isaac_finger_T_obj_rot_mat = (
+                self.convert_to_ref_frame(
+                    isaac_global_T_finger_trans_split[i],
+                    isaac_global_T_finger_rot_wxyz_split[i],
+                    self.isaac_global_T_obj,
+                )
+            )
+
+            isaac_finger_T_obj_translations.extend(isaac_finger_T_obj_trans)
+            # convert from 3x3 rotation matrix to 4-dim quaternion
+            isaac_finger_T_obj_rot_quat_xyzw = R.from_matrix(
+                isaac_finger_T_obj_rot_mat
+            ).as_quat()
+            isaac_finger_T_obj_rotations.extend(
+                isaac_finger_T_obj_rot_quat_xyzw
+            )
+            # increment by 3 for each finger
+        return isaac_finger_T_obj_translations, isaac_finger_T_obj_rotations
+
+    def get_curr_targets(self):
+        isaac_obj_T_ee_pos, isaac_obj_T_ee_rot_quat_xyzw = self.get_hand_pose()
+        isaac_obj_T_ee_rot_quat_rpy = R.from_quat(
+            isaac_obj_T_ee_rot_quat_xyzw
+        ).as_euler("xyz", degrees=False)
+
+        right_hand_joints = torch.tensor(
+            self.env.sim.articulated_agent._robot_wrapper.right_hand_joint_pos
+        )
+        return torch.cat(
+            [
+                torch.tensor(isaac_obj_T_ee_pos),
+                torch.tensor(isaac_obj_T_ee_rot_quat_rpy),
+                right_hand_joints,
+            ]
+        )
+
+    def reset(self):
+        self.target_fingers = np.zeros(16)
+        self.progress_ctr = 0
+        self.obj_prim_path = (
+            str(self.env.sim._rigid_objects[0]._prim)
+            .split("<")[1]
+            .split(">")[0]
+        )
+        self.object_name = self.env.current_episode.rigid_objs[0][0]
+        pc, normals = sample_point_cloud_from_urdf(
+            os.path.abspath("data/assets"),
+            f"dexgraspnet2/meshdata/{self.object_name}/simplified_sdf.urdf",
+            100,
+            seed=4,
+        )
+        self.gt_object_point_clouds__object = torch.tensor(pc).unsqueeze(0)
+
+        self.get_priv_info()
+        self.get_obj_T_matrix()
+        targets = self.get_curr_targets()
 
         # initialize to values from beginning, not zero
         self.obs_buf_lag_history = torch.tensor(
             np.repeat(targets, 6)
         )  # joints = 22-dim, target = 22-dim, history of 3
-        self.target_obs = torch.tensor(targets)
+        self.prev_targets = torch.tensor(targets)
         self.behavior_action = torch.zeros(22).unsqueeze(0)
 
     def get_obs_dict(self, convention="hab"):
         obs_dict = {}
-        obj_trans, obj_rot = self.env.sim.get_prim_transform(
-            self.obj_prim_path, convention="quat"
-        )
-        if self.convention == "isaac":
-            obj_trans = self.convert_position_conventions(obj_trans)
-        # obj_trans = torch.tensor(obj_trans).unsqueeze(0)
-        # obj_rot = torch.tensor(obj_rot).unsqueeze(0)
+        self.get_obj_T_matrix()
 
-        obj_T_obj_pos, obj_T_obj_rot = self.convert_to_obj_frame(
-            obj_trans, obj_rot
-        )
-        obj_T_obj_rot_quat = R.from_matrix(obj_T_obj_rot).as_quat()
-        obj_T_obj_pos = torch.tensor(obj_T_obj_pos)
-        obj_T_obj_rot_quat = torch.tensor(obj_T_obj_rot_quat)
+        obs_dict["behavior_action"] = self.behavior_action
 
+        ## get hand_base_pose, relative to world (under object)
+
+        isaac_obj_T_ee_pos, isaac_obj_T_ee_rot_quat_xyzw = self.get_hand_pose()
+        obs_dict["hand_base_pose"] = torch.cat(
+            [
+                torch.tensor(isaac_obj_T_ee_pos),
+                torch.tensor(isaac_obj_T_ee_rot_quat_xyzw),
+            ]
+        ).unsqueeze(0)
+
+        ## get gt object point cloud in hand frame
         object_pc__world = to_world_frame(
             self.gt_object_point_clouds__object,
-            obj_T_obj_rot_quat.unsqueeze(0),
-            obj_T_obj_pos.unsqueeze(0),
+            torch.tensor(isaac_obj_T_ee_rot_quat_xyzw).unsqueeze(0),
+            torch.tensor(isaac_obj_T_ee_pos).unsqueeze(0),
         )
         obs_dict["gt_object_point_cloud"] = object_pc__world
-        self.private_info["object_trans"] = obj_T_obj_pos
-        self.private_info["object_rot"] = obj_T_obj_rot_quat
-        obj_T_ee_poses, obj_T_ee_rots = self.get_fingertip_poses(
-            convention="local"
-        )
-        self.private_info["fingertip_trans"] = torch.tensor(obj_T_ee_poses)
 
+        ## get object translation, rotation and angular velocity in hand frame
+        isaac_obj_T_hand_trans, isaac_obj_T_hand_rot_quat_xyzw = (
+            self.get_obj_transform()
+        )
+        self.private_info["object_trans"] = torch.tensor(
+            isaac_obj_T_hand_trans
+        )
+        self.private_info["object_rot"] = torch.tensor(
+            isaac_obj_T_hand_rot_quat_xyzw
+        )
+        self.private_info["object_angvel"] = torch.tensor(
+            self.env.sim._rigid_objects[0]._rigid_prim.get_angular_velocity()
+        )
+
+        ## get fingertip translation in hand frame
+        isaac_finger_T_obj_translations, isaac_finger_T_obj_rotations = (
+            self.get_fingertip_poses()
+        )
+        self.private_info["fingertip_trans"] = torch.tensor(
+            isaac_finger_T_obj_translations
+        )
+
+        prev_obs_buf = self.obs_buf_lag_history[44:]
+
+        curr_targets = self.get_curr_targets()
+        print("curr_targets: ", curr_targets)
+        print("self.prev_targets: ", self.prev_targets)
+        cur_obs_buf = torch.cat([curr_targets, self.prev_targets])
+        obs_buf = torch.cat([prev_obs_buf, cur_obs_buf]).unsqueeze(0)
+
+        clip_obs = 5.0
+        obs_dict["obs"] = torch.clamp(obs_buf, -clip_obs, clip_obs)
+
+        ## set priv info
         obs_dict["priv_info"] = torch.cat(
             [
                 self.private_info["object_trans"],
@@ -236,53 +395,41 @@ class RLPickPolicy:
                 self.private_info["object_restitution"],
             ]
         ).unsqueeze(0)
-        clip_obs = 5.0
-        prev_obs_buf = self.obs_buf_lag_history[44:]
-        joints_obs = torch.tensor(
-            self.env.sim.articulated_agent._robot_wrapper.right_hand_joint_pos
-        )
-        curr_ee_pos, curr_ee_rot_rpy = self.murp_wrapper.get_curr_ee_pose()
-        if self.convention == "isaac":
-            curr_ee_pos = self.convert_position_conventions(curr_ee_pos)
-        _, curr_ee_rot_quat = self.murp_wrapper.get_curr_ee_pose(
-            convention="quat"
-        )
-        obj_T_ee_pos, obj_T_ee_rot = self.convert_to_obj_frame(
-            curr_ee_pos, curr_ee_rot_quat, rotation_convention="xyzw"
-        )
-        obj_T_ee_rot_rpy = R.from_matrix(obj_T_ee_rot).as_euler(
-            "xyz", degrees=False
-        )
-        obj_T_ee_rot_quat = R.from_matrix(obj_T_ee_rot).as_quat()
-        # convert to torch and concatenate
-        wrist_pose = torch.cat(
-            [torch.tensor(obj_T_ee_pos), torch.tensor(obj_T_ee_rot_rpy)]
-        )
-        cur_obs_buf = torch.cat([joints_obs, wrist_pose, self.target_obs])
 
-        obs_buf = torch.cat([prev_obs_buf, cur_obs_buf]).unsqueeze(0)
-        obs_dict["obs"] = torch.clamp(obs_buf, -clip_obs, clip_obs)
         # add current observation to obs_buf_lag_history
-
         self.obs_buf_lag_history = torch.cat([prev_obs_buf, cur_obs_buf])
 
-        obs_dict["hand_base_pose"] = torch.cat(
-            [torch.tensor(obj_T_ee_pos), torch.tensor(obj_T_ee_rot_quat)]
-        ).unsqueeze(0)
-        obs_dict["behavior_action"] = self.behavior_action
         obs_dict["progress_float"] = torch.tensor(
             [self.progress_ctr]
         ).unsqueeze(0)
+
+        if self.debug:
+            traj_obs = self.traj[self.progress_ctr + 1]["obs"]
+            keep_keys = [
+                "gt_object_point_cloud",
+                "progress_float",
+                "priv_info",
+                "obs",
+                "hand_base_pose",
+                "behavior_action",
+            ]
+            traj_obs["gt_object_point_cloud"] = obs_dict[
+                "gt_object_point_cloud"
+            ]
+            traj_obs["progress_float"] = obs_dict["progress_float"]
+            # traj_obs["priv_info"] = obs_dict["priv_info"]
+            # traj_obs["hand_base_pose"] = obs_dict["hand_base_pose"]
+            obs_dict = {k: v for k, v in traj_obs.items() if k in keep_keys}
         for k, v in obs_dict.items():
             obs_dict[k] = v.float().to("cuda:0")
-            # print(k, v.shape)
 
-        # print("obs_dict: ", obs_dict)
+        self.obs_dict = obs_dict
         return obs_dict
 
     def step(self, action):
-        if self.debug:
-            action = self.traj[self.progress_ctr + 1]["act"]
+        # if self.debug:
+        # traj_action = self.traj[self.progress_ctr + 1]["act"]
+        # action = traj_action
         wrist_scale = 0.2
         finger_scale = 0.05  # 0.005
         # delta_wrist_trans, delta_wrist_axis_angle, delta_fingers
@@ -308,9 +455,16 @@ class RLPickPolicy:
 
         # apply the deltas to the current wrist pose
         delta_wrist_trans = action[0, :3]
+
+        print("action: ", action)
+        print("delta_wrist_trans: ", delta_wrist_trans)
         # convert to habitat conventions
         delta_wrist_trans_hab = (
-            self.convert_position_conventions(delta_wrist_trans.cpu().numpy())
+            np.array(
+                isaac_prim_utils.habitat_to_usd_position(
+                    delta_wrist_trans.cpu().numpy()
+                )
+            )
             * wrist_scale
         )
         base_T_delta = create_T_matrix(
@@ -347,4 +501,5 @@ class RLPickPolicy:
             timeout=1,
             text="using RL pick controller",
         )
+        self.prev_targets = action.squeeze(0).cpu()
         self.behavior_action = action

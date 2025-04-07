@@ -89,7 +89,8 @@ def make_hab_cfg(agent_dict, action_dict):
     env_cfg = EnvironmentConfig()
     dataset_cfg = DatasetConfig(
         type="RearrangeDataset-v0",
-        data_path="/fsx-siro/jtruong/repos/vla-physics/habitat-lab/habitat-lab/habitat/tasks/rearrange/task_pick.json.gz",
+        # data_path="/fsx-siro/jtruong/repos/vla-physics/habitat-lab/habitat-lab/habitat/tasks/rearrange/task_pick.json.gz",
+        data_path="/fsx-siro/jtruong/repos/vla-physics/habitat-lab/results/open_cabinet.json.gz",
     )
 
     hab_cfg = HabitatConfig()
@@ -138,12 +139,12 @@ class ExpertDatagen:
         if user == "joanne":
             urdf_path = os.path.join(
                 data_path,
-                "murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_with_hand_2_vyshnav.urdf",
+                "murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_tmr_right_arm_only.urdf",
             )
             arm_urdf_path = os.path.join(
                 data_path,
                 # "murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_tmr_left_arm_only.urdf",
-                "murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_right_arm.urdf",
+                "murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_tmr_right_arm_only.urdf",
             )
             usda_path = os.path.join(
                 data_path, "usd/robots/franka_with_hand_right.usda"
@@ -186,7 +187,8 @@ class ExpertDatagen:
         self.env = init_rearrange_env(agent_dict, action_dict)
 
         aux = self.env.reset()
-        self.target_name = self.env.current_episode.action_target[0]
+        # self.target_name = self.env.current_episode.action_target[0]
+        self.target_name = "shelf"
         self.skill = skill
         self.save_path = f"output_env_murp_{self.skill}_{self.target_name}.mp4"
         self.writer = imageio.get_writer(
@@ -851,7 +853,7 @@ class ExpertDatagen:
             self.move_base(-1.0, 0.0)
 
     def run_expert_w_grasp(self, hand="left"):
-        self.target_name = self.env.current_episode.action_target[0]
+        self.target_name = "shelf"
         self.reset_robot(self.target_name)
         print("TARGET_NAME", self.target_name)
         self.target_ee_pos, self.target_ee_rot = (
@@ -1043,7 +1045,7 @@ class ExpertDatagen:
         ee_rot = rpy + np.array([0, 90, 0])
 
         # grap control
-        self.load_gum_oracle_policy()
+        # self.load_gum_oracle_policy()
         self.data_cache = self.load_grasp_cache()
         self.progress_ctr = 0
         self.obj_prim_path = (
@@ -1105,13 +1107,13 @@ class ExpertDatagen:
         self.policy = SimpleApproachLiftOraclePolicy(cfg, device="cuda:0")
 
     def main(self):
-        self.test_pick()
-        # for _ in range(self.env.number_of_episodes):
-        #     if self.skill == "pick":
-        #         self.test_pick()
-        #     elif self.skill == "open":
-        #         self.run_expert_w_grasp(hand="right")
-        #     self.env.reset()
+        # self.test_pick()
+        for _ in range(self.env.number_of_episodes):
+            if self.skill == "pick":
+                self.test_pick()
+            elif self.skill == "open":
+                self.run_expert_w_grasp(hand="right")
+            self.env.reset()
         print(f"saved video to: {self.save_path}")
 
 

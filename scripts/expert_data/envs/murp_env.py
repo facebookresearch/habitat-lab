@@ -225,17 +225,23 @@ class MurpEnv:
             "open"
         )
 
-    def get_curr_ee_pose(self, arm="right", convention="rpy", use_global=True):
+    def get_curr_ee_pose(
+        self,
+        arm="right",
+        coord_convention="hab",
+        convention="rpy",
+        use_global=True,
+    ):
         if arm == "left":
             curr_ee_pos_vec, curr_ee_rot_quat = (
                 self.env.sim.articulated_agent._robot_wrapper.ee_pose(
-                    use_global=use_global
+                    convention=coord_convention, use_global=use_global
                 )
             )
         elif arm == "right":
             curr_ee_pos_vec, curr_ee_rot_quat = (
                 self.env.sim.articulated_agent._robot_wrapper.ee_right_pose(
-                    use_global=use_global
+                    convention=coord_convention, use_global=use_global
                 )
             )
         curr_ee_pos = np.array([*curr_ee_pos_vec])
