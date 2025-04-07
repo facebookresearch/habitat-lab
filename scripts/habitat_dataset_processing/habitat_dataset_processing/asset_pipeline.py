@@ -324,11 +324,11 @@ class AssetPipeline:
             ), f"A scene blacklist is specified for a dataset that does not contain any scene: '{source.dataset_config}'."
             assert (
                 include_orphan_assets == True
-            ), f"`include_orphan_assets` is specified for a dataset that does not contain any scene: '{source.dataset_config}'."
+            ), f"`include_orphan_assets` must be set for datasets that does not contain any scene: '{source.dataset_config}'."
 
         # Remove assets that do not appear in any scene.
         if (
-            include_orphan_assets
+            not include_orphan_assets
             or whitelist is not None
             or blacklist is not None
         ):
@@ -390,9 +390,7 @@ class AssetPipeline:
         max_chunk_size = 10
         chunk_index = 0
         current_chunk_length = 0
-        output_dir = os.path.join(
-            config.output_dir, self._output_subdir, config.data_folder_name
-        )
+        output_dir = os.path.join(config.output_dir, self._output_subdir)
         for database_index in range(len(self._databases)):
             database = self._databases[database_index]
 
@@ -403,9 +401,11 @@ class AssetPipeline:
 
             for asset in database._template_name_to_asset.values():
                 for asset_path in asset.dependencies.union([asset.path]):
-                    dest_path = os.path.join(
-                        output_dir, asset_path[len(config.input_dir) + 1 :]
+                    relative_path = os.path.join(
+                        config.data_folder_name,
+                        asset_path[len(config.input_dir) + 1 :],
                     )
+                    dest_path = os.path.join(output_dir, relative_path)
                     jobs.append(
                         Job(
                             asset_path=asset_path,
@@ -425,13 +425,15 @@ class AssetPipeline:
 
                     # LOCAL: Add to the single 'local' group.
                     if group_type == GroupType.LOCAL:
-                        add_asset_to_group(asset_path, local_group_name)
+                        add_asset_to_group(relative_path, local_group_name)
                     # GROUP_TOGETHER: Add to a per-database group.
                     elif group_type == GroupType.GROUP_TOGETHER:
-                        add_asset_to_group(asset_path, database.database_name)
+                        add_asset_to_group(
+                            relative_path, database.database_name
+                        )
                     # GROUP_SEPARATELY: Add to a chunk.
                     elif group_type == GroupType.GROUP_SEPARATELY:
-                        add_asset_to_group(asset_path, str(chunk_index))
+                        add_asset_to_group(relative_path, str(chunk_index))
                         current_chunk_length += 1
                         if current_chunk_length > max_chunk_size:
                             current_chunk_length = 0
@@ -440,10 +442,10 @@ class AssetPipeline:
                     elif group_type == GroupType.GROUP_BY_SCENE:
                         if len(asset.scenes) > 0:
                             for scene in asset.scenes:
-                                add_asset_to_group(asset_path, scene)
+                                add_asset_to_group(relative_path, scene)
                         else:
                             # If the asset is orphan, fallback to 'GROUP_SEPARATELY'.
-                            add_asset_to_group(asset_path, str(chunk_index))
+                            add_asset_to_group(relative_path, str(chunk_index))
                             current_chunk_length += 1
                             if current_chunk_length > max_chunk_size:
                                 current_chunk_length = 0

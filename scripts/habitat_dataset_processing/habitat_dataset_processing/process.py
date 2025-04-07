@@ -46,7 +46,8 @@ def create_metadata_file(groups: dict[str, list[str]], output_dir: str):
     for group in content["groups"].values():
         assets_to_remove: list[str] = []
         for asset in group:
-            if not os.path.exists(asset):
+            asset_path = os.path.join(output_dir, asset)
+            if not os.path.exists(asset_path):
                 assets_to_remove.append(asset)
                 assets_removed += 1
         for asset in assets_to_remove:
