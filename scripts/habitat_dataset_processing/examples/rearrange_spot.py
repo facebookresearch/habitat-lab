@@ -32,7 +32,7 @@ if __name__ == "__main__":
     object_dataset_settings = ProcessingSettings(
         operation=Operation.PROCESS,
         decimate=False,
-        group=GroupType.GROUP_SEPARATELY,
+        group=GroupType.GROUP_BY_CHUNK,
     )
 
     datasets: list[HabitatDatasetSource] = [
@@ -55,7 +55,6 @@ if __name__ == "__main__":
                 decimate=False,
                 group=GroupType.GROUP_BY_SCENE,
             ),
-            scene_whitelist=["102344250"],
             include_orphan_assets=False,
         ),
         # ai2thorhab

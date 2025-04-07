@@ -8,9 +8,14 @@ import argparse
 import fnmatch
 import json
 import os
+import shutil
 from pathlib import Path
 from typing import Any, Optional
 
+from habitat_dataset_processing.asset_processor import (
+    create_metadata_file,
+    process_models,
+)
 from habitat_dataset_processing.configs import (
     AssetSource,
     Config,
@@ -19,10 +24,6 @@ from habitat_dataset_processing.configs import (
     ProcessingSettings,
 )
 from habitat_dataset_processing.job import Job
-from habitat_dataset_processing.process import (
-    create_metadata_file,
-    simplify_models,
-)
 from habitat_dataset_processing.util import (
     get_dependencies,
     resolve_relative_path,
@@ -383,6 +384,12 @@ class AssetPipeline:
         for assets in config.additional_assets:
             self._load_assets(assets)
 
+        # (Re)create output dir
+        output_dir = os.path.join(config.output_dir, self._output_subdir)
+        if os.path.exists(output_dir):
+            shutil.rmtree(output_dir)
+        os.makedirs(output_dir)
+
         # Create a list of processing commands
         jobs: list[Job] = []
         groups: dict[str, list[str]] = {}
@@ -390,7 +397,6 @@ class AssetPipeline:
         max_chunk_size = 10
         chunk_index = 0
         current_chunk_length = 0
-        output_dir = os.path.join(config.output_dir, self._output_subdir)
         for database_index in range(len(self._databases)):
             database = self._databases[database_index]
 
@@ -426,13 +432,13 @@ class AssetPipeline:
                     # LOCAL: Add to the single 'local' group.
                     if group_type == GroupType.LOCAL:
                         add_asset_to_group(relative_path, local_group_name)
-                    # GROUP_TOGETHER: Add to a per-database group.
-                    elif group_type == GroupType.GROUP_TOGETHER:
+                    # GROUP_BY_DATASET: Add to a per-database group.
+                    elif group_type == GroupType.GROUP_BY_DATASET:
                         add_asset_to_group(
                             relative_path, database.database_name
                         )
-                    # GROUP_SEPARATELY: Add to a chunk.
-                    elif group_type == GroupType.GROUP_SEPARATELY:
+                    # GROUP_BY_CHUNK: Add to a chunk.
+                    elif group_type == GroupType.GROUP_BY_CHUNK:
                         add_asset_to_group(relative_path, str(chunk_index))
                         current_chunk_length += 1
                         if current_chunk_length > max_chunk_size:
@@ -444,12 +450,12 @@ class AssetPipeline:
                             for scene in asset.scenes:
                                 add_asset_to_group(relative_path, scene)
                         else:
-                            # If the asset is orphan, fallback to 'GROUP_SEPARATELY'.
+                            # If the asset is orphan, fallback to 'GROUP_BY_CHUNK'.
                             add_asset_to_group(relative_path, str(chunk_index))
                             current_chunk_length += 1
                             if current_chunk_length > max_chunk_size:
                                 current_chunk_length = 0
                                 chunk_index += 1
 
-        simplify_models(jobs, config)
+        process_models(jobs, config)
         create_metadata_file(groups, output_dir)

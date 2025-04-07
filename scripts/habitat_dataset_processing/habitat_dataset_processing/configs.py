@@ -22,13 +22,13 @@ class GroupType(Enum):
     Use for assets that are expected to be used every time.
     """
 
-    GROUP_TOGETHER = 1
+    GROUP_BY_DATASET = 1
     """
     Group all assets within this data source together.
     Use when most assets within a dataset are intended to be used together (e.g. a robot).
     """
 
-    GROUP_SEPARATELY = 2
+    GROUP_BY_CHUNK = 2
     """
     Assets will be grouped in arbitrary chunks.
     Use for large datasets with many objects that are occasionally used (e.g. ycb, ovmm, etc.).

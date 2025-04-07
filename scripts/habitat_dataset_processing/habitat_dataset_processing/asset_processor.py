@@ -27,7 +27,7 @@ SKIPPED_EXTENSIONS: list[str] = [".urdf"]
 def create_metadata_file(groups: dict[str, list[str]], output_dir: str):
     """
     Create output metadata file.
-    This file is consumed by custom external asset pipelines (e.g. Unity) to manage assets.
+    This file may be consumed by custom external asset pipelines (e.g. Unity) to package assets.
 
     Contents:
     * version: Version of the file format. Bump when breaking backward compatibility.
@@ -193,7 +193,7 @@ def process_model(args: AssetProcessorArgs):
     return result
 
 
-def simplify_models(jobs: list[Job], config: Config):
+def process_models(jobs: list[Job], config: Config):
     start_time = time.time()
     total_source_tris = 0
     total_simplified_tris = 0
