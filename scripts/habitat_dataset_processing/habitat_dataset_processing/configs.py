@@ -65,6 +65,16 @@ class ProcessingSettings:
     decimate: bool
     group: GroupType
 
+    def __init__(
+        self,
+        operation: Operation,
+        decimate: bool,
+        group: GroupType = GroupType.LOCAL,
+    ):
+        self.operation = operation
+        self.decimate = decimate
+        self.group = group
+
 
 @dataclass
 class HabitatDatasetSource:
