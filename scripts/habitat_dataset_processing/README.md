@@ -24,14 +24,14 @@ The processed datasets retain the directory structure of the input (e.g. `data/d
 1. Create a new conda environments for dataset processing.
 
 ```
-conda create -n unity python=3.10
-conda activate unity
+conda create -n datasets python=3.10
+conda activate datasets
 ```
 
 2. Install the project.
 
 ```
-cd scripts/unity_dataset_processing
+cd scripts/habitat_dataset_processing
 pip install -e .
 ```
 
@@ -59,7 +59,7 @@ It is recommended that you create a new `conda` environment so that it can be re
    * Scroll down to "Artifacts".
    * Download your the binaries that match your system (e.g. On Linux: `magnum-tools-v2020.06-...-linux-x64`)
    * Extract to a convenient location.
-4. Navigate to the `site-packages` of your new environment, e.g. `~/anaconda/envs/unity/lib/python3.10/site-packages/`.
+4. Navigate to the `site-packages` of your new environment, e.g. `~/anaconda/envs/datasets/lib/python3.10/site-packages/`.
 5. Create a `magnum.pth` file in this directory.
 6. Add the absolute path to `magnum-tools`'s `python` folder to this file, e.g:
 ```
