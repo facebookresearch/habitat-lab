@@ -39,18 +39,10 @@ from scripts.xr_pose_adapter import XRPose, XRPoseAdapter, XRTrajectory
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 # TODO LIST:
-# - define API for switching between saved poses (e.g. for grip poses)
-# - setup constraint management API
 # - setup pymomentum IK API
 
-# TODO Apr 4th:
-
 # GRASPING
-# - Add robot.py function for caching and loading a pose subset (e.g. only consider dofs for a set of links)
-# - Use robot hand link ids to construct and cache a "pre-grasp" hand pose
 # - Add UI to toggle the pre-grasp pose w/ default (XR button)
-# - Add geom grasp "sensor" which uses fingertip raycasts between thumb and other fingers to provide a "can grasp" signal for objects
-#   - hook this up with a visual representation
 # - Add a grasp manager API to constrain an object in the palm's coordinate space with successful pre-grasp and update the constraint frame when moving
 # - Add a "release grasp" control to toggle default hand pose and break the constraint
 # - bind the above UI to "index trigger" on each hand
@@ -631,9 +623,63 @@ class AppStateRobotTeleopViewer(AppState):
 
         # robot pose caching and loading
         if gui_input.get_key_down(KeyCode.P) and self.robot is not None:
-            self.robot.cache_pose()
+            # cache the current pose
+            print("Save pose to cache:")
+            configuration_subset_name = input(
+                " Enter the configuration subset key. (Press ENTER without input for full pose.) >"
+            )
+            if (
+                configuration_subset_name != ""
+                and configuration_subset_name not in self.robot.pos_subsets
+            ):
+                print(
+                    f" Invalid configuration subset name. Defined subsets are: {self.robot.pos_subsets.keys()}"
+                )
+                return
+            cached_pose_name = input(
+                "Enter the desired cache key name of the pose > "
+            )
+            if cached_pose_name == "":
+                print("No cache key name entered, defaulted to 'default'.")
+                cached_pose_name = "default"
+            if configuration_subset_name == "":
+                self.robot.cache_pose(pose_name=cached_pose_name)
+            else:
+                self.robot.pos_subsets[configuration_subset_name].cache_pose(
+                    pose_name=cached_pose_name
+                )
         if gui_input.get_key_down(KeyCode.O) and self.robot is not None:
-            self.robot.set_cached_pose()
+            # self.robot.set_cached_pose()
+            # load a pose from the cache
+            configuration_subset_name = input(
+                "Enter the configuration subset key. (Press ENTER without input for full pose.) >"
+            )
+            if (
+                configuration_subset_name != ""
+                and configuration_subset_name not in self.robot.pos_subsets
+            ):
+                print(
+                    f" Invalid configuration subset name. Defined subsets are: {self.robot.pos_subsets.keys()}"
+                )
+                return
+            cached_pose_name = input("Enter the cache key name of the pose > ")
+            if cached_pose_name == "":
+                print("No cache key name entered, defaulted to 'default'.")
+                cached_pose_name = "default"
+            if configuration_subset_name == "":
+                self.robot.set_cached_pose(
+                    pose_name=cached_pose_name,
+                    set_motor_targets=self.robot.using_joint_motors,
+                    set_positions=not self.robot.using_joint_motors,
+                )
+            else:
+                self.robot.pos_subsets[
+                    configuration_subset_name
+                ].set_cached_pose(
+                    pose_name=cached_pose_name,
+                    set_motor_targets=self.robot.using_joint_motors,
+                    set_positions=not self.robot.using_joint_motors,
+                )
 
         # Load next scene
         if gui_input.get_key_down(KeyCode.ZERO):
@@ -678,12 +724,25 @@ class AppStateRobotTeleopViewer(AppState):
         right = xr_input.right_controller
         from habitat_hitl.core.xr_input import XRButton
 
+        ###########################################################
+        ###########################################################
+        # Enumerate All XR Inputs here to avoid fragmentation and accidental overwriting
+        # LEFT CONTROLLER BUTTONS
         if left.get_buttons_down(XRButton.ONE):
             print("pressed one left")
             self.sync_xr_local_state()
             print("synced headset state...")
+        if left.get_buttons_up(XRButton.ONE):
+            pass
         if left.get_buttons_down(XRButton.TWO):
             print("pressed two left")
+        if left.get_buttons_up(XRButton.TWO):
+            pass
+        if left.get_buttons_down(XRButton.START):
+            print("pressed START left")
+            # NOTE: reserved by QuestReader for now...
+        if left.get_buttons_up(XRButton.START):
+            pass
 
         # RIGHT CONTROLLER BUTTONS
         if right.get_buttons_down(XRButton.ONE):
@@ -704,6 +763,16 @@ class AppStateRobotTeleopViewer(AppState):
             self.replay_xr_traj = not self.replay_xr_traj
             self.recording_xr_traj = False
             print(f"XR Traj playback = {self.replay_xr_traj}")
+        if right.get_buttons_up(XRButton.TWO):
+            pass
+        # NOTE: XRButton.START is reserved for Quest menu functionality
+
+        # NOTE: PRIMARY_HAND_TRIGGER mapped to IK toggle
+        # NOTE: PRIMARY_INDEX_TRIGGER mapped to grasping functionality
+
+        # TODO: PRIMARY_THUMBSTICK (click?) unmapped currently and available
+        ###########################################################
+        ###########################################################
 
         # construct the xr -> robot frame alignment transform
         # first construct a 4x4 with the local correction components from sync_xr_local_state
@@ -781,51 +850,69 @@ class AppStateRobotTeleopViewer(AppState):
         )
         if xr_pose.valid:
             global_xr_pose = self.xr_pose_adapter.get_global_xr_pose(xr_pose)
-            # print(right.get_hand_trigger())
-            if right.get_hand_trigger() > 0:
-                robot_right_base_link = 43
-                xr_pose_in_robot_frame = (
-                    self.xr_pose_adapter.xr_pose_transformed(
-                        global_xr_pose,
-                        self.robot.ao.get_link_scene_node(
-                            robot_right_base_link
-                        ).transformation.inverted(),
+
+            # combine both hands' logic to reduce boilerplate code
+            for xrcontroller, base_link_key, arm_subset_key in [
+                (right, "right_arm_base", "right_arm"),
+                (left, "left_arm_base", "left_arm"),
+            ]:
+                if xrcontroller.get_hand_trigger() > 0:
+                    arm_base_link = self.robot.link_subsets[
+                        base_link_key
+                    ].link_ixs[0]
+                    xr_pose_in_robot_frame = (
+                        self.xr_pose_adapter.xr_pose_transformed(
+                            global_xr_pose,
+                            self.robot.ao.get_link_scene_node(
+                                arm_base_link
+                            ).transformation.inverted(),
+                        )
                     )
-                )
-                _cur_angles = self.robot.ao.joint_positions
-                pose_right = to_ik_pose(
-                    (
-                        xr_pose_in_robot_frame.pos_right,
-                        xr_pose_in_robot_frame.rot_right,
-                    )
-                )
-                _cur_angles[23:30] = self._ik.inverse_kinematics(
-                    pose_right, _cur_angles[23:30]
-                )
-                self.robot.ao.joint_positions = _cur_angles
-                self.robot.ao.update_all_motor_targets(_cur_angles)
-            if left.get_hand_trigger() > 0:
-                robot_left_base_link = 1
-                xr_pose_in_robot_frame = (
-                    self.xr_pose_adapter.xr_pose_transformed(
-                        global_xr_pose,
-                        self.robot.ao.get_link_scene_node(
-                            robot_left_base_link
-                        ).transformation.inverted(),
-                    )
-                )
-                _cur_angles = self.robot.ao.joint_positions
-                pose_left = to_ik_pose(
-                    (
+                    arm_joint_subset = self.robot.pos_subsets[arm_subset_key]
+                    cur_arm_pose = arm_joint_subset.get_pos()
+                    _cur_angles = self.robot.ao.joint_positions
+
+                    # TODO: a bit hacky way to get the correct hand here
+                    xr_pose = (
                         xr_pose_in_robot_frame.pos_left,
                         xr_pose_in_robot_frame.rot_left,
                     )
+                    if "right" in base_link_key:
+                        xr_pose = (
+                            xr_pose_in_robot_frame.pos_right,
+                            xr_pose_in_robot_frame.rot_right,
+                        )
+
+                    new_arm_pose = self._ik.inverse_kinematics(
+                        to_ik_pose(xr_pose), cur_arm_pose
+                    )
+                    # using configuration subset to avoid accidental overwriting with noise
+                    if self.robot.using_joint_motors:
+                        self.robot.pos_subsets[arm_subset_key].set_motor_pos(
+                            new_arm_pose
+                        )
+                    else:
+                        self.robot.pos_subsets[arm_subset_key].set_pos(
+                            new_arm_pose
+                        )
+
+            # grasping logic
+            # TODO: actual constraints
+            # NOTE: currently toggles between the grasp poses with trigger depth
+            for xrcontroller, hand_subset_key in [
+                (right, "right_hand"),
+                (left, "left_hand"),
+            ]:
+                active_pose = "hand_open"
+                if xrcontroller.get_index_trigger() > 0.5:
+                    active_pose = "grasp"
+                elif xrcontroller.get_index_trigger() > 0:
+                    active_pose = "pre_grasp"
+                self.robot.pos_subsets[hand_subset_key].set_cached_pose(
+                    pose_name=active_pose,
+                    set_motor_targets=self.robot.using_joint_motors,
+                    set_positions=not self.robot.using_joint_motors,
                 )
-                _cur_angles[0:7] = self._ik.inverse_kinematics(
-                    pose_left, _cur_angles[0:7]
-                )
-                self.robot.ao.joint_positions = _cur_angles
-                self.robot.ao.update_all_motor_targets(_cur_angles)
 
             # record XR state if necessary
             if self.recording_xr_traj:
@@ -867,7 +954,8 @@ class AppStateRobotTeleopViewer(AppState):
             and self.dof_editor is not None
         ):
             self.dof_editor.update(
-                self._app_service.gui_input._relative_mouse_position[0] * 0.01
+                self._app_service.gui_input._relative_mouse_position[0] * 0.01,
+                set_positions=not self.robot.using_joint_motors,
             )
 
     def get_cursor_cast(self) -> None:
@@ -935,8 +1023,14 @@ class AppStateRobotTeleopViewer(AppState):
         self.move_robot_on_navmesh()
         self._update_cursor_pos()
 
-        # TODO: step the simulator
-        # self._sim.step_physics(dt)
+        # step the simulator
+        if self.robot is not None and self.robot.using_joint_motors:
+            self._sim.step_physics(dt)
+
+        # update robot finger raycast sensors
+        if self.robot is not None:
+            for finger_raycast_sensor in self.robot.finger_raycast_sensors:
+                finger_raycast_sensor.update_sensor_raycasts()
 
         # update the camera position
         self._camera_helper.update(self._cursor_pos, dt)

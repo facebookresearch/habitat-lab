@@ -4,10 +4,12 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from scripts.robot import Robot
 import magnum as mn
-from habitat_sim.gfx import DebugLineRender
+
 import habitat.sims.habitat_simulator.sim_utilities as sutils
+from habitat_sim.gfx import DebugLineRender
+from scripts.robot import Robot
+
 
 class DoFEditor:
     """
@@ -31,7 +33,7 @@ class DoFEditor:
             if link_ix == self.link_ix:
                 self.motor_id = motor_id
 
-    def update(self, dt: float) -> None:
+    def update(self, dt: float, set_positions: bool = False) -> None:
         """
         Attempt to increment the dof value by dt.
         """
@@ -42,10 +44,11 @@ class DoFEditor:
             jms = self.robot.ao.get_joint_motor_settings(self.motor_id)
             jms.position_target = self.dof_value
             self.robot.ao.update_joint_motor(self.motor_id, jms)
-        else:
+        if set_positions:
             # this joint has no motor, so directly manipulate the position
             cur_pos = self.robot.ao.joint_positions
             cur_pos[self.dof] = self.dof_value
+            self.robot.ao.joint_positions = cur_pos
 
     def debug_draw(self, dblr: DebugLineRender, cam_pos: mn.Vector3) -> None:
         """
