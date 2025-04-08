@@ -5,7 +5,9 @@
 #global robot settings
 #urdf: "data/hab_murp/murp_tmr_franka/murp_tmr_franka.urdf"
 #urdf: "data/hab_murp/murp_tmr_kinova/murp_tmr_kinova.urdf"
-urdf: "data/hab_murp/murp_tmr_franka/murp_tmr_franka_metahand.urdf"
+# urdf: "data/hab_murp/murp_tmr_franka/murp_tmr_franka_metahand.urdf"
+urdf: "data/__/hab_murp/murp_tmr_franka/franka_with_hand_v2.urdf"
+
 #if True, the base is kinematic
 fixed_base: True
 
@@ -14,11 +16,10 @@ navmesh_radius: 0.45
 navmesh_height: 1.2
 
 #joint motor settings
-#TODO: re-enable joint motors
-create_joint_motors: False
-joint_motor_pos_gains: 0.3
-joint_motor_vel_gains: 0.3
-joint_motor_max_impulse: 10.0
+create_joint_motors: True
+joint_motor_pos_gains: 0.05
+joint_motor_vel_gains: 0.25
+joint_motor_max_impulse: 1.0
 
 configuration_subsets:
   #define the hand link indices
@@ -27,8 +28,8 @@ configuration_subsets:
   left_hand: [19, 20, 21, 22,   11, 12, 13, 14,   26, 27, 28, 29,   34, 35, 36, 37]
   right_hand: [61, 62, 63, 64,  53, 54, 55, 56,  68, 69, 70, 71,  76, 77, 78, 79]
   #define arm link indices
-  left_arm: [2, 3, 4, 5, 6, 7, 8]
-  right_arm: [44, 45, 46, 47, 48, 49, 50]
+  left_arm: [12, 13, 14, 15, 16, 17, 18]
+  right_arm: [35, 36, 37, 38, 39, 40, 41]
 
 link_subsets:
   #link ixs for finger tips on each hand
@@ -38,8 +39,9 @@ link_subsets:
   left_finger_tips: [15, 30, 38]
   right_finger_tips: [57, 72, 80]
   #arm base links (the fixed attachment point)
-  left_arm_base: [1]
-  right_arm_base: [43]
+  left_arm_base: [16]
+  right_arm_base: [47]
+
 
 
 #initial pose options. This refers to an entry in the robot_poses.json file.
