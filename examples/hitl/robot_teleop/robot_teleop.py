@@ -47,7 +47,6 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 # - Add UI to toggle the pre-grasp pose w/ default (XR button)
 # - Add a grasp manager API to constrain an object in the palm's coordinate space with successful pre-grasp and update the constraint frame when moving
 # - Add a "release grasp" control to toggle default hand pose and break the constraint
-# - bind the above UI to "index trigger" on each hand
 
 # IK:
 # - get IK frame aligned (Asjad)
