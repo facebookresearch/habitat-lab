@@ -203,7 +203,7 @@ See [the troubleshooting steps on siro_hitl_unity_client](https://github.com/eun
 
 ### Connection Issues
 
-* Make sure that your server firewall allows incoming connections to the port `8888`.
+* Make sure that your server firewall allows incoming connections to the port `18000`.
 * Check that the Unity client `config.txt` file lists to the correct address. See [this section](#connection).
 * Make sure that both devices are on the same network.
 * Corporate networks may introduce additional hurdles. To circumvent these, you can use the wifi hotspot on your phone or a separate router.
