@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import hydra
 import magnum as mn
+import numpy as np
 from hydra import compose
 from omegaconf import DictConfig
 
@@ -28,6 +29,7 @@ from habitat_hitl.core.hydra_utils import (
 )
 from habitat_hitl.core.key_mapping import KeyCode, MouseButton
 from habitat_hitl.core.text_drawer import TextOnScreenAlignment
+from habitat_hitl.core.xr_input import HAND_LEFT, HAND_RIGHT
 from habitat_hitl.environment.camera_helper import CameraHelper
 from scripts.DoFeditor import DoFEditor
 from scripts.ik import DifferentialInverseKinematics
@@ -558,6 +560,38 @@ class AppStateRobotTeleopViewer(AppState):
                     mn.Rad(r_speed), mn.Vector3(0, 1, 0)
                 )
                 self.robot.ao.rotation = r * self.robot.ao.rotation
+
+            # XR input for robot motion
+            xr_input = self._app_service.remote_client_state.get_xr_input(0)
+            if xr_input is not None:
+                left = xr_input.controllers[HAND_LEFT]
+                right = xr_input.controllers[HAND_RIGHT]
+
+                # use left thumbstick to move the robot
+                left_thumbstick = left.get_thumbstick()
+                end = end + self.robot.ao.transformation.transform_vector(
+                    mn.Vector3(speed * left_thumbstick[1], 0, 0)
+                )
+                r = mn.Quaternion.rotation(
+                    mn.Rad(-r_speed * left_thumbstick[0]), mn.Vector3(0, 1, 0)
+                )
+                self.robot.ao.rotation = r * self.robot.ao.rotation
+
+                # use right thumbstick to rotate the camera
+                right_thumbstick = right.get_thumbstick()
+                scale = 0.06
+                self._camera_helper._lookat_offset_yaw += (
+                    scale * right_thumbstick[0]
+                )
+                self._camera_helper._lookat_offset_pitch += (
+                    scale * -right_thumbstick[1]
+                )
+                self._camera_helper._lookat_offset_pitch = np.clip(
+                    self._camera_helper._lookat_offset_pitch,
+                    self._camera_helper._min_lookat_offset_pitch,
+                    self._camera_helper._max_lookat_offset_pitch,
+                )
+
             self.robot.ao.translation = self._sim.pathfinder.try_step(
                 start, end
             )
