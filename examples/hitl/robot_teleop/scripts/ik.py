@@ -27,20 +27,19 @@ class DifferentialInverseKinematics:
         # Create a joint velocity decision variable
         qd = prog.NewContinuousVariables(7, "qd")
 
-        # max_qd = [2.1750, 2.1750, 2.1750, 2.1750, 2.61, 2.61, 2.61]
-        max_q = [2.8973, 1.7628, 2.8973, -0.68315114, 2.8973, 3.7525, 2.8973]
+        max_qd = [2.1750, 2.1750, 2.1750, 2.1750, 2.61, 2.61, 2.61]
+        max_q = [2.8973, 1.7628, 2.8973, -0.7315114, 2.8973, 3.7525, 2.8973]
         min_q = [-2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973]
         # max_qdd = [15, 7.5, 10, 12.5, 15, 20, 20]
 
         # Add constraints to limit the joint velocities
         for _i in range(7):
-            # prog.AddConstraint(qd[i] <= max_qd[i])
-            # prog.AddConstraint(qd[i] >= -max_qd[i])
-            # prog.AddConstraint(self.robot.q[i]+qd[i]*0.05 <= max_q[i])
-            # prog.AddConstraint(self.robot.q[i]+qd[i]*0.05 >= min_q[i])
-            # prog.AddConstraint(qd[i]-self.robot.qd[i] <= max_qdd[i]*0.05)
-            # prog.AddConstraint(qd[i]-self.robot.qd[i] >= -max_qdd[i]*0.05)
+            prog.AddConstraint(qd[_i] <= max_qd[_i])
+            prog.AddConstraint(qd[_i] >= -max_qd[_i])
+            prog.AddConstraint(self.robot.q[_i]+qd[_i]*0.03 <= max_q[_i])
+            prog.AddConstraint(self.robot.q[_i]+qd[_i]*0.03 >= min_q[_i])
             pass
+            
 
         # Add a cost to minimize the squared joint velocities
         error = jacobian @ qd - v
@@ -70,4 +69,5 @@ class DifferentialInverseKinematics:
         if result.is_success():
             return result.GetSolution(qd) / 30 + self.robot.q
         else:
+            print("Inverse kinematics failed")
             return self.robot.q
