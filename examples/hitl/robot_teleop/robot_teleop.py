@@ -44,7 +44,6 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 # - setup pymomentum IK API
 
 # GRASPING
-# - Add UI to toggle the pre-grasp pose w/ default (XR button)
 # - Add a grasp manager API to constrain an object in the palm's coordinate space with successful pre-grasp and update the constraint frame when moving
 # - Add a "release grasp" control to toggle default hand pose and break the constraint
 
@@ -207,6 +206,9 @@ class AppStateRobotTeleopViewer(AppState):
         self.cursor_cast_results: HitObjectInfo = None
         self.mouse_cast_results: HitObjectInfo = None
         self._hide_gui = False
+
+        # additional object managment
+        self.added_object_ids: List[int] = []
 
         # set with SPACE, when true cursor is locked on robot
         self.cursor_follow_robot = True
@@ -407,6 +409,44 @@ class AppStateRobotTeleopViewer(AppState):
             )
         else:
             print("No robot configured.")
+
+    def remove_object(self, object_id: int) -> None:
+        """
+        Remove the specified object. Only accepts removal of objects added to the scene.
+        """
+        try:
+            added_id = next(
+                obj_id
+                for obj_id in self.added_object_ids
+                if object_id == obj_id
+            )
+            self._sim.get_rigid_object_manager().remove_object_by_id(added_id)
+            self.added_object_ids.remove(added_id)
+        except StopIteration:
+            print(f"No object with id {object_id} to remove.")
+
+    def add_object_at(
+        self,
+        obj_template_handle: str,
+        translation: mn.Vector3 = None,
+        rotation: mn.Quaternion = None,
+    ) -> habitat_sim.physics.ManagedRigidObject:
+        """
+        Add the desired object and assign it the provided translation and rotation if applicable.
+        Returns a ManagedObject and also registers the object_id in a global list for later cleanup.
+        """
+        ro = (
+            self._sim.get_rigid_object_manager().add_object_by_template_handle(
+                obj_template_handle
+            )
+        )
+        if ro is not None:
+            self.added_object_ids.append(ro.object_id)
+            if translation is not None:
+                ro.translation = translation
+            if rotation is not None:
+                ro.rotation = rotation
+        return ro
 
     def _update_help_text(self) -> None:
         """
@@ -716,6 +756,26 @@ class AppStateRobotTeleopViewer(AppState):
                     set_motor_targets=self.robot.using_joint_motors,
                     set_positions=not self.robot.using_joint_motors,
                 )
+
+        if gui_input.get_key_down(KeyCode.Y):
+            # insert an object at the mouse raycast position
+            obj_shortname = "000bbe302b53fd2904e7ae92e1516a18f29de02d"
+            obj_template_handle = list(
+                self._sim.get_object_template_manager()
+                .get_templates_by_handle_substring(obj_shortname)
+                .keys()
+            )[0]
+            new_obj = self.add_object_at(obj_template_handle)
+            obj_size_down = sutils.get_obj_size_along(
+                self._sim, new_obj.object_id, mn.Vector3(0, -1, 0)
+            )
+            placement_position = self.mouse_cast_results.hits[
+                0
+            ].point + mn.Vector3(0, obj_size_down[0], 0)
+            new_obj.translation = placement_position
+
+        if gui_input.get_key_down(KeyCode.U):
+            self.remove_object(self.mouse_cast_results.hits[0].object_id)
 
         # Load next scene
         if gui_input.get_key_down(KeyCode.ZERO):

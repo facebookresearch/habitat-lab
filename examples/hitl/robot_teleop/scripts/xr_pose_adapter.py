@@ -1,3 +1,4 @@
+import copy
 import json
 import os
 from typing import Any, Dict, List
@@ -198,6 +199,7 @@ class XRPoseAdapter:
         # this transform should be constructed to map xr local space into the final global coordinate space
         # NOTE: this is done within the application
         self.xr_local_to_global: mn.Matrix4 = mn.Matrix4()
+        self.arm_extension_scale_factor = 1.75
 
     def xr_pose_transformed(
         self, xr_pose: XRPose, transform: mn.Matrix4
@@ -223,4 +225,21 @@ class XRPoseAdapter:
         Get a global space XRPose from a local space XRPose.
         Transform all elements of an XRPose with the local_to_global_transform and return the new object.
         """
-        return self.xr_pose_transformed(xr_pose, self.xr_local_to_global)
+        return self.extend_xr_reach(
+            self.xr_pose_transformed(xr_pose, self.xr_local_to_global)
+        )
+
+    def extend_xr_reach(self, xr_pose: XRPose) -> XRPose:
+        """
+        Heuristic to extend the effective reach of the XR user by non-uniformly scaling the translation on the hand pose elements.
+        """
+        new_xr_pose = copy.deepcopy(xr_pose)
+        head_to_left = xr_pose.pos_left - xr_pose.pos_head
+        head_to_right = xr_pose.pos_right - xr_pose.pos_head
+        new_xr_pose.pos_left = (
+            xr_pose.pos_head + head_to_left * self.arm_extension_scale_factor
+        )
+        new_xr_pose.pos_right = (
+            xr_pose.pos_head + head_to_right * self.arm_extension_scale_factor
+        )
+        return new_xr_pose
