@@ -145,16 +145,43 @@ class ConfigurationSubset:
                 cur_settings.position_target = all_joint_pos_targets[j_pos_ix]
                 self.ao.update_joint_motor(motor_id, cur_settings)
 
-    def set_motor_pos(self, motor_targets: List[float]) -> None:
+    def set_motor_pos(
+        self, motor_targets: List[float], clamp: bool = True
+    ) -> None:
         """
         Set this configuration subset's joint motor targets from a precisely sized list of joint position targets.
         NOTE: Input joint position targets list must be the same size as this configuration subset. To set this subset from a full pose use set_motor_pos_from_full instead.
         """
+        joint_limits = self.ao.joint_position_limits
         for ix, pos in enumerate(motor_targets):
             for motor_id in self.joint_motors[ix]:
                 cur_settings = self.ao.get_joint_motor_settings(motor_id)
                 cur_settings.position_target = pos
+                if clamp:
+                    min_dof = joint_limits[0][self.joint_pos_ixs[ix]]
+                    max_dof = joint_limits[1][self.joint_pos_ixs[ix]]
+                    cur_settings.position_target = min(
+                        max(cur_settings.position_target, min_dof), max_dof
+                    )
                 self.ao.update_joint_motor(motor_id, cur_settings)
+
+    def get_motor_pos(self) -> List[float]:
+        """
+        Get the current motor targets for the subset.
+        Assumes exactly one motor per joint.
+        """
+        motor_targets = []
+        for link_motors in self.joint_motors:
+            if len(link_motors) != 1:
+                print(
+                    f"    WARNING: motor pos vector requested with {len(link_motors)} motors on a link."
+                )
+            motor_targets.append(
+                self.ao.get_joint_motor_settings(
+                    link_motors[0]
+                ).position_target
+            )
+        return motor_targets
 
     def set_cached_pose(
         self,

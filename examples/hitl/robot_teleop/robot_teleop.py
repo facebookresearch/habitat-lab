@@ -906,7 +906,8 @@ class AppStateRobotTeleopViewer(AppState):
                     )
                     arm_joint_subset = self.robot.pos_subsets[arm_subset_key]
                     cur_arm_pose = arm_joint_subset.get_pos()
-                    _cur_angles = self.robot.ao.joint_positions
+                    if self.robot.using_joint_motors:
+                        cur_arm_pose = arm_joint_subset.get_motor_pos()
 
                     # TODO: a bit hacky way to get the correct hand here
                     xr_pose = (
