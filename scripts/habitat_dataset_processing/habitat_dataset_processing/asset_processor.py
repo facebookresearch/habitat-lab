@@ -9,9 +9,11 @@ from pathlib import Path
 from threading import Lock
 from typing import Any
 
+import collada
 from habitat_dataset_processing import magnum_decimation
 from habitat_dataset_processing.configs import Config, Operation
 from habitat_dataset_processing.job import Job
+from habitat_dataset_processing.util import is_file_collada
 
 METADATA_FILE_VERSION = 1
 OMIT_BLACK_LIST = False
@@ -89,6 +91,17 @@ def get_preferred_operation(
     return Operation.COPY
 
 
+def transform_collada(path: str):
+    """
+    Habitat ignores the collada up direction ("ImportColladaIgnoreUpDirection" == "true").
+    The collada file needs to be transformed so that the coordinate system matches Habitat.
+    """
+    assert os.path.exists(path)
+    mesh = collada.Collada(path)
+    mesh.assetInfo.upaxis = "Y_UP"
+    mesh.write(path)
+
+
 def process_model(args: AssetProcessorArgs):
     job = args.job
     verbose = args.verbose
@@ -119,6 +132,10 @@ def process_model(args: AssetProcessorArgs):
     if operation == Operation.COPY:
         shutil.copyfile(job.source_path, job.dest_path, follow_symlinks=True)
         result["status"] = "copied"
+
+        if is_file_collada(job.dest_path):
+            transform_collada(job.dest_path)
+
         return result
 
     elif operation == Operation.PROCESS:
