@@ -7,6 +7,7 @@
 import os
 import re
 import xml.etree.ElementTree as et
+from pathlib import Path
 
 
 def resolve_relative_path(path: str) -> str:
@@ -39,6 +40,12 @@ def resolve_relative_path_with_wildcard(path: str) -> str:
         else:
             break
     return resolve_relative_path(path)
+
+
+def is_file_collada(path: str) -> bool:
+    """Returns true if the path is a collada (`.dae`) file."""
+    extension = Path(path).suffix.lower()
+    return extension == ".dae"
 
 
 def get_dependencies_urdf(urdf_file_path: str) -> set[str]:
