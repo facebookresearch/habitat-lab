@@ -266,10 +266,9 @@ class AppStateRobotTeleopViewer(AppState):
         # import and setup the robot from config
         self.import_robot()
 
-        # set the initial state of the UI cursor to the "top" of the robot
+        # set the initial state of the UI cursor to the robot viewpoint
         self._cursor_pos = self.robot.ao.transformation.transform_point(
-            self.robot.ao.aabb.center()
-            + mn.Vector3(0, self.robot.ao.aabb.size_y() / 2.0, 0)
+            self.robot.viewpoint_offset
         )
 
         self._camera_helper.update(self._cursor_pos, 0.0)
@@ -482,8 +481,12 @@ class AppStateRobotTeleopViewer(AppState):
 
         if self.cursor_follow_robot and self.robot is not None:
             # lock the cursor to the robot
-            self._cursor_pos[0] = self.robot.ao.translation[0]
-            self._cursor_pos[2] = self.robot.ao.translation[2]
+            new_cursor_position = self.robot.ao.transformation.transform_point(
+                self.robot.viewpoint_offset
+            )
+            # only set horizontal each frame to allow y to be adjusted via UI
+            self._cursor_pos[0] = new_cursor_position[0]
+            self._cursor_pos[2] = new_cursor_position[2]
         else:
             # manual cursor control
             xz_forward = self._camera_helper.get_xz_forward()
@@ -1034,9 +1037,9 @@ class AppStateRobotTeleopViewer(AppState):
                 remote_client_state=self._app_service.remote_client_state
             )
             if current_xr_pose.valid:
-                current_xr_pose.draw_pose(
-                    dblr, transform=self.xr_pose_adapter.xr_local_to_global
-                )
+                self.xr_pose_adapter.get_global_xr_pose(
+                    current_xr_pose
+                ).draw_pose(dblr)
 
     # this is where connect with the thread for controller positions
     def sim_update(

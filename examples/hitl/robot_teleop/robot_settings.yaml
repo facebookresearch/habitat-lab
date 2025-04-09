@@ -3,10 +3,7 @@
 #This config file can be hot-reloaded with 'T' to quickly change robot settings
 
 #global robot settings
-#urdf: "data/hab_murp/murp_tmr_franka/murp_tmr_franka.urdf"
-#urdf: "data/hab_murp/murp_tmr_kinova/murp_tmr_kinova.urdf"
-# urdf: "data/hab_murp/murp_tmr_franka/murp_tmr_franka_metahand.urdf"
-urdf: "data/__/hab_murp/murp_tmr_franka/franka_with_hand_v2.urdf"
+urdf: "data/hab_murp/murp_tmr_franka/franka_with_hand_v2.urdf"
 
 #if True, the base is kinematic
 fixed_base: True
@@ -14,6 +11,9 @@ fixed_base: True
 #what radius is required to represent the robot on the navmesh
 navmesh_radius: 0.45
 navmesh_height: 1.2
+
+#offset from the robot's origin of the XR "head" viewpoint in local space
+viewpoint_offset: [0.25,1.2,0]
 
 #joint motor settings
 create_joint_motors: True
@@ -24,23 +24,23 @@ joint_motor_max_impulse: 1.0
 configuration_subsets:
   #define the hand link indices
   #NOTE: we assume these are in the same order such that setting a symmetric pose is straightforward
-  #[base|palm(1), thumb(5), index(5), middle(5), ring(5)]
-  left_hand: [19, 20, 21, 22,   11, 12, 13, 14,   26, 27, 28, 29,   34, 35, 36, 37]
-  right_hand: [61, 62, 63, 64,  53, 54, 55, 56,  68, 69, 70, 71,  76, 77, 78, 79]
+  #[thumb(4), index(4), middle(4), ring(4)]
+  left_hand: [31,32,33,34,  26,27,28,29,  36,37,38,39, 41,42,43,44]
+  right_hand: [62,63,64,65, 57,58,59,60,  67,68,69,70,  72,73,74,75]
   #define arm link indices
-  left_arm: [12, 13, 14, 15, 16, 17, 18]
-  right_arm: [35, 36, 37, 38, 39, 40, 41]
+  left_arm: [17,18,19,20,21,22,23]
+  right_arm: [48,49,50,51,52,53,54]
 
 link_subsets:
   #link ixs for finger tips on each hand
-  left_thumb_tip: [23]
-  right_thumb_tip: [65]
+  left_thumb_tip: [35]
+  right_thumb_tip: [66]
   #[index, middle, ring]
-  left_finger_tips: [15, 30, 38]
-  right_finger_tips: [57, 72, 80]
+  left_finger_tips: [30,40,45]
+  right_finger_tips: [61,71,76]
   #arm base links (the fixed attachment point)
-  left_arm_base: [16]
-  right_arm_base: [47]
+  left_arm_base: [15]
+  right_arm_base: [46]
 
 
 

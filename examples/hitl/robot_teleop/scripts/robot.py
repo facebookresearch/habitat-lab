@@ -93,8 +93,13 @@ class ConfigurationSubset:
         """
         Queries all active joint motors to collect the set corresponding to this configuration subset.
         """
-        all_motor_ids = self.ao.existing_joint_motor_ids
-        motor_ids_by_link = {k: v for v, k in all_motor_ids.items()}
+        # first organize all motors for all links
+        motor_ids_by_link: Dict[int, List[int]] = {}
+        for motor_id, link_id in self.ao.existing_joint_motor_ids.items():
+            if link_id not in motor_ids_by_link:
+                motor_ids_by_link[link_id] = []
+            motor_ids_by_link[link_id].append(motor_id)
+        # then re-organize all motors for each link in this subset sequentially
         self.joint_motors = []
         for link_ix in self.link_ixs:
             self.joint_motors.append([])
@@ -394,6 +399,10 @@ class Robot:
 
         self.sim = sim
         self.robot_cfg = robot_cfg
+
+        # apply this local viewpoint offset to the ao.translation to align the cursor
+        self.viewpoint_offset = mn.Vector3(robot_cfg.viewpoint_offset)
+
         # expect a "urdf" config field with the filepath
         self.ao = self.sim.get_articulated_object_manager().add_articulated_object_from_urdf(
             self.robot_cfg.urdf,
@@ -457,6 +466,9 @@ class Robot:
             set_positions=True,
             set_motor_targets=True,
         )
+        # clamp to joint limits
+        self.clamp_joints_to_limits()
+        self.clamp_motor_targets_to_limits()
         # self.init_ik()
 
     def init_ik(self):
@@ -473,10 +485,19 @@ class Robot:
         except ImportError:
             print("Could not initialize pymomentum IK library.")
 
-    def create_joint_motors(self):
+    def clear_joint_motors(self) -> None:
+        """
+        Removes all active joint motors.
+        """
+        for motor_id in self.ao.existing_joint_motor_ids:
+            self.ao.remove_joint_motor(motor_id)
+
+    def create_joint_motors(self) -> None:
         """
         Creates a full set of joint motors for the robot.
         """
+        # first clear any existing joint motors in case there are damping motors or stale motors from other code.
+        self.clear_joint_motors()
         self.motor_settings = habitat_sim.physics.JointMotorSettings(
             0,  # position_target
             self.robot_cfg.joint_motor_pos_gains,  # position_gain
@@ -507,6 +528,43 @@ class Robot:
         offset = (self.ao.translation - center)[1] + y_size
         self.ao.translation = base_pos + mn.Vector3(0, offset, 0)
 
+    def clamp_joints_to_limits(self) -> None:
+        """
+        Clamps the robot's joint positions to fall within the joint limits.
+        """
+        cur_joint_pos = self.ao.joint_positions
+        joint_limits = self.ao.joint_position_limits
+        for dof_ix in range(len(cur_joint_pos)):
+            min_dof = joint_limits[0][dof_ix]
+            max_dof = joint_limits[1][dof_ix]
+            new_dof = min(max(cur_joint_pos[dof_ix], min_dof), max_dof)
+            if cur_joint_pos[dof_ix] != new_dof:
+                print(
+                    f" Clamped joint position dof {dof_ix} from {cur_joint_pos[dof_ix]} to {new_dof} in range [{min_dof},{max_dof}] "
+                )
+            cur_joint_pos[dof_ix] = new_dof
+        self.ao.joint_positions = cur_joint_pos
+
+    def clamp_motor_targets_to_limits(self) -> None:
+        """
+        Clamps the robot's joint motor target positions to fall within the joint limits.
+        """
+        joint_limits = self.ao.joint_position_limits
+        for motor_id, link_ix in self.ao.existing_joint_motor_ids.items():
+            cur_settings = self.ao.get_joint_motor_settings(motor_id)
+            dof_ix = self.ao.get_link_dof_offset(link_ix)
+            min_dof = joint_limits[0][dof_ix]
+            max_dof = joint_limits[1][dof_ix]
+            new_target = min(
+                max(cur_settings.position_target, min_dof), max_dof
+            )
+            if new_target != cur_settings.position_target:
+                print(
+                    f" Clamped motor target dof {dof_ix} from {cur_settings.position_target} to {new_target} in range [{min_dof},{max_dof}] "
+                )
+                cur_settings.position_target = new_target
+                self.ao.update_joint_motor(motor_id, cur_settings)
+
     def set_cached_pose(
         self,
         pose_file: str = default_pose_cache_path,
@@ -529,7 +587,7 @@ class Robot:
         """
         Saves the current robot pose in a json cache file with the given name.
         """
-        self.pos_subsets["all"].cache_pose(pose_file, pose_name)
+        self.pos_subsets["full"].cache_pose(pose_file, pose_name)
 
     def draw_debug(self, dblr: DebugLineRender):
         """
