@@ -68,9 +68,6 @@ class LabDriver(AppDriver):
         HITL application driver that instantiates a `habitat-lab` environment.
         """
         # Initialize environment and simulator.
-        self._dataset_config = config.habitat.dataset
-        self._play_episodes_filter_str = config.habitat_hitl.episodes_filter
-        self._num_recorded_episodes = 0
         with habitat.config.read_write(config):  # type: ignore
             # needed so we can provide keyframes to GuiApplication
             config.habitat.simulator.habitat_sim_v0.enable_gfx_replay_save = (
@@ -95,6 +92,9 @@ class LabDriver(AppDriver):
             text_drawer=text_drawer,
             sim=sim,
         )
+
+        self._dataset_config = config.habitat.dataset
+        self._num_recorded_episodes = 0
 
         # If all agents are gui-controlled, we should have no camera sensors and thus no renderer.
         if len(config.habitat_hitl.gui_controlled_agents) == len(
@@ -204,10 +204,10 @@ class LabDriver(AppDriver):
         dataset = make_dataset(
             id_dataset=dataset_config.type, config=dataset_config
         )
-        if self._play_episodes_filter_str is not None:
-            self._play_episodes_filter_str = str(
-                self._play_episodes_filter_str
-            )
+
+        play_episodes_filter = config.habitat_hitl.episodes_filter
+        if play_episodes_filter is not None:
+            play_episodes_filter_str = str(play_episodes_filter)
             max_num_digits: int = len(str(len(dataset.episodes)))
 
             def get_play_episodes_ids(play_episodes_filter_str):
@@ -228,7 +228,7 @@ class LabDriver(AppDriver):
                 return play_episodes_ids
 
             play_episodes_ids_list = get_play_episodes_ids(
-                self._play_episodes_filter_str
+                play_episodes_filter_str
             )
 
             dataset.episodes = [
