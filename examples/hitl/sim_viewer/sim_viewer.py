@@ -15,7 +15,7 @@ from habitat_hitl.core.key_mapping import KeyCode
 from habitat_hitl.environment.camera_helper import CameraHelper
 
 
-class AppStateBasicViewer(AppState):
+class AppStateSimViewer(AppState):
     def __init__(
         self,
         app_service: AppService,
@@ -26,25 +26,21 @@ class AppStateBasicViewer(AppState):
         self._lookat_pos = None
         self._cam_transform = None
 
+        hitl_config = self._app_service.hitl_config
         self._camera_helper = CameraHelper(
-            self._app_service.hitl_config, self._app_service.gui_input
+            hitl_config, self._app_service.gui_input
         )
-        self._paused = False
-        self._do_single_step = False
 
+        sim_viewer_config = self._app_service.config.sim_viewer
         self._app_service.reconfigure_sim(
-            "data/hssd-hab/hssd-hab-articulated.scene_dataset_config.json",
-            "102817140.scene_instance.json",
+            sim_viewer_config.dataset,
+            sim_viewer_config.scene,
         )
-
-        # Activate the first user.
-        self._app_service.users.activate_user(0)
 
     def _init_lookat_pos(self):
         self._lookat_pos = mn.Vector3(0.0, 0.0, -1.0)
 
     def _update_lookat_pos(self):
-        # update lookat
         move_delta = 0.1
         move = mn.Vector3.zero_init()
         if self._gui_input.get_key(KeyCode.W):
@@ -76,10 +72,6 @@ class AppStateBasicViewer(AppState):
             mn.Color3(255 / 255, 0 / 255, 0 / 255),
         )
 
-    @property
-    def _env_task_complete(self):
-        return False
-
     def _get_camera_lookat_pos(self):
         return self._lookat_pos
 
@@ -90,25 +82,12 @@ class AppStateBasicViewer(AppState):
         self._init_lookat_pos()
         self._camera_helper.update(self._get_camera_lookat_pos(), dt=0)
 
-    def sim_update(self, dt, post_sim_update_dict):
+    def sim_update(self, dt: float, post_sim_update_dict):
         if self._app_service.gui_input.get_key_down(KeyCode.ESC):
             post_sim_update_dict["application_exit"] = True
 
-        if self._app_service.gui_input.get_key_down(KeyCode.P):
-            self._paused = not self._paused
-
-        if self._app_service.gui_input.get_key_down(KeyCode.SPACE):
-            self._do_single_step = True
-            self._paused = True
-
-        is_paused_this_frame = self._paused and not self._do_single_step
-
         self._update_lookat_pos()
-        if not is_paused_this_frame:
-            self._do_single_step = False
-
         self._camera_helper.update(self._get_camera_lookat_pos(), dt)
-
         self._cam_transform = self._camera_helper.get_cam_transform()
         post_sim_update_dict["cam_transform"] = self._cam_transform
 
@@ -117,7 +96,7 @@ class AppStateBasicViewer(AppState):
 def main(config):
     hitl_main(
         config,
-        lambda app_service: AppStateBasicViewer(app_service),
+        lambda app_service: AppStateSimViewer(app_service),
     )
 
 

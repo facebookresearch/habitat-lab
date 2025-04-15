@@ -518,18 +518,22 @@ async def start_websocket_server(
 
 
 class DiscoveryProtocol(asyncio.DatagramProtocol):
-    def __init__(self, hitl_port: int):
-        self.hitl_port = hitl_port
+    def __init__(self, hitl_port: int, network_mgr: NetworkManager):
+        self._hitl_port = hitl_port
+        self._network_mgr = network_mgr
         super().__init__()
 
     def connection_made(self, transport):
         self.transport = transport
 
     def datagram_received(self, data, addr):
+        if not self._network_mgr.can_accept_connection():
+            return
+
         message = data.decode()
         print(f"Received message from {addr}: {message}")
         # Respond the HITL port.
-        response = f"{self.hitl_port}"
+        response = f"{self._hitl_port}"
         self.transport.sendto(response.encode(), addr)
 
 
@@ -538,9 +542,11 @@ async def start_discovery_server(
     network_mgr: NetworkManager,
     networking_config,
 ):
+    hitl_port = networking_config.port
+    discovery_port = networking_config.discovery_server.port
     task = loop.create_datagram_endpoint(
-        lambda: DiscoveryProtocol(networking_config.port),
-        local_addr=("0.0.0.0", 12345),
+        lambda: DiscoveryProtocol(hitl_port, network_mgr),
+        local_addr=("0.0.0.0", discovery_port),
     )
     transport, protocol = await task
     return transport

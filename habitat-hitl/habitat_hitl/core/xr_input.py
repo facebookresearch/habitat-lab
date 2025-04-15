@@ -16,6 +16,10 @@ HAND_RIGHT: Final[int] = 1
 
 
 class XRController:
+    """
+    State of a single XR controller.
+    """
+
     def __init__(self):
         self._buttons_held: set[XRButton] = set()
         self._buttons_down: set[XRButton] = set()
@@ -33,15 +37,15 @@ class XRController:
         XRController.validate_button(button)
         return button in self._buttons_held
 
-    def get_buttons_down(self, button):
+    def get_button_down(self, button):
         XRController.validate_button(button)
         return button in self._buttons_down
 
-    def get_buttons_up(self, button):
+    def get_button_up(self, button):
         XRController.validate_button(button)
         return button in self._buttons_up
 
-    def get_buttons_touched(self, button):
+    def get_button_touched(self, button):
         XRController.validate_button(button)
         return button in self._buttons_touched
 
@@ -58,14 +62,6 @@ class XRController:
         return self._is_controller_in_hand
 
     def reset(self, reset_continuous_input: bool = True):
-        """
-        Reset the input states. To be called at the end of a frame.
-
-        `reset_continuous_input`: controls whether to reset continuous input like scrolling or dragging.
-        Remote clients send their input at a different frequency than the server framerate.
-        To avoid choppiness, their continuous inputs should be reset before consolidating new remote inputs.
-        This differs from discrete input like clicking, which must be reset every frame to avoid extending click events across multiple frames.
-        """
         self._buttons_down.clear()
         self._buttons_up.clear()
 
@@ -77,7 +73,7 @@ class XRController:
 
 class XRInput:
     """
-    Container to hold the state of XR input.
+    State of the XR input system (HMD and controllers).
     """
 
     def __init__(self):

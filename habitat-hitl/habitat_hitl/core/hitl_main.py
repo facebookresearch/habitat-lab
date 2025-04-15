@@ -11,14 +11,14 @@ import magnum as mn
 
 from habitat.config.default import patch_config
 from habitat_hitl._internal.config_helper import update_config
-from habitat_hitl._internal.hitl_bare_sim_driver import HitlBareSimDriver
-from habitat_hitl._internal.hitl_driver import HitlDriver
+from habitat_hitl._internal.lab_driver import LabDriver
 from habitat_hitl._internal.networking.average_rate_tracker import (
     AverageRateTracker,
 )
 from habitat_hitl._internal.networking.frequency_limiter import (
     FrequencyLimiter,
 )
+from habitat_hitl._internal.sim_driver import SimDriver
 from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl.core.hydra_utils import omegaconf_to_object
 
@@ -117,8 +117,8 @@ def hitl_headed_main(hitl_config, app_config, create_app_state_lambda):
         text_drawer_kwargs=text_drawer_kwargs,
     )
 
-    # todo: move to HitlDriver
-    if hitl_config.driver == "HitlDriver":
+    # TODO: Move to LabDriver
+    if hitl_config.driver == "LabDriver":
         app_config = patch_config(app_config)
         update_config(
             app_config,
@@ -128,11 +128,9 @@ def hitl_headed_main(hitl_config, app_config, create_app_state_lambda):
         )
 
     drivers = {
-        "HitlDriver": HitlDriver,
-        "HitlBareSimDriver": HitlBareSimDriver,
+        "LabDriver": LabDriver,
+        "SimDriver": SimDriver,
     }
-
-    # TODO - Abstraction
     driver_class: Any = drivers[hitl_config.driver]
 
     driver = driver_class(
@@ -218,8 +216,8 @@ def hitl_headless_main(hitl_config, app_config, create_app_state_lambda=None):
         debug_third_person_height,
     ) = _parse_debug_third_person(hitl_config)
 
-    # todo: move to HitlDriver
-    if hitl_config.driver == "HitlDriver":
+    # TODO: Move to LabDriver
+    if hitl_config.driver == "LabDriver":
         app_config = patch_config(app_config)
         update_config(
             app_config,
@@ -229,8 +227,8 @@ def hitl_headless_main(hitl_config, app_config, create_app_state_lambda=None):
         )
 
     drivers = {
-        "HitlDriver": HitlDriver,
-        "HitlBareSimDriver": HitlBareSimDriver,
+        "LabDriver": LabDriver,
+        "SimDriver": SimDriver,
     }
 
     driver_class: Any = drivers[hitl_config.driver]
