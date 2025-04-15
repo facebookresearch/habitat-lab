@@ -8,10 +8,13 @@ from habitat.tasks.rearrange.isaac_rearrange_sim import IsaacRearrangeSim
 
 warnings.filterwarnings("ignore")
 import argparse
+import json
 import math
 import os
 import random
+import shutil
 
+import cv2
 import imageio
 import numpy as np
 import torch
@@ -56,90 +59,27 @@ else:
     data_path = "/home/joanne/habitat-lab/data/"
 
 
-def make_sim_cfg(agent_dict):
-    # Start the scene config
-    sim_cfg = SimulatorConfig(type="IsaacRearrangeSim-v0")
-
-    # This is for better graphics
-    sim_cfg.habitat_sim_v0.enable_hbao = True
-    sim_cfg.habitat_sim_v0.enable_physics = False
-
-    # TODO: disable this, causes performance issues
-    sim_cfg.habitat_sim_v0.frustum_culling = False
-
-    # Set up an example scene
-    sim_cfg.scene = "NONE"  # os.path.join(data_path, "hab3_bench_assets/hab3-hssd/scenes/103997919_171031233.scene_instance.json")
-
-    cfg = OmegaConf.create(sim_cfg)
-
-    # Set the scene agents
-    cfg.agents = agent_dict
-    cfg.agents_order = list(cfg.agents.keys())
-    return cfg
-
-
-def make_hab_cfg(agent_dict, action_dict):
-    sim_cfg = make_sim_cfg(agent_dict)
-    task_cfg = TaskConfig(type="RearrangeEmptyTask-v0")
-    task_cfg.actions = action_dict
-    env_cfg = EnvironmentConfig()
-    dataset_cfg = DatasetConfig(
-        type="RearrangeDataset-v0",
-        data_path="data/hab3_bench_assets/episode_datasets/small_large.json.gz",
-    )
-
-    hab_cfg = HabitatConfig()
-    hab_cfg.environment = env_cfg
-    hab_cfg.task = task_cfg
-
-    hab_cfg.dataset = dataset_cfg
-    hab_cfg.simulator = sim_cfg
-    hab_cfg.simulator.seed = hab_cfg.seed
-
-    return hab_cfg
-
-
-def init_rearrange_env(agent_dict, action_dict):
-    hab_cfg = make_hab_cfg(agent_dict, action_dict)
-    res_cfg = OmegaConf.create(hab_cfg)
-    res_cfg.environment.max_episode_steps = 100000000
-    print("hab_cfg: ", hab_cfg)
-    print("res_cfg: ", res_cfg)
-    return Env(res_cfg)
-
-
-from habitat.datasets.rearrange.navmesh_utils import compute_turn
-from habitat.tasks.utils import get_angle
-
-
-def process_obs_img(obs):
-    im = obs["third_rgb"]
-    im2 = obs["articulated_agent_arm_rgb"]
-    im3 = (255 * obs["articulated_agent_arm_depth"]).astype(np.uint8)
-    imt = np.zeros(im.shape, dtype=np.uint8)
-    imt[: im2.shape[0], : im2.shape[1], :] = im2
-    imt[im2.shape[0] :, : im2.shape[1], 0] = im3[:, :, 0]
-    imt[im2.shape[0] :, : im2.shape[1], 1] = im3[:, :, 0]
-    imt[im2.shape[0] :, : im2.shape[1], 2] = im3[:, :, 0]
-    im = np.concatenate([im, imt], 1)
-    return im
-
-
 class ExpertDatagen:
-    def __init__(self, target_name="cabinet", skill="pick", replay=False):
+    def __init__(
+        self, target_name="cabinet", skill="pick", replay=False, seed=1
+    ):
         # Define the agent configuration
+        self.seed = seed
+        print("using seed: ", self.seed)
+        np.random.seed(self.seed)
+        torch.manual_seed(self.seed)
         self.replay = replay
         main_agent_config = AgentConfig()
 
         if user == "joanne":
             urdf_path = os.path.join(
                 data_path,
-                "murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_with_hand_2_vyshnav.urdf",
+                "murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_right_digit.urdf",
             )
             arm_urdf_path = os.path.join(
                 data_path,
                 # "murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_tmr_left_arm_only.urdf",
-                "murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_right_arm.urdf",
+                "murp/murp/platforms/franka_tmr/franka_description_tmr/urdf/franka_tmr_right_arm_only.urdf",
             )
         else:
             urdf_path = os.path.join(
@@ -158,8 +98,10 @@ class ExpertDatagen:
         # We will later talk about why we are giving the sensors these names
         main_agent_config.sim_sensors = {
             "third_rgb": ThirdRGBSensorConfig(),
-            "articulated_agent_arm_rgb": ArmRGBSensorConfig(),
-            "articulated_agent_arm_depth": ArmDepthSensorConfig(),
+            "articulated_agent_arm_rgb": ArmRGBSensorConfig(hfov=110),
+            "articulated_agent_arm_depth": ArmDepthSensorConfig(
+                min_depth=0.1, max_depth=8.0, hfov=110
+            ),
         }
 
         # We create a dictionary with names of agents and their corresponding agent configuration
@@ -172,26 +114,236 @@ class ExpertDatagen:
             ),
             "arm_reach_ee_action": ActionConfig(type="ArmReachEEAction"),
         }
-        self.env = init_rearrange_env(agent_dict, action_dict)
+        self.env = self.init_rearrange_env(agent_dict, action_dict)
+
+        self.ep_id = self.seed
+        self.episode_json = {
+            "episode_id": 0,
+            "scene_id": "Fremont",
+            "language_instruction": "Open the cabinet door",
+            "episode_data": [],
+            "success": True,
+        }
+        self.save_keys = [
+            "articulated_agent_arm_rgb",
+            "articulated_agent_arm_depth",
+        ]
+        mode = "train"
+        save_pth_base = f"/fsx-siro/jtruong/data/sim_robot_data/heuristic_expert_open/open_fridge/right_usd_zed_mini"
+        self.json_save_path = f"{save_pth_base}/{mode}/ep_{self.ep_id}"
+        os.makedirs(self.json_save_path, exist_ok=True)
 
         aux = self.env.reset()
+        self.env.sim.seed(self.seed)
         self.target_name = target_name
         self.skill = skill
-        self.save_path = f"output_env_murp_{self.skill}_{self.target_name}.mp4"
+        self.video_save_path = f"{save_pth_base}/videos"
+        self.save_path = f"{self.video_save_path}/output_env_murp_{self.skill}_{self.target_name}_{self.seed}.mp4"
+        os.makedirs(self.video_save_path, exist_ok=True)
         self.writer = imageio.get_writer(
             self.save_path,
             fps=30,
         )
         self.base_trans = None
         self.TARGET_CONFIG = {
-                "cabinet": [30, 15, 25, "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_cabinet"],
-                "shelf": [25, 20, 1, "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_door18"],
-                "island": [20, 12, 18, "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_island"],
-                "oven": [35, 18, 30, "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_ovendoor2"],
-                "fridge": [30, 14, 28, "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_fridgedoor1"],
-                "fridge2": [30, 20, 19, "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_fridgedoor2"],
-                "freezer": [28, 12, 24, "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_freezer"],
-            }
+            "cabinet": [
+                30,
+                15,
+                25,
+                "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_cabinet",
+            ],
+            "shelf": [
+                25,
+                20,
+                1,
+                "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_door18",
+            ],
+            "island": [
+                20,
+                12,
+                18,
+                "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_island",
+            ],
+            "oven": [
+                35,
+                18,
+                30,
+                "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_ovendoor2",
+            ],
+            "fridge": [
+                30,
+                14,
+                28,
+                "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_fridgedoor1",
+            ],
+            "fridge2": [
+                30,
+                20,
+                19,
+                "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_fridgedoor2",
+            ],
+            "freezer": [
+                28,
+                12,
+                24,
+                "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_freezer",
+            ],
+        }
+
+    def make_sim_cfg(self, agent_dict):
+        # Start the scene config
+        sim_cfg = SimulatorConfig(type="IsaacRearrangeSim-v0")
+
+        # This is for better graphics
+        sim_cfg.habitat_sim_v0.enable_hbao = True
+        sim_cfg.habitat_sim_v0.enable_physics = False
+
+        # TODO: disable this, causes performance issues
+        sim_cfg.habitat_sim_v0.frustum_culling = False
+
+        # Set up an example scene
+        sim_cfg.scene = "NONE"  # os.path.join(data_path, "hab3_bench_assets/hab3-hssd/scenes/103997919_171031233.scene_instance.json")
+
+        cfg = OmegaConf.create(sim_cfg)
+
+        # Set the scene agents
+        cfg.agents = agent_dict
+        cfg.agents_order = list(cfg.agents.keys())
+        return cfg
+
+    def make_hab_cfg(self, agent_dict, action_dict):
+        sim_cfg = self.make_sim_cfg(agent_dict)
+        task_cfg = TaskConfig(type="RearrangeEmptyTask-v0")
+        task_cfg.actions = action_dict
+        env_cfg = EnvironmentConfig()
+        dataset_cfg = DatasetConfig(
+            type="RearrangeDataset-v0",
+            data_path="data/hab3_bench_assets/episode_datasets/small_large.json.gz",
+        )
+
+        hab_cfg = HabitatConfig()
+        hab_cfg.environment = env_cfg
+        hab_cfg.task = task_cfg
+        hab_cfg.seed = self.seed
+
+        hab_cfg.dataset = dataset_cfg
+        hab_cfg.simulator = sim_cfg
+        hab_cfg.simulator.seed = self.seed
+
+        return hab_cfg
+
+    def init_rearrange_env(self, agent_dict, action_dict):
+        hab_cfg = self.make_hab_cfg(agent_dict, action_dict)
+        res_cfg = OmegaConf.create(hab_cfg)
+        res_cfg.environment.max_episode_steps = 100000000
+        print("hab_cfg: ", hab_cfg)
+        print("res_cfg: ", res_cfg)
+        return Env(res_cfg)
+
+    def process_obs_img(self, obs):
+        im = obs["third_rgb"]
+        im2 = obs["articulated_agent_arm_rgb"]
+        im3 = (255 * obs["articulated_agent_arm_depth"]).astype(np.uint8)
+        imt = np.zeros(im.shape, dtype=np.uint8)
+        imt[: im2.shape[0], : im2.shape[1], :] = im2
+        imt[im2.shape[0] :, : im2.shape[1], 0] = im3[:, :, 0]
+        imt[im2.shape[0] :, : im2.shape[1], 1] = im3[:, :, 0]
+        imt[im2.shape[0] :, : im2.shape[1], 2] = im3[:, :, 0]
+        im = np.concatenate([im, imt], 1)
+        return im
+
+    def save_img(self, observations, img_key, ep_data):
+        if img_key in observations.keys():
+            robot_img = observations[img_key]
+            if "depth" in img_key:
+                robot_img_tmp = np.concatenate(
+                    [robot_img, robot_img, robot_img], axis=-1
+                )
+                robot_img = robot_img_tmp
+                robot_img *= 255
+            elif "rgb" in img_key:
+                robot_img = cv2.cvtColor(robot_img, cv2.COLOR_BGR2RGB)
+            img_dir = f"{self.json_save_path}/imgs"
+            os.makedirs(img_dir, exist_ok=True)
+            img_pth = f"{img_dir}/{img_key}_img_{int(time.time()*1000)}.png"
+            cv2.imwrite(f"{img_pth}", robot_img)
+            ep_data[img_key] = img_pth
+        return ep_data
+
+    def convert_frame(self, orig_pos, orig_rot, frame_pos, frame_rot):
+        local_pos = frame_rot.inverted().transform_vector(orig_pos - frame_pos)
+        # Convert to local rotation
+        local_rot = frame_rot.inverted() * orig_rot
+        return local_pos, local_rot
+
+    def add_episode_data(self, obs, action):
+        frame = "arm_base"
+
+        curr_arm_joints = (
+            self.env.sim.articulated_agent._robot_wrapper.right_arm_joint_pos
+        )
+        curr_hand_joints = (
+            self.env.sim.articulated_agent._robot_wrapper.right_hand_joint_pos
+        )
+        global_T_ee_pos, global_T_ee_rot = (
+            self.env.sim.articulated_agent._robot_wrapper.ee_right_pose(
+                convention="usd"
+            )
+        )
+        curr_base_pos, curr_base_rot = (
+            self.env.sim.articulated_agent._robot_wrapper.get_root_pose(
+                convention="usd"
+            )
+        )
+        right_arm_base_pos, right_arm_base_rot = (
+            self.env.sim.articulated_agent._robot_wrapper.get_link_world_pose(
+                self.env.sim.articulated_agent._robot_wrapper.right_base_ee_link_id,
+                "usd",
+            )
+        )
+        base_T_ee_pos, base_T_ee_rot = self.convert_frame(
+            global_T_ee_pos,
+            global_T_ee_rot,
+            right_arm_base_pos,
+            right_arm_base_rot,
+        )
+        ep_data = {
+            "arm_joints": np.array(curr_arm_joints).tolist(),
+            "hand_joints": np.array(curr_hand_joints).tolist(),
+            "global_T_ee_pos": np.array(global_T_ee_pos).tolist(),
+            "global_T_ee_rot": np.array(
+                [*global_T_ee_rot.vector, global_T_ee_rot.scalar]
+            ).tolist(),
+            "base_T_ee_pos": np.array(base_T_ee_pos).tolist(),
+            "base_T_ee_rot": np.array(
+                [*base_T_ee_rot.vector, base_T_ee_rot.scalar]
+            ).tolist(),
+            "global_T_base_pos": np.array(curr_base_pos).tolist(),
+            "global_T_base_rot": np.array(
+                [*curr_base_rot.vector, curr_base_rot.scalar]
+            ).tolist(),
+        }
+
+        for save_key in self.save_keys:
+            ep_data = self.save_img(obs, save_key, ep_data)
+
+        ep_data["arm_action"] = action["arm_action"]
+        ep_data["base_action"] = action["base_action"]
+        ep_data["empty_action"] = action["empty_action"]
+        ep_data["hand_action"] = action["hand_action"]
+        ep_data["grasp_mode"] = action["grasp_mode"]
+
+        self.episode_json["episode_data"].append(ep_data)
+
+    def save_json(self):
+        ep_path = f"{self.json_save_path}/ep_{self.ep_id}.json"
+        if self.episode_json["success"]:
+            print(f"success! saving episode: {ep_path}")
+            with open(ep_path, "w") as outfile:
+                json.dump(self.episode_json, outfile)
+        else:
+            if os.path.exists(self.json_save_path):
+                shutil.rmtree(self.json_save_path)
 
     def get_grasp_mode(self, name):
         # num_hand_joints = 10
@@ -286,6 +438,14 @@ class ExpertDatagen:
                 self.env.sim.articulated_agent._robot_wrapper.right_hand_joint_pos
             )
 
+    def get_grasp_mode_idx(self, name):
+        grasp_modes = {
+            "open": 0,
+            "pre_grasp": 0,
+            "close": 1,
+        }
+        return grasp_modes[name]
+
     def move_to_ee(
         self, target_ee_pos, target_ee_rot=None, grasp=None, timeout=1000
     ):
@@ -315,7 +475,20 @@ class ExpertDatagen:
             self.pin_left_arm()
 
             obs = self.env.step(action)
-            im = process_obs_img(obs)
+
+            save_action = {
+                "arm_action": np.array(
+                    [*target_ee_pos, *target_ee_rot]
+                ).tolist(),
+                "base_action": [0, 0],
+                "empty_action": [0],
+                "hand_action": np.zeros(16).tolist(),
+                "grasp_mode": [self.get_grasp_mode_idx(self.grasp)],
+            }
+
+            self.add_episode_data(obs, save_action)
+
+            im = self.process_obs_img(obs)
             im = add_text_to_image(im, "moving ee")
             self.writer.append_data(im)
 
@@ -353,7 +526,16 @@ class ExpertDatagen:
             )
             self.pin_left_arm()
             obs = self.env.step(action)
-            im = process_obs_img(obs)
+            save_action = {
+                "arm_action": np.zeros(6).tolist(),
+                "base_action": [0, 0],
+                "empty_action": [0],
+                "hand_action": np.array([*target_hand_pos]).tolist(),
+                "grasp_mode": [self.get_grasp_mode_idx(self.grasp)],
+            }
+
+            self.add_episode_data(obs, save_action)
+            im = self.process_obs_img(obs)
             self.writer.append_data(im)
             curr_hand_pos = self.get_curr_hand_pose()
             ctr += 1
@@ -385,7 +567,18 @@ class ExpertDatagen:
             self.pin_left_arm()
 
             obs = self.env.step(action)
-            im = process_obs_img(obs)
+            save_action = {
+                "arm_action": np.array(
+                    [*target_ee_pos, *target_ee_rot]
+                ).tolist(),
+                "base_action": [0, 0],
+                "empty_action": [0],
+                "hand_action": np.array(hand_joints).tolist(),
+                "grasp_mode": [self.get_grasp_mode_idx(self.grasp)],
+            }
+
+            self.add_episode_data(obs, save_action)
+            im = self.process_obs_img(obs)
             im = add_text_to_image(im, "using grasp controller")
             self.writer.append_data(im)
 
@@ -408,8 +601,17 @@ class ExpertDatagen:
         }
 
         obs = self.env.step(action)
+        save_action = {
+            "arm_action": np.zeros(6).tolist(),
+            "base_action": [base_lin_vel, base_ang_vel],
+            "empty_action": [0],
+            "hand_action": np.zeros(16).tolist(),
+            "grasp_mode": [self.get_grasp_mode_idx(self.grasp)],
+        }
+
+        self.add_episode_data(obs, save_action)
         self.base_trans = self.env.sim.articulated_agent.base_transformation
-        im = process_obs_img(obs)
+        im = self.process_obs_img(obs)
         im = add_text_to_image(im, "using base controller")
         self.writer.append_data(im)
 
@@ -444,10 +646,21 @@ class ExpertDatagen:
             self.pin_right_arm()
 
             obs = self.env.step(action)
+            save_action = {
+                "arm_action": np.array(
+                    [*target_ee_pos, *target_ee_rot]
+                ).tolist(),
+                "base_action": [base_lin_vel, base_ang_vel],
+                "empty_action": [0],
+                "hand_action": np.array(hand_joints).tolist(),
+                "grasp_mode": [self.get_grasp_mode_idx(self.grasp)],
+            }
+            self.add_episode_data(obs, save_action)
+
             self.base_trans = (
                 self.env.sim.articulated_agent.base_transformation
             )
-            im = process_obs_img(obs)
+            im = self.process_obs_img(obs)
             im = add_text_to_image(im, "using grasp controller")
             self.writer.append_data(im)
 
@@ -461,9 +674,10 @@ class ExpertDatagen:
             self.writer.append_data(im)
 
     def visualize_pos(self, pos, name="target_ee_pos"):
-        self.env.sim.viz_ids[name] = self.env.sim.visualize_position(
-            pos, self.env.sim.viz_ids[name]
-        )
+        # self.env.sim.viz_ids[name] = self.env.sim.visualize_position(
+        #     pos, self.env.sim.viz_ids[name]
+        # )
+        return
 
     def get_poses(self, name, pose_type="base"):
         poses = {
@@ -477,7 +691,7 @@ class ExpertDatagen:
                 "base_pos": np.array([-4.4, 0.1, -3.5]),
                 "base_rot": 180,
                 "ee_pos": np.array([-5.6, 1.0, -3.9]),
-                "ee_rot": np.deg2rad([-60, 0 , 0]),
+                "ee_rot": np.deg2rad([-60, 0, 0]),
             },
             "island": {
                 "base_pos": np.array([-5.3, 0.1, -1.6]),
@@ -516,8 +730,16 @@ class ExpertDatagen:
                 "ee_rot": np.deg2rad([0, 80, -30]),
             },
         }
+        rand_offset = np.array(
+            [
+                np.random.normal(-0.01, 0.01),
+                np.random.normal(-0.01, 0.01),
+                np.random.normal(-0.01, 0.01),
+            ]
+        )
+        print("rand_offset: ", rand_offset)
         return (
-            poses[name][f"{pose_type}_pos"],
+            poses[name][f"{pose_type}_pos"] + rand_offset,
             poses[name][f"{pose_type}_rot"],
         )
 
@@ -571,6 +793,7 @@ class ExpertDatagen:
             )
 
         elif name == "target_grip":
+            self.grasp = "close"
             return (
                 torch.tensor(self.close_fingers),
                 # torch.tensor(self.target_w_xyz),
@@ -651,10 +874,10 @@ class ExpertDatagen:
         return isaac_T_door_quat
 
     def get_door_quat(self):
-        path =self.TARGET_CONFIG[self.target_name][3]
+        path = self.TARGET_CONFIG[self.target_name][3]
         door_trans, door_orientation_rpy = (
             self.env.sim.articulated_agent._robot_wrapper.get_prim_transform(
-               path
+                path
             )
         )
         self.visualize_pos(door_trans, "door")
@@ -764,7 +987,7 @@ class ExpertDatagen:
         self.move_to_ee(
             self.target_ee_pos,
             self.target_ee_rot,
-            grasp="pre_grasp" if hand == "left" else "open",
+            grasp="pre_grasp" if hand == "right" else "open",
             timeout=300 if hand == "left" else 200,
         )
 
@@ -806,18 +1029,57 @@ class ExpertDatagen:
 
     def run_expert_w_grasp(self, hand="left"):
         self.reset_robot(self.target_name)
+        self.grasp = "pre_grasp"
 
+        door_orientation_quat = self.get_door_quat()
+        door_orienation_quat_R = R.from_quat(door_orientation_quat)
+        initial_door_orientation_rpy = door_orienation_quat_R.as_euler(
+            "xyz", degrees=True
+        )
+        print("init door orientation: ", initial_door_orientation_rpy)
+
+        init_hand_joints = (
+            self.env.sim.articulated_agent._robot_wrapper.right_hand_joint_pos
+        )
         self.target_ee_pos, self.target_ee_rot = self.get_poses(
             self.target_name, pose_type="ee"
         )
         self.visualize_pos(self.target_ee_pos)
-        grip_iters,open_iters,move_iters,_ = self.TARGET_CONFIG[self.target_name]
+        grip_iters, open_iters, move_iters, _ = self.TARGET_CONFIG[
+            self.target_name
+        ]
         if hand == "left":
             self.execute_grasp_sequence(hand, grip_iters, open_iters)
         elif hand == "right":
             self.execute_grasp_sequence(
                 hand, grip_iters, open_iters, move_iters
             )
+
+        door_orientation_quat = self.get_door_quat()
+        door_orienation_quat_R = R.from_quat(door_orientation_quat)
+        final_door_orientation_rpy = door_orienation_quat_R.as_euler(
+            "xyz", degrees=True
+        )
+        print("initial door orientation: ", initial_door_orientation_rpy)
+        print("final door orientation: ", final_door_orientation_rpy)
+
+        final_hand_joints = (
+            self.env.sim.articulated_agent._robot_wrapper.right_hand_joint_pos
+        )
+        print("init hand joints: ", init_hand_joints)
+        print("final hand joints: ", final_hand_joints)
+
+        success = False
+        if not np.allclose(
+            np.abs(np.round(initial_door_orientation_rpy, 0)),
+            np.abs(np.round(final_door_orientation_rpy, 0)),
+        ):
+            success = True
+        self.episode_json["success"] = success
+        print("success: ", success)
+        self.save_json()
+        self.writer.close()
+        print(f"saved file to: {self.save_path}")
 
 
 if __name__ == "__main__":
@@ -829,8 +1091,11 @@ if __name__ == "__main__":
     )
     parser.add_argument("--skill", default="open", help="open, pick")
     parser.add_argument("--replay", action="store_true")
+    parser.add_argument("--seed", type=int, default=0, help="seed")
 
     args = parser.parse_args()
-    datagen = ExpertDatagen(args.target_name, args.skill, args.replay)
+    datagen = ExpertDatagen(
+        args.target_name, args.skill, args.replay, args.seed
+    )
 
     datagen.run_expert_w_grasp(hand="right")

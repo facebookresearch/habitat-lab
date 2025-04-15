@@ -30,7 +30,7 @@ class MurpRobotWrapper:
     def __init__(self, isaac_service, instance_id=0):
 
         self._isaac_service = isaac_service
-        asset_path = "./data/usd/robots/franka_with_hand_right.usda"  # Lambda Machine Change
+        asset_path = "./data/usd/robots/franka_right_digit.usda"  # Lambda Machine Change
         robot_prim_path = f"/World/env_{instance_id}/Murp"
         self._robot_prim_path = robot_prim_path
 
@@ -132,7 +132,6 @@ class MurpRobotWrapper:
         return pos, rot
 
     def get_link_world_poses(self, convention="hab"):
-
         positions = []
         positions_usd, rotations_usd = self._xform_prim_view.get_world_poses()
         for pos in positions_usd:
@@ -211,8 +210,11 @@ class MurpRobotWrapper:
             "joint", "link"
         )
 
+        self.right_base_ee_link_id = self.get_link_id("right_base")
+        self.left_base_ee_link_id = self.get_link_id("left_base")
         self.ee_link_id = self.get_link_id(self.ee_link_name)
         self.right_ee_link_id = self.get_link_id(self.right_ee_link_name)
+        print("EE_LINK_ID: ", self.right_ee_link_id)
         left_arm_joint_indices = []
         right_arm_joint_indices = []
         dof_names = self._robot.dof_names
@@ -532,23 +534,22 @@ class MurpRobotWrapper:
 
         return hand_joint_positions
 
-    def ee_pose(self, convention="hab"):
-        """Get the current ee position and rotation."""
+    def get_link_world_pose(self, link_name, convention="hab"):
         link_poses = self.get_link_world_poses(convention=convention)
 
-        ee_pos = link_poses[0][self.ee_link_id]
-        ee_rot = link_poses[1][self.ee_link_id]
-
+        ee_pos = link_poses[0][link_name]
+        ee_rot = link_poses[1][link_name]
         return ee_pos, ee_rot
+
+    def ee_pose(self, convention="hab"):
+        return self.get_link_world_pose(
+            self.ee_link_name, convention=convention
+        )
 
     def ee_right_pose(self, convention="hab"):
-        """Get the current ee position and rotation."""
-        link_poses = self.get_link_world_poses(convention=convention)
-
-        ee_pos = link_poses[0][self.right_ee_link_id]
-        ee_rot = link_poses[1][self.right_ee_link_id]
-
-        return ee_pos, ee_rot
+        return self.get_link_world_pose(
+            self.right_ee_link_id, convention=convention
+        )
 
     def get_prim_transform(self, asset_path=None):
         """Get Scene prim's position and rotation."""
@@ -588,11 +589,5 @@ class MurpRobotWrapper:
         return articulation_links
 
     def hand_pose(self, convention="hab"):
-        """Get the current hand base link position and rotation."""
-        link_poses = self.get_link_world_poses(convention=convention)
-        hand_base_id = self.get_link_id("link_0_0")
-
-        ee_pos = link_poses[0][hand_base_id]
-        ee_rot = link_poses[1][hand_base_id]
-
-        return ee_pos, ee_rot
+        hand_base_id = self.get_link_id("base_link_hand")
+        return self.get_link_world_pose(hand_base_id, convention=convention)

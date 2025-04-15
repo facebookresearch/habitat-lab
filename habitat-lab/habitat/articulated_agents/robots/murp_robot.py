@@ -96,17 +96,19 @@ class MurpRobot(MobileManipulator):
             ee_constraint=np.array([[[0.4, 1.2], [-0.7, 0.7], [0.25, 1.5]]]),
             cameras={
                 "articulated_agent_arm_depth": ArticulatedAgentCameraParams(
-                    cam_offset_pos=mn.Vector3(0.166, 0.0, 0.018),
+                    cam_offset_pos=mn.Vector3(-0.06, 0.1, 0.04),
                     cam_orientation=mn.Vector3(0.0, -1.571, 0.0),
                     # attached_link_id=36,
-                    attached_link_id=67,
+                    # attached_link_id=67,
+                    attached_link_id=73,
                     relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
                 ),
                 "articulated_agent_arm_rgb": ArticulatedAgentCameraParams(
-                    cam_offset_pos=mn.Vector3(0.166, 0.0, 0.03),
+                    cam_offset_pos=mn.Vector3(-0.06, 0.1, 0.04),
                     cam_orientation=mn.Vector3(0, -1.571, 0.0),
                     # attached_link_id=36,
-                    attached_link_id=67,
+                    # attached_link_id=67,
+                    attached_link_id=73,
                     relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
                 ),
                 "articulated_agent_arm_panoptic": ArticulatedAgentCameraParams(
