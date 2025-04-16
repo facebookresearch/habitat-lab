@@ -1,7 +1,11 @@
 import cv2
 import numpy as np
 import torch
+import math
+import copy
 import habitat.utils.geometry_utils as geo_utils
+
+from habitat.utils.geometry_utils import quaternion_from_coeff, quaternion_to_list, quaternion_rotate_vector, angle_between_quaternions
 
 def transform_rgb_bgr(image):
     return image[:, :, [2, 1, 0]]
@@ -63,3 +67,33 @@ def average_min_distance(goal_feat: torch.Tensor, current_feat: torch.Tensor, k:
     avg_min_dist = min_distances.mean()
     
     return avg_min_dist
+
+def rotate_agent_state(agent_state, turn_angle_degrees):
+    """
+    Return a new agent state with its rotation rotated by `turn_angle_degrees` around the up-axis.
+    This example assumes that the up-axis is (0, 1, 0) and that agent_state.rotation is a quaternion.
+    """
+    # Convert turn angle to radians.
+    turn_angle = math.radians(turn_angle_degrees)
+    
+    # Define up-axis vector.
+    up_axis = np.array([0, 1, 0])
+    
+    # Compute the quaternion representing a rotation by turn_angle about up_axis.
+    # One common approach is to compute the coefficients for a quaternion rotation:
+    # q = [x, y, z, w] where (x,y,z) = axis * sin(theta/2) and w = cos(theta/2)
+    sin_half_angle = math.sin(turn_angle / 2)
+    cos_half_angle = math.cos(turn_angle / 2)
+    q_coeffs = [up_axis[0] * sin_half_angle, up_axis[1] * sin_half_angle, up_axis[2] * sin_half_angle, cos_half_angle]
+    
+    # Create a quaternion from coefficients using habitat's helper.
+    turn_quat = quaternion_from_coeff(q_coeffs)
+    
+    # Multiply the turn quaternion with the agent's current rotation.
+    # Note: Depending on the quaternion library, the order of multiplication matters.
+    new_rotation = turn_quat * agent_state.rotation
+
+    # Create a deep copy of the agent state to avoid mutating the original.
+    new_agent_state = copy.deepcopy(agent_state)
+    new_agent_state.rotation = new_rotation
+    return new_agent_state
