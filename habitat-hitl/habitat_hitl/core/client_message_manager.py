@@ -236,7 +236,12 @@ class ClientMessageManager:
             if pos is not None and len(pos) == 3:
                 message["setXrOriginPosition"] = [pos[0], pos[1], pos[2]]
             if rot is not None and len(rot) == 4:
-                message["setXrOriginPosition"] = [pos[0], pos[1], pos[2]]
+                message["setXrOriginRotation"] = [
+                    rot[0],
+                    rot[1],
+                    rot[2],
+                    rot[3],
+                ]
 
     def signal_scene_change(self, destination_mask: Mask = Mask.ALL) -> None:
         r"""
