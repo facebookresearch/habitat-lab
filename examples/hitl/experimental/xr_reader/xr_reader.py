@@ -73,10 +73,6 @@ class AppStateXRReader(AppState):
         - Thumbstick:   {left.get_thumbstick()}
         - In hand:      {left.get_is_controller_in_hand()}
         """
-
-        # TODO: Magnum crashes when rendering more than 512 characters.
-        #       > Text::Renderer::render(): capacity 512 too small to render 584 glyphs
-        text = text[0:512]
         self._app_service.text_drawer.add_text(
             text,
             TextOnScreenAlignment.TOP_LEFT,
@@ -94,10 +90,6 @@ class AppStateXRReader(AppState):
         - Thumbstick:   {right.get_thumbstick()}
         - In hand:      {right.get_is_controller_in_hand()}
         """
-
-        # TODO: Magnum crashes when rendering more than 512 characters.
-        #       > Text::Renderer::render(): capacity 512 too small to render 584 glyphs
-        text = text[0:512]
         self._app_service.text_drawer.add_text(
             text,
             TextOnScreenAlignment.TOP_CENTER,
@@ -107,10 +99,6 @@ class AppStateXRReader(AppState):
         HMD:
         - Position:     {pos(state.get_head_pose(0))}
         """
-
-        # TODO: Magnum crashes when rendering more than 512 characters.
-        #       > Text::Renderer::render(): capacity 512 too small to render 584 glyphs
-        text = text[0:512]
         self._app_service.text_drawer.add_text(
             text,
             TextOnScreenAlignment.TOP_RIGHT,
