@@ -49,7 +49,7 @@ class Operation(Enum):
     """Copy the asset as-is, skipping all processing."""
 
     PROCESS = 2
-    """Process the asset to make it compatible with Unity."""
+    """Process the asset with the selected processor (only `magnum_decimation` is supported at the moment)."""
 
 
 @dataclass
