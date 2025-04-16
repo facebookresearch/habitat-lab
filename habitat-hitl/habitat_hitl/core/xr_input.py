@@ -81,6 +81,9 @@ class XRInput:
         for _ in range(NUM_CONTROLLERS):
             self._controllers.append(XRController())
 
+        self._origin_position: list[float] = [0.0, 0.0, 0.0]
+        self._origin_rotation: list[float] = [0.0, 0.0, 0.0, 0.0]
+
     @property
     def controllers(self):
         return self._controllers
@@ -92,6 +95,14 @@ class XRInput:
     @property
     def right_controller(self):
         return self._controllers[HAND_RIGHT]
+
+    @property
+    def origin_position(self):
+        return self._origin_position
+
+    @property
+    def origin_rotation(self):
+        return self._origin_rotation
 
     def reset(self, reset_continuous_input: bool = True):
         """

@@ -395,6 +395,14 @@ class RemoteClientState:
                                     ctrl_input._buttons_up.add(
                                         XRButton(button)
                                     )
+                    origin = xr.get("origin", None)
+                    if origin is not None:
+                        pos = origin.get("position", None)
+                        if pos is not None:
+                            xr_input._origin_position = pos
+                        rot = origin.get("rotation", None)
+                        if rot is not None:
+                            xr_input._origin_rotation = rot
 
             # Update other inputs from the latest data.
             last_client_state = client_states[-1]

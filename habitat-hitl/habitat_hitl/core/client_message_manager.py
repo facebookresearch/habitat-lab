@@ -210,16 +210,38 @@ class ClientMessageManager:
                     }
                 )
 
-    def change_humanoid_position(
+    def rebase_xr_headset_position(
         self, pos: List[float], destination_mask: Mask = Mask.ALL
     ) -> None:
         r"""
-        Change the position of the humanoid.
-        Used to synchronize the humanoid position in the client when changing scene.
+        Move the headset position to the specified world position.
+        Under the hood, this moves the XR origin on the horizontal plane such as the headset position matches the input.
         """
         for user_index in self._users.indices(destination_mask):
             message = self._messages[user_index]
-            message["teleportAvatarBasePosition"] = [pos[0], pos[1], pos[2]]
+            message["rebaseXrHeadsetPosition"] = [pos[0], pos[1], pos[2]]
+
+    def set_xr_origin_transform(
+        self,
+        pos: Optional[List[float]] = None,
+        rot: Optional[List[float]] = None,
+        destination_mask: Mask = Mask.ALL,
+    ) -> None:
+        r"""
+        Set the XR origin world position and rotation.
+        Use `None` to retain the same position or rotation.
+        """
+        for user_index in self._users.indices(destination_mask):
+            message = self._messages[user_index]
+            if pos is not None and len(pos) == 3:
+                message["setXrOriginPosition"] = [pos[0], pos[1], pos[2]]
+            if rot is not None and len(rot) == 4:
+                message["setXrOriginRotation"] = [
+                    rot[0],
+                    rot[1],
+                    rot[2],
+                    rot[3],
+                ]
 
     def signal_scene_change(self, destination_mask: Mask = Mask.ALL) -> None:
         r"""

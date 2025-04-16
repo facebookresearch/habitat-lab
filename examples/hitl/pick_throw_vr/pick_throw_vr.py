@@ -140,7 +140,7 @@ class AppStatePickThrowVr(AppState):
 
         client_message_manager = self._app_service.client_message_manager
         if client_message_manager:
-            client_message_manager.change_humanoid_position(human_pos)
+            client_message_manager.rebase_xr_headset_position(human_pos)
             client_message_manager.signal_scene_change()
             client_message_manager.update_navmesh_triangles(
                 self._get_navmesh_triangle_vertices()
