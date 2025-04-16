@@ -1,7 +1,7 @@
 # @package _global_
 
 habitat_hitl:
-  driver: "HitlBareSimDriver"
+  driver: "SimDriver"
   disable_policies_and_stepping: True
 
   # experimental:

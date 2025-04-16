@@ -5,7 +5,7 @@ defaults:
   - _self_
 
 habitat_hitl:
-  driver: "HitlBareSimDriver"
+  driver: "SimDriver"
   disable_policies_and_stepping: True
   window:
     title: "Sim Viewer"
