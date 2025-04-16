@@ -132,9 +132,9 @@ class AssetDatabase:
         ), f"Invalid object or stage config: '{config_path}'."
         object_dir: str = str(Path(config_path).parent)
         render_asset_file_name: Optional[str] = None
-        if "render_asset" in data:
+        if "render_asset" in data and data["render_asset"] != "":
             render_asset_file_name = data["render_asset"]
-        elif "urdf_filepath" in data:
+        elif "urdf_filepath" in data and data["urdf_filepath"] != "":
             render_asset_file_name = data["urdf_filepath"]
         render_asset_path = os.path.join(object_dir, render_asset_file_name)
         template_name = get_template_name(config_path)
