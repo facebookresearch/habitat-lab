@@ -835,7 +835,19 @@ class AppStateRobotTeleopViewer(AppState):
         if left.get_button_up(XRButton.ONE):
             pass
         if left.get_button_down(XRButton.TWO):
-            print("pressed two left")
+
+            print("Resetting Robot Joint Positions")
+            for reset_joint_values, arm_subset_key in [
+                ("right_arm_in", "right_arm"),
+                ("left_arm_in", "left_arm"),
+            ]:
+                
+                self.robot.pos_subsets[arm_subset_key].set_cached_pose(
+                    pose_name=reset_joint_values,
+                    set_motor_targets=self.robot.using_joint_motors,
+                    set_positions=not self.robot.using_joint_motors,
+                )
+
         if left.get_button_up(XRButton.TWO):
             pass
         if left.get_button_down(XRButton.START):
