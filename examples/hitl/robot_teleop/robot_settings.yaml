@@ -4,6 +4,7 @@
 
 #global robot settings
 urdf: "data/hab_murp/murp_tmr_franka/franka_with_hand_v2.urdf"
+# urdf: "data/hab_murp/franka_description_tmr/urdf/franka_with_hand_habitat.urdf"
 
 #if True, the base is kinematic
 fixed_base: True
@@ -25,22 +26,22 @@ configuration_subsets:
   #define the hand link indices
   #NOTE: we assume these are in the same order such that setting a symmetric pose is straightforward
   #[thumb(4), index(4), middle(4), ring(4)]
-  left_hand: [31,32,33,34,  26,27,28,29,  36,37,38,39, 41,42,43,44]
-  right_hand: [62,63,64,65, 57,58,59,60,  67,68,69,70,  72,73,74,75]
+  left_hand: [26,27,28,29,  44,45,46,47,  32,33,34,35, 38,39,40,41]
+  right_hand: [67,68,69,70, 61,62,63,64,  73,74,75,76,  79,80,81,82]
   #define arm link indices
   left_arm: [17,18,19,20,21,22,23]
-  right_arm: [48,49,50,51,52,53,54]
+  right_arm: [52,53,54,55,56,57,58]
 
 link_subsets:
   #link ixs for finger tips on each hand
-  left_thumb_tip: [35]
-  right_thumb_tip: [66]
+  left_thumb_tip: [30, 31]
+  right_thumb_tip: [71, 72]
   #[index, middle, ring]
-  left_finger_tips: [30,40,45]
-  right_finger_tips: [61,71,76]
+  left_finger_tips: [36, 37, 42, 43, 48, 49]
+  right_finger_tips: [65, 66, 77, 78, 83, 84]
   #arm base links (the fixed attachment point)
   left_arm_base: [15]
-  right_arm_base: [46]
+  right_arm_base: [50]
 
 
 
