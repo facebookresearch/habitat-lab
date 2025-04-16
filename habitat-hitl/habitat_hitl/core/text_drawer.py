@@ -159,6 +159,9 @@ if not use_headless_text_drawer:
                 :param text_delta_y: pixels delta to move/adjust window text anchor along Y axis,
             """
 
+            # TODO: Magnum crashes when rendering more than 512 characters.
+            truncated_text = text_to_add[0:512]
+
             # text object transform in window space is Projection matrix times Translation Matrix
             # put text in top left of window
             align_y, align_x = alignment.value
@@ -170,12 +173,12 @@ if not use_headless_text_drawer:
                 + mn.Vector2(text_delta_x, text_delta_y)
             )
             self._text_transform_pairs.append(
-                (text_to_add, window_text_transform)
+                (truncated_text, window_text_transform)
             )
 
             if self._client_message_manager:
                 self._client_message_manager.add_text(
-                    text_to_add, [align_x, align_y], destination_mask
+                    truncated_text, [align_x, align_y], destination_mask
                 )
 
         def draw_text(self):

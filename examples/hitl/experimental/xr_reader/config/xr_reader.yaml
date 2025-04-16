@@ -1,0 +1,23 @@
+# @package _global_
+
+defaults:
+  - hitl_defaults
+  - _self_
+
+habitat_hitl:
+  driver: "SimDriver"
+  disable_policies_and_stepping: True
+  window:
+    title: "XR Reader"
+  networking:
+    enable: True
+    max_client_count: 1
+    http_availability_server:
+      enable: False
+    enable_connections_by_default: True
+    client_sync:
+      # The client controls its own camera.
+      server_camera: False
+      server_input: True
+      # This is a first-person application. We don't need to transmit skinned mesh poses.
+      skinning: False
