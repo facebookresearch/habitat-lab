@@ -824,42 +824,42 @@ class AppStateRobotTeleopViewer(AppState):
         ###########################################################
         # Enumerate All XR Inputs here to avoid fragmentation and accidental overwriting
         # LEFT CONTROLLER BUTTONS
-        if left.get_buttons_down(XRButton.ONE):
+        if left.get_button_down(XRButton.ONE):
             print("pressed one left")
             self.sync_xr_local_state()
             print("synced headset state...")
-        if left.get_buttons_up(XRButton.ONE):
+        if left.get_button_up(XRButton.ONE):
             pass
-        if left.get_buttons_down(XRButton.TWO):
+        if left.get_button_down(XRButton.TWO):
             print("pressed two left")
-        if left.get_buttons_up(XRButton.TWO):
+        if left.get_button_up(XRButton.TWO):
             pass
-        if left.get_buttons_down(XRButton.START):
+        if left.get_button_down(XRButton.START):
             print("pressed START left")
             # NOTE: reserved by QuestReader for now...
-        if left.get_buttons_up(XRButton.START):
+        if left.get_button_up(XRButton.START):
             pass
 
         # RIGHT CONTROLLER BUTTONS
-        if right.get_buttons_down(XRButton.ONE):
+        if right.get_button_down(XRButton.ONE):
             print("pressed one right")
             print("Starting to record a new trajectory")
             self.xr_traj = XRTrajectory()
             self.recording_xr_traj = True
             self.replay_xr_traj = False
-        if right.get_buttons_up(XRButton.ONE):
+        if right.get_button_up(XRButton.ONE):
             print("released one right")
             self.recording_xr_traj = False
             self.xr_traj.save_json()
             print(
                 f"Saved the trajectory with {len(self.xr_traj.traj)} poses to 'xr_pose.json'."
             )
-        if right.get_buttons_down(XRButton.TWO):
+        if right.get_button_down(XRButton.TWO):
             print("pressed two right")
             self.replay_xr_traj = not self.replay_xr_traj
             self.recording_xr_traj = False
             print(f"XR Traj playback = {self.replay_xr_traj}")
-        if right.get_buttons_up(XRButton.TWO):
+        if right.get_button_up(XRButton.TWO):
             pass
         # NOTE: XRButton.START is reserved for Quest menu functionality
 
@@ -899,7 +899,7 @@ class AppStateRobotTeleopViewer(AppState):
             )
             _cur_angles = self.robot.ao.joint_positions
             # right hand
-            robot_right_base_link = 43
+            robot_right_base_link = 47
             arm_base_link_t = self.robot.ao.get_link_scene_node(
                 robot_right_base_link
             ).transformation.inverted()
@@ -912,15 +912,15 @@ class AppStateRobotTeleopViewer(AppState):
                     xr_pose_in_robot_frame.rot_right,
                 )
             )
-            _cur_angles[23:30] = self._ik.inverse_kinematics(
-                pose_right, _cur_angles[23:30]
+            _cur_angles[35:42] = self._ik.inverse_kinematics(
+                pose_right, _cur_angles[35:42]
             )
             self.robot.ao.joint_positions = _cur_angles
             # TODO: activate motor control
             # self.robot.ao.update_all_motor_targets(_cur_angles)
 
             # left hand
-            robot_left_base_link = 1
+            robot_left_base_link = 16
             arm_base_link_t = self.robot.ao.get_link_scene_node(
                 robot_left_base_link
             ).transformation.inverted()
@@ -933,8 +933,8 @@ class AppStateRobotTeleopViewer(AppState):
                     xr_pose_in_robot_frame.rot_left,
                 )
             )
-            _cur_angles[0:7] = self._ik.inverse_kinematics(
-                pose_left, _cur_angles[0:7]
+            _cur_angles[12:19] = self._ik.inverse_kinematics(
+                pose_left, _cur_angles[12:19]
             )
             self.robot.ao.joint_positions = _cur_angles
             # TODO: activate motor control
@@ -1123,6 +1123,7 @@ class AppStateRobotTeleopViewer(AppState):
         # step the simulator
         if self.robot is not None and self.robot.using_joint_motors:
             self._sim.step_physics(dt)
+        
 
         # update robot finger raycast sensors
         if self.robot is not None:
