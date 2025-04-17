@@ -34,7 +34,7 @@ from habitat_hitl.environment.camera_helper import CameraHelper
 from scripts.DoFeditor import DoFEditor
 from scripts.ik import DifferentialInverseKinematics
 from scripts.quest_reader import pos as to_ik_pose
-from scripts.robot import Robot
+from scripts.robot import LERP, Robot
 from scripts.xr_pose_adapter import XRPose, XRPoseAdapter, XRTrajectory
 
 # path to this example app directory
@@ -214,6 +214,8 @@ class AppStateRobotTeleopViewer(AppState):
         self.cursor_follow_robot = True
 
         self.robot: Optional[Robot] = None
+        # in-memory cache of hand poses for quick LERP grasping
+        self.hand_grasp_poses: List[List[float]] = []
         self.dof_editor: Optional[DoFEditor] = None
         # self._quest_reader: Optional[QuestReader] = QuestReader(self._app_service)
         self.xr_origin_offset = mn.Vector3(0, 0, 0)
@@ -407,6 +409,13 @@ class AppStateRobotTeleopViewer(AppState):
             self.robot.place_robot(
                 self._sim.pathfinder.get_random_navigable_point()
             )
+            # load the grasping poses. If this line fails (i.e. integrating a new robot, comment it and record the configuration subset and poses with the same key names below)
+            self.hand_grasp_poses = [
+                self.robot.pos_subsets["left_hand"].fetch_cached_pose(
+                    pose_name=hand_subset_key
+                )
+                for hand_subset_key in ["hand_open", "grasp"]
+            ]
         else:
             print("No robot configured.")
 
@@ -605,7 +614,9 @@ class AppStateRobotTeleopViewer(AppState):
 
             # XR input for robot motion
             if self._app_service.remote_client_state is not None:
-                xr_input = self._app_service.remote_client_state.get_xr_input(0)
+                xr_input = self._app_service.remote_client_state.get_xr_input(
+                    0
+                )
                 if xr_input is not None:
                     left = xr_input.controllers[HAND_LEFT]
                     right = xr_input.controllers[HAND_RIGHT]
@@ -616,7 +627,8 @@ class AppStateRobotTeleopViewer(AppState):
                         mn.Vector3(speed * left_thumbstick[1], 0, 0)
                     )
                     r = mn.Quaternion.rotation(
-                        mn.Rad(-r_speed * left_thumbstick[0]), mn.Vector3(0, 1, 0)
+                        mn.Rad(-r_speed * left_thumbstick[0]),
+                        mn.Vector3(0, 1, 0),
                     )
                     self.robot.ao.rotation = r * self.robot.ao.rotation
 
@@ -818,7 +830,7 @@ class AppStateRobotTeleopViewer(AppState):
     def handle_xr_input(self, dt: float):
         if self._app_service.remote_client_state is None:
             return
-        
+
         xr_input = self._app_service.remote_client_state.get_xr_input(0)
         left = xr_input.left_controller
         right = xr_input.right_controller
@@ -835,13 +847,11 @@ class AppStateRobotTeleopViewer(AppState):
         if left.get_button_up(XRButton.ONE):
             pass
         if left.get_button_down(XRButton.TWO):
-
             print("Resetting Robot Joint Positions")
             for reset_joint_values, arm_subset_key in [
                 ("right_arm_in", "right_arm"),
                 ("left_arm_in", "left_arm"),
             ]:
-                
                 self.robot.pos_subsets[arm_subset_key].set_cached_pose(
                     pose_name=reset_joint_values,
                     set_motor_targets=self.robot.using_joint_motors,
@@ -1016,16 +1026,27 @@ class AppStateRobotTeleopViewer(AppState):
                 (right, "right_hand"),
                 (left, "left_hand"),
             ]:
-                active_pose = "hand_open"
-                if xrcontroller.get_index_trigger() > 0.5:
-                    active_pose = "grasp"
-                elif xrcontroller.get_index_trigger() > 0:
-                    active_pose = "pre_grasp"
-                self.robot.pos_subsets[hand_subset_key].set_cached_pose(
-                    pose_name=active_pose,
-                    set_motor_targets=self.robot.using_joint_motors,
-                    set_positions=not self.robot.using_joint_motors,
+                # active_pose = "hand_open"
+                # if xrcontroller.get_index_trigger() > 0.5:
+                #     active_pose = "grasp"
+                # elif xrcontroller.get_index_trigger() > 0:
+                #     active_pose = "pre_grasp"
+                # self.robot.pos_subsets[hand_subset_key].set_cached_pose(
+                #     pose_name=active_pose,
+                #     set_motor_targets=self.robot.using_joint_motors,
+                #     set_positions=not self.robot.using_joint_motors,
+                # )
+                cur_pose = LERP(
+                    self.hand_grasp_poses[0],
+                    self.hand_grasp_poses[1],
+                    xrcontroller.get_index_trigger(),
                 )
+                if not self.robot.using_joint_motors:
+                    self.robot.pos_subsets[hand_subset_key].set_pos(cur_pose)
+                else:
+                    self.robot.pos_subsets[hand_subset_key].set_motor_pos(
+                        cur_pose
+                    )
 
             # record XR state if necessary
             if self.recording_xr_traj:
@@ -1139,7 +1160,6 @@ class AppStateRobotTeleopViewer(AppState):
         # step the simulator
         if self.robot is not None and self.robot.using_joint_motors:
             self._sim.step_physics(dt)
-        
 
         # update robot finger raycast sensors
         if self.robot is not None:

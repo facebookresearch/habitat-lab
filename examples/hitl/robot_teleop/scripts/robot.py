@@ -9,6 +9,7 @@ import os
 from typing import Dict, List, Tuple
 
 import magnum as mn
+import numpy as np
 from omegaconf import DictConfig
 
 import habitat.sims.habitat_simulator.sim_utilities as sutils
@@ -20,6 +21,19 @@ from habitat_sim.physics import RaycastResults
 # path to this example app directory
 dir_path = os.path.dirname(os.path.realpath(__file__)).split("scripts")[0]
 default_pose_cache_path = os.path.join(dir_path, "robot_poses.json")
+
+
+def LERP(vec0: List[float], vec1: List[float], t: float) -> List[float]:
+    """
+    Linear Interpolation (LERP) for two vectors (lists of floats) representing, for example, a joint space pose.
+    Requires len(vec0) == len(vec1)
+    """
+    if len(vec0) != len(vec1):
+        print(f"Cannot LERP mismatching vectors {len(vec0)} vs {len(vec1)}")
+    npv0 = np.array(vec0)
+    npv1 = np.array(vec1)
+    delta = npv1 - npv0
+    return list(npv0 + delta * t)
 
 
 def debug_draw_axis(
@@ -193,11 +207,49 @@ class ConfigurationSubset:
         """
         Loads a robot pose from a json file which could have multiple poses.
         """
+
+        # fetch and validate the pose
+        pose = self.fetch_cached_pose(pose_file, pose_name)
+
+        if pose == None:
+            return
+
+        if len(self.joint_pos_ixs) == len(self.ao.joint_positions):
+            # this is a full pose subset so use the shortcut APIs
+            if set_positions:
+                self.ao.joint_positions = pose
+            if set_motor_targets:
+                self.ao.update_all_motor_targets(pose)
+            return
+
+        # this is a partial pose, so set each dof
+        if set_motor_targets:
+            for ix, pos in enumerate(pose):
+                for motor_id in self.joint_motors[ix]:
+                    cur_settings = self.ao.get_joint_motor_settings(motor_id)
+                    cur_settings.position_target = pos
+                    self.ao.update_joint_motor(motor_id, cur_settings)
+        if set_positions:
+            cur_pose = self.ao.joint_positions
+            for ix in range(len(pose)):
+                cur_pose[self.joint_pos_ixs[ix]] = pose[ix]
+            self.ao.joint_positions = cur_pose
+
+    def fetch_cached_pose(
+        self,
+        pose_file: str = default_pose_cache_path,
+        pose_name: str = "default",
+    ) -> List[float]:
+        """
+        Reads a pose cache file and returns this ConfigurationSubset's pose vector from the cache without changing the robot's state.
+        NOTE: Use this to deserialize and store pose waypoints for applications such as LERPing between cached poses.
+        Returns None if the requested operation is invalid.
+        """
         if not os.path.exists(pose_file):
             print(
                 f"Cannot load cached pose. Configured pose file {pose_file} does not exist."
             )
-            return
+            return None
 
         with open(pose_file, "r") as f:
             poses = json.load(f)
@@ -205,24 +257,17 @@ class ConfigurationSubset:
                 print(
                     f"Cannot load cached pose. No poses cached for robot {self.ao.handle}."
                 )
-                return
+                return None
             if pose_name not in poses[self.ao.handle]:
                 print(
                     f"Cannot load cached pose. No pose named {pose_name} cached for robot {self.ao.handle}. Options are {poses[self.ao.handle].keys()}"
                 )
-                return
+                return None
             pose = poses[self.ao.handle][pose_name]
             if len(pose) == len(self.ao.joint_positions):
                 # loaded a full pose so cut it down if necessary
                 if len(pose) != len(self.joint_pos_ixs):
                     pose = [pose[ix] for ix in self.joint_pos_ixs]
-                else:
-                    # this is a full pose subset so use the shortcut APIs
-                    if set_positions:
-                        self.ao.joint_positions = pose
-                    if set_motor_targets:
-                        self.ao.update_all_motor_targets(pose)
-                    return
             elif len(pose) == len(self.joint_pos_ixs):
                 # subset pose is correctly sized so no work
                 pass
@@ -230,20 +275,8 @@ class ConfigurationSubset:
                 print(
                     f"Cannot load cached pose (size {len(pose)}) as it does not match number of dofs ({len(self.ao.joint_positions)} full or {len(self.joint_pos_ixs)} subset)"
                 )
-                return
-            if set_motor_targets:
-                for ix, pos in enumerate(pose):
-                    for motor_id in self.joint_motors[ix]:
-                        cur_settings = self.ao.get_joint_motor_settings(
-                            motor_id
-                        )
-                        cur_settings.position_target = pos
-                        self.ao.update_joint_motor(motor_id, cur_settings)
-            if set_positions:
-                cur_pose = self.ao.joint_positions
-                for ix in range(len(pose)):
-                    cur_pose[self.joint_pos_ixs[ix]] = pose[ix]
-                self.ao.joint_positions = cur_pose
+                return None
+            return pose
 
     def cache_pose(
         self,
