@@ -292,7 +292,9 @@ class AppStateRobotTeleopViewer(AppState):
                     pathfinder=self._sim.pathfinder,
                 )
                 if user_pos is not None:
-                    client_message_manager.change_humanoid_position(user_pos)
+                    client_message_manager.set_xr_origin_transform(
+                        pos=user_pos
+                    )
                 client_message_manager.update_navmesh_triangles(
                     self._get_navmesh_triangle_vertices()
                 )
@@ -822,10 +824,9 @@ class AppStateRobotTeleopViewer(AppState):
             -xr_pose.pos_head
         )
         # TODO: try setting the VR user state to align with the robot
-        # TODO: waiting for Unity control pathway for setting XR offset transformation
         # client_message_manager = self._app_service.client_message_manager
         # if client_message_manager is not None and self.robot is not None:
-        #    client_message_manager.change_humanoid_position(self.robot.ao.translation)
+        #    client_message_manager.set_xr_origin_transform(pos=self.robot.ao.translation)
 
     def handle_xr_input(self, dt: float):
         if self._app_service.remote_client_state is None:
