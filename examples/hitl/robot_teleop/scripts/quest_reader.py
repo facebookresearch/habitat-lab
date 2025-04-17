@@ -31,7 +31,7 @@ def pos(legacy_tuple: Optional[tuple[mn.Vector3, mn.Quaternion]]) -> str:
         return None
 
     # apply a corrective rotation to the local frame in order to align the palm
-    r = mn.Quaternion.rotation(-mn.Rad(mn.math.pi / 2.0), mn.Vector3(0, 0, 1))
+    r = mn.Quaternion.rotation(-mn.Rad(0), mn.Vector3(0, 0, 1))
     q = q * r
 
     R = (
