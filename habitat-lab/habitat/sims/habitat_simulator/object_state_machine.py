@@ -6,8 +6,10 @@
 
 """This module implements a singleton state-machine architecture for representing and managing non-geometric object states via metadata manipulation. For example, tracking and manipulating state such as "powered on" or "clean vs dirty". This interface is intended to provide a foundation which can be extended for downstream applications."""
 
+from __future__ import annotations
+
 from collections import defaultdict
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
 import magnum as mn
 
@@ -47,6 +49,7 @@ def set_state_of_obj(
     obj: Union[ManagedArticulatedObject, ManagedRigidObject],
     state_name: str,
     state_val: Any,
+    object_state_machine: Optional[ObjectStateMachine] = None,
 ) -> None:
     """
     Set the specified state in an object's "object_states" user_defined metadata.
@@ -54,12 +57,16 @@ def set_state_of_obj(
     :param obj: The ManagedObject.
     :param state_name: The name/key of the object state property to set.
     :param state_val: The value of the object state property to set.
+    :param object_state_machine: If specified, flag the snapshot as dirty.
     """
 
     user_attr = obj.user_attributes
     obj_state_config = user_attr.get_subconfig("object_states")
     obj_state_config.set(state_name, state_val)
     user_attr.save_subconfig("object_states", obj_state_config)
+
+    if object_state_machine is not None:
+        object_state_machine.set_snapshot_dirty()
 
 
 ##################################################
@@ -204,21 +211,6 @@ class BooleanObjectState(ObjectStateSpec):
 
         draw_object_highlight(obj, debug_line_render, camera_transform, color)
 
-    def toggle(
-        self, obj: Union[ManagedArticulatedObject, ManagedRigidObject]
-    ) -> bool:
-        """
-        Toggles a boolean state, returning the newly set value.
-
-        :param obj: The ManagedObject instance.
-        :return: The new value of the state.
-        """
-
-        cur_state = get_state_of_obj(obj, self.name)
-        new_state = not cur_state
-        set_state_of_obj(obj, self.name, new_state)
-        return new_state
-
 
 class ObjectIsClean(BooleanObjectState):
     """
@@ -269,6 +261,10 @@ class ObjectStateMachine:
         self.objects_with_states: Dict[
             str, List[ObjectStateSpec]
         ] = defaultdict(lambda: [])
+        # Whether the snapshot cache is dirty.
+        self._dirty = False
+        # Snapshot cache.
+        self._snapshot_cache: Dict[str, Dict[str, Any]] = {}
 
     def initialize_object_state_map(self, sim: habitat_sim.Simulator) -> None:
         """
@@ -299,6 +295,8 @@ class ObjectStateMachine:
                     f"registered state {state} for object {obj.handle}"
                 )
 
+        self.set_snapshot_dirty()
+
     def update_states(self, sim: habitat_sim.Simulator, dt: float) -> None:
         """
         Update all tracked object states for a simulation step.
@@ -316,6 +314,14 @@ class ObjectStateMachine:
                 obj = sutils.get_obj_from_handle(sim, obj_handle)
                 for state in states:
                     state.update_state(sim, obj, dt)
+
+        self.set_snapshot_dirty()
+
+    def set_snapshot_dirty(self) -> None:
+        """
+        Flag the snapshot dict for recalculation the next time `get_snapshot_dict()` is called.
+        """
+        self._dirty = True
 
     def get_snapshot_dict(
         self, sim: habitat_sim.Simulator
@@ -340,6 +346,9 @@ class ObjectStateMachine:
             >>>     ...
             >>> }
         """
+        if not self._dirty:
+            return self._snapshot_cache
+
         snapshot: Dict[str, Dict[str, Any]] = defaultdict(lambda: {})
         for object_handle, states in self.objects_with_states.items():
             obj = sutils.get_obj_from_handle(sim, object_handle)
@@ -350,4 +359,7 @@ class ObjectStateMachine:
                     if obj_state is not None
                     else state.default_value()
                 )
-        return dict(snapshot)
+
+        self._snapshot_cache = dict(snapshot)
+        self._dirty = False
+        return self._snapshot_cache
