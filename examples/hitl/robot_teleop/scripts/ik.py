@@ -19,7 +19,7 @@ class DifferentialInverseKinematics:
 
         jacobian = self.robot.jacobe(self.robot.q)
 
-        v, _ = rtb.p_servo(self.robot.fkine(self.robot.q), pose, 5)
+        v, _ = rtb.p_servo(self.robot.fkine(self.robot.q, end=self.robot.links[7]), pose, 5)
 
         # Create a MathematicalProgram
         prog = MathematicalProgram()
@@ -38,7 +38,7 @@ class DifferentialInverseKinematics:
             prog.AddConstraint(qd[_i] >= -max_qd[_i])
             prog.AddConstraint(self.robot.q[_i]+qd[_i]*0.03 <= max_q[_i])
             prog.AddConstraint(self.robot.q[_i]+qd[_i]*0.03 >= min_q[_i])
-            pass
+            
             
 
         # Add a cost to minimize the squared joint velocities
