@@ -638,7 +638,7 @@ class AppStateRobotTeleopViewer(AppState):
                     # use right thumbstick up/down to raise/lower the head point
                     # use right thumbstick left/right to rotate the alignment
                     right_thumbstick = right.get_thumbstick()
-                    yaw_scale = 0.06
+                    yaw_scale = -0.06
                     y_scale = 0.02
                     self.xr_origin_yaw_offset += (
                         right_thumbstick[0] * yaw_scale
