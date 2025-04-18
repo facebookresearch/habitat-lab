@@ -5,16 +5,13 @@
 # LICENSE file in the root directory of this source tree.
 
 import os
-from typing import List
+from typing import TYPE_CHECKING, List
 
 import hydra
 import magnum as mn
 
 from habitat.isaac_sim import isaac_prim_utils
 from habitat.isaac_sim.isaac_app_wrapper import IsaacAppWrapper
-from habitat.isaac_sim.isaac_rigid_object_manager import (
-    IsaacRigidObjectWrapper,
-)
 from habitat_hitl._internal.networking.average_rate_tracker import (
     AverageRateTracker,
 )
@@ -32,6 +29,11 @@ from habitat_hitl.environment.camera_helper import CameraHelper
 # path to this example app directory
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
+
+if TYPE_CHECKING:
+    from habitat.isaac_sim.isaac_rigid_object_manager import (
+        IsaacRigidObjectWrapper,
+    )
 
 # unfortunately we can't import this earlier
 # import habitat_sim  # isort:skip
@@ -128,7 +130,7 @@ class AppStateIsaacSimViewer(AppState):
             usd_path=asset_path, prim_path="/World/test_scene"
         )
 
-        self._rigid_objects: List[IsaacRigidObjectWrapper] = []
+        self._rigid_objects: List["IsaacRigidObjectWrapper"] = []
         from habitat.isaac_sim.isaac_rigid_object_manager import (
             IsaacRigidObjectManager,
         )
