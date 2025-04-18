@@ -71,8 +71,10 @@ mamba install numpy=1.26.4
 This app requires both HSSD scene dataset and murp_hab robot models.
 
 ```
+#run from habitat-lab root directory
+python -m habitat_sim.utils.datasets_download --uids hssd-hab ycb
+ln -s scene_datasets/hssd-hab/ data/hssd-hab
 #run from your 'habitat-lab/data' directory
-git clone https://huggingface.co/datasets/hssd/hssd-hab
 git clone https://huggingface.co/datasets/ai-habitat/hab_murp
 ```
 

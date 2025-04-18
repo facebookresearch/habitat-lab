@@ -206,7 +206,7 @@ class AppStateRobotTeleopViewer(AppState):
         self.mouse_cast_results: HitObjectInfo = None
         self._hide_gui = False
 
-        # additional object managment
+        # additional object management
         self.added_object_ids: List[int] = []
 
         # set with SPACE, when true cursor is locked on robot
@@ -241,6 +241,12 @@ class AppStateRobotTeleopViewer(AppState):
 
         # setup the simulator
         self.set_scene(self._current_scene_index)
+
+        # load YCB object configs
+        # python -m habitat_sim.utils.datasets_download --uids ycb
+        self._sim.get_object_template_manager().load_configs(
+            "data/objects/ycb/configs"
+        )
 
         # DEBUG: if replaying from start, sync at start
         if self.replay_xr_traj:
@@ -797,7 +803,7 @@ class AppStateRobotTeleopViewer(AppState):
 
         if gui_input.get_key_down(KeyCode.Y):
             # insert an object at the mouse raycast position
-            obj_shortname = "000bbe302b53fd2904e7ae92e1516a18f29de02d"
+            obj_shortname = "002_master_chef_can"
             obj_template_handle = list(
                 self._sim.get_object_template_manager()
                 .get_templates_by_handle_substring(obj_shortname)
