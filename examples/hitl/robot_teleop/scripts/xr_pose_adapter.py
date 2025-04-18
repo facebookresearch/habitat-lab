@@ -25,6 +25,8 @@ class XRPose:
         If no XR input is available, self.valid is False.
         """
 
+        self.pos_origin: mn.Vector3 = None
+        self.rot_origin: mn.Quaternion = None
         self.pos_head: mn.Vector3 = None
         self.rot_head: mn.Quaternion = None
         self.pos_left: mn.Vector3 = None
@@ -45,12 +47,26 @@ class XRPose:
         elif json_pose_dict is not None:
             self.from_json(json_pose_dict)
 
+    def __str__(self) -> str:
+        """
+        String rep of an XRPose:
+        'origin: (pos,rot) | head: (pos,rot) | left_hand: (pos,rot) | right_hand: (pos,rot)'
+        """
+        return f"origin: ({self.pos_origin},{self.rot_origin}) | head: ({self.pos_head},{self.rot_head}) | left_hand: ({self.pos_left},{self.rot_left}) | right_hand: ({self.pos_right},{self.rot_right})"
+
     def from_remote_state(
         self, remote_client_state: RemoteClientState
     ) -> None:
         """
         Read the XRPose from the provided RemoteClientState.
         """
+        xr_input = remote_client_state.get_xr_input(0)
+        pos_origin = mn.Vector3(xr_input.origin_position)
+        # client interface is wxyz format
+        rot_origin = mn.Quaternion(
+            mn.Vector3(xr_input.origin_rotation[1:4]),
+            xr_input.origin_rotation[0],
+        )
         head_pos, head_rot = remote_client_state.get_head_pose(user_index=0)
         pos_left, rot_left = remote_client_state.get_hand_pose(
             user_index=0, hand_idx=0
@@ -58,13 +74,15 @@ class XRPose:
         pos_right, rot_right = remote_client_state.get_hand_pose(
             user_index=0, hand_idx=1
         )
-        if None in [head_pos, pos_left, pos_right]:
+        if None in [pos_origin, head_pos, pos_left, pos_right]:
             # one of the controllers or the headset has no valid state, this object is invalid
             self.valid = False
             return
         self.valid = True
 
         # collect the state info
+        self.pos_origin = pos_origin
+        self.rot_origin = rot_origin
         self.pos_head = head_pos
         self.rot_head = head_rot
         self.pos_left = pos_left
@@ -79,6 +97,11 @@ class XRPose:
         self.valid = True
 
         # collect the state info from the JSON dict
+        self.pos_origin = mn.Vector3(json_pose_dict["pos_origin"])
+        self.rot_origin = mn.Quaternion(
+            mn.Vector3(json_pose_dict["rot_origin"][:3]),
+            json_pose_dict["rot_origin"][3],
+        )
         self.pos_head = mn.Vector3(json_pose_dict["pos_head"])
         self.rot_head = mn.Quaternion(
             mn.Vector3(json_pose_dict["rot_head"][:3]),
@@ -103,6 +126,9 @@ class XRPose:
             return None
         # extract the list formatted pose components
         json_dict = {
+            "pos_origin": list(self.pos_origin),
+            "rot_origin": list(self.rot_origin.vector)
+            + [self.rot_origin.scalar],
             "pos_head": list(self.pos_head),
             "rot_head": list(self.rot_head.vector) + [self.rot_head.scalar],
             "pos_left": list(self.pos_left),
@@ -209,11 +235,15 @@ class XRPoseAdapter:
         """
         transformed_pose = XRPose()
         t_quat = mn.Quaternion.from_matrix(transform.rotation())
+        transformed_pose.pos_origin = transform.transform_point(
+            xr_pose.pos_origin
+        )
         transformed_pose.pos_head = transform.transform_point(xr_pose.pos_head)
         transformed_pose.pos_left = transform.transform_point(xr_pose.pos_left)
         transformed_pose.pos_right = transform.transform_point(
             xr_pose.pos_right
         )
+        transformed_pose.rot_origin = t_quat * xr_pose.rot_origin
         transformed_pose.rot_head = t_quat * xr_pose.rot_head
         transformed_pose.rot_left = t_quat * xr_pose.rot_left
         transformed_pose.rot_right = t_quat * xr_pose.rot_right

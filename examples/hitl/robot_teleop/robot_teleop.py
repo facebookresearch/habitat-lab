@@ -10,7 +10,6 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import hydra
 import magnum as mn
-import numpy as np
 from hydra import compose
 from omegaconf import DictConfig
 
@@ -220,6 +219,8 @@ class AppStateRobotTeleopViewer(AppState):
         # self._quest_reader: Optional[QuestReader] = QuestReader(self._app_service)
         self.xr_origin_offset = mn.Vector3(0, 0, 0)
         self.xr_origin_rotation = mn.Quaternion()
+        # controls the yaw alignment (radians) between headset frame and robot local frame
+        self.xr_origin_yaw_offset: float = -mn.math.pi / 2.0
         self.xr_pose_adapter = XRPoseAdapter()
 
         # API for recording and playing back XR trajectories
@@ -634,24 +635,46 @@ class AppStateRobotTeleopViewer(AppState):
                     )
                     self.robot.ao.rotation = r * self.robot.ao.rotation
 
-                    # use right thumbstick to rotate the camera
+                    # use right thumbstick up/down to raise/lower the head point
+                    # use right thumbstick left/right to rotate the alignment
                     right_thumbstick = right.get_thumbstick()
-                    scale = 0.06
-                    self._camera_helper._lookat_offset_yaw += (
-                        scale * right_thumbstick[0]
+                    yaw_scale = 0.06
+                    y_scale = 0.02
+                    self.xr_origin_yaw_offset += (
+                        right_thumbstick[0] * yaw_scale
                     )
-                    self._camera_helper._lookat_offset_pitch += (
-                        scale * -right_thumbstick[1]
+                    self.xr_origin_rotation = mn.Quaternion.rotation(
+                        mn.Rad(self.xr_origin_yaw_offset), mn.Vector3(0, 1, 0)
                     )
-                    self._camera_helper._lookat_offset_pitch = np.clip(
-                        self._camera_helper._lookat_offset_pitch,
-                        self._camera_helper._min_lookat_offset_pitch,
-                        self._camera_helper._max_lookat_offset_pitch,
-                    )
+                    if abs(right_thumbstick[1]) > 0.1:
+                        self._cursor_pos[1] += right_thumbstick[1] * y_scale
 
-            self.robot.ao.translation = self._sim.pathfinder.try_step(
-                start, end
-            )
+                    # NOTE: This option controls the 3rd person PC camera orientation
+                    # scale = 0.06
+                    # self._camera_helper._lookat_offset_yaw += (
+                    #     scale * right_thumbstick[0]
+                    # )
+                    # self._camera_helper._lookat_offset_pitch += (
+                    #     scale * -right_thumbstick[1]
+                    # )
+                    # self._camera_helper._lookat_offset_pitch = np.clip(
+                    #     self._camera_helper._lookat_offset_pitch,
+                    #     self._camera_helper._min_lookat_offset_pitch,
+                    #     self._camera_helper._max_lookat_offset_pitch,
+                    # )
+                    # TODO: more elegance required
+                    if (
+                        right_thumbstick[0] != 0
+                        or right_thumbstick[1] != 0
+                        or left_thumbstick[0] != 0
+                        or left_thumbstick[1] != 0
+                    ):
+                        self._sync_xr_user_to_robot_cursor()
+
+            if start != end:
+                self.robot.ao.translation = self._sim.pathfinder.try_step(
+                    start, end
+                )
 
             # sample new placement for robot on navmesh
             if gui_input.get_key_down(KeyCode.M):
@@ -799,7 +822,7 @@ class AppStateRobotTeleopViewer(AppState):
     def sync_xr_local_state(self, xr_pose: XRPose = None):
         """
         Sets a local offset variable to transform XR headset and controller origin into the local robot space.
-        Should be run once when the quest user reaches a comfortable pose.
+        Should be run once every time the quest user reaches a comfortable pose and wishes to re-align with the robot.
         If no XRPose is provided, the current state is used.
         """
         if xr_pose is None:
@@ -813,20 +836,67 @@ class AppStateRobotTeleopViewer(AppState):
             )
             return
 
-        # the following lines construct a local correction frame which uses the headset pose as the origin
-        # align the XR headset orientation with the x axis
+        # align the XR headset orientation with the x axis + user offset
         align_z_to_x = mn.Quaternion.rotation(
-            mn.Rad(mn.math.pi / 2.0), mn.Vector3(0, 1, 0)
+            mn.Rad(self.xr_origin_yaw_offset), mn.Vector3(0, 1, 0)
         )
-        self.xr_origin_rotation = xr_pose.rot_head.inverted() * align_z_to_x
-        # align the headset position with the origin
-        self.xr_origin_offset = self.xr_origin_rotation.transform_vector(
-            -xr_pose.pos_head
+        self.xr_origin_rotation = (
+            align_z_to_x  # xr_pose.rot_head.inverted() * align_z_to_x
         )
-        # TODO: try setting the VR user state to align with the robot
-        # client_message_manager = self._app_service.client_message_manager
-        # if client_message_manager is not None and self.robot is not None:
-        #    client_message_manager.set_xr_origin_transform(pos=self.robot.ao.translation)
+
+        # get the local offset of the head from the origin for user correction
+        origin_transform = mn.Matrix4.from_(
+            xr_pose.rot_origin.to_matrix(), xr_pose.pos_origin
+        )
+        global_offset = xr_pose.pos_origin - xr_pose.pos_head
+        self.xr_origin_offset = origin_transform.inverted().transform_vector(
+            global_offset
+        )
+        self._sync_xr_user_to_robot_cursor()
+
+    def _sync_xr_user_to_robot_cursor(self):
+        """
+        Updates the XR user 0's origin transform from the robot and cursor states.
+        Call when robot base is moved or XR offsets are adjusted by user.
+        """
+        xr_pose = XRPose(
+            remote_client_state=self._app_service.remote_client_state
+        )
+        client_message_manager = self._app_service.client_message_manager
+        if (
+            client_message_manager is not None
+            and self.robot is not None
+            and xr_pose.valid
+        ):
+            origin_transform = mn.Matrix4.from_(
+                xr_pose.rot_origin.to_matrix(), xr_pose.pos_origin
+            )
+            # set the origin such that the headset is aligned with the cursor
+            # NOTE: temporarily setting the mutable values of immutable xr_input.origin_position by reference until bugfix in unity app with pushing the state from client
+            origin_position = list(
+                self._cursor_pos
+                + origin_transform.transform_vector(self.xr_origin_offset)
+            )
+            for i in range(3):
+                self._app_service.remote_client_state.get_xr_input(
+                    0
+                ).origin_position[i] = origin_position[i]
+            origin_orientation = (
+                self.robot.ao.rotation * self.xr_origin_rotation
+            )
+            self._app_service.remote_client_state.get_xr_input(
+                0
+            ).origin_rotation[0] = origin_orientation.scalar
+            for i in range(3):
+                self._app_service.remote_client_state.get_xr_input(
+                    0
+                ).origin_rotation[i + 1] = origin_orientation.vector[i]
+            client_message_manager.set_xr_origin_transform(
+                pos=origin_position,
+                rot=self._app_service.remote_client_state.get_xr_input(
+                    0
+                ).origin_rotation,
+            )
 
     def handle_xr_input(self, dt: float):
         if self._app_service.remote_client_state is None:
@@ -896,20 +966,6 @@ class AppStateRobotTeleopViewer(AppState):
         # TODO: PRIMARY_THUMBSTICK (click?) unmapped currently and available
         ###########################################################
         ###########################################################
-
-        # construct the xr -> robot frame alignment transform
-        # first construct a 4x4 with the local correction components from sync_xr_local_state
-        local_correction_tform = mn.Matrix4().from_(
-            self.xr_origin_rotation.to_matrix(), self.xr_origin_offset
-        )
-        # sync the aligned local XR state with the robot's orientation and cursor position
-        local_to_robot = mn.Matrix4().from_(
-            self.robot.ao.rotation.to_matrix(), self._cursor_pos
-        )
-        # cache the combined XR local to global transform
-        self.xr_pose_adapter.xr_local_to_global = local_to_robot.__matmul__(
-            local_correction_tform
-        )
 
         # TODO: example of freezing the replay at a known frame
         # self.xr_replay_frame =1

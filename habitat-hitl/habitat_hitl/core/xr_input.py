@@ -82,6 +82,7 @@ class XRInput:
             self._controllers.append(XRController())
 
         self._origin_position: list[float] = [0.0, 0.0, 0.0]
+        # [wxyz] or [scalar(1), vector(3)]
         self._origin_rotation: list[float] = [0.0, 0.0, 0.0, 0.0]
 
     @property
