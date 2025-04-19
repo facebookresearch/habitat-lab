@@ -63,8 +63,10 @@ def shortest_path_navigation(args):
         if args.verbose:
             print("Environment creation successful")
         
+        prev_scene = None
         for episode in range(len(env.episodes)):
             observations, info = env.reset(return_info=True)
+            current_scene = env.habitat_env.current_episode.scene_id
 
             if random.random() < args.sample:
                 continue
@@ -80,7 +82,7 @@ def shortest_path_navigation(args):
 
                 env.habitat_env.current_episode.goals[0].position = env.habitat_env.current_episode.goals[0].view_points[view_n].agent_state.position
                 follower = agent.ImageNavShortestPathFollower(
-                    env.habitat_env.sim, goal_radius, env.habitat_env.current_episode.goals[0].view_points[view_n].agent_state.rotation, False
+                    env.habitat_env.sim, goal_radius, env.habitat_env.current_episode.goals[0].view_points[view_n].agent_state.rotation, False, turn_angle
                 )
 
             if args.verbose:
@@ -93,24 +95,35 @@ def shortest_path_navigation(args):
                 )
                 if best_action is None:
                     break
-
+                
                 images.append(observations["rgb"])
                 distances.append(observations["pointgoal_with_gps_compass"][0])
                 actions.append(best_action)
 
                 if args.every_view and best_action == HabitatSimActions.move_forward:
-                    original_state = env.habitat_env.sim.get_agent_state()
+                    original_state = env.habitat_env.sim.get_agent_state()  # Save current agent state
                     position_views = []
-                    while True:
-                        observations, reward, done, info = env.step(HabitatSimActions.turn_left)
-                        position_views.append(observations["rgb"])
-                        current_state = env.habitat_env.sim.get_agent_state()
-                        if np.allclose(quaternion_to_list(current_state.rotation), quaternion_to_list(original_state.rotation), rtol=1e-04, atol=1e-05):
-                            break
-                    
-                    rot_steps = 360 // turn_angle
-                    views.append(position_views[-rot_steps:])
+                    turn_angle = config.habitat.simulator.turn_angle  # For instance, 30 degrees
+                    num_views = 360 // turn_angle
+
+                    for _ in range(num_views):
+                        # Compute the new agent state rotated by 'turn_angle'
+                        new_state = utils.rotate_agent_state(original_state, turn_angle)
                         
+                        # Update the simulation state (this does not count as a step in the usual sense)
+                        env.habitat_env.sim.set_agent_state(new_state.position, new_state.rotation)
+                        
+                        # Get new observations; this call should trigger a re-render based on the updated state.
+                        obs = env.habitat_env.sim.get_sensor_observations()
+                        position_views.append(obs["rgb"][:, :, :3])
+                        
+                        # Update original_state so that rotations accumulate if that’s the desired behavior.
+                        original_state = new_state
+
+                    views.append(position_views)
+                    # Restore the original state if required.
+                    env.habitat_env.sim.set_agent_state(original_state.position, original_state.rotation)
+                                            
                 observations, reward, done, info = env.step(best_action)
 
                 if args.verbose:
@@ -121,7 +134,10 @@ def shortest_path_navigation(args):
             assert len(images) == len(distances)
             assert len(images) == len(actions)
             if len(images) >= MIN_STEPS_TO_SAVE:
-                dirname = os.path.join(args.save_dir, f"%0{len(str(len(env.episodes)))}d" % episode)
+                if args.save_per_scene:
+                    dirname = os.path.join(args.save_dir, current_scene.split("/")[-1].split(".")[0], f"%0{len(str(len(env.episodes)))}d" % episode)
+                else:
+                    dirname = os.path.join(args.save_dir, f"%0{len(str(len(env.episodes)))}d" % episode)
                 
                 if os.path.exists(dirname):
                     shutil.rmtree(dirname)
@@ -152,6 +168,7 @@ if __name__ == "__main__":
     parser.add_argument("--split", type=str, default="val")
     parser.add_argument("--every-view", action="store_true", default=False)
     parser.add_argument("--sample", type=float, default=0.0)
+    parser.add_argument("--save-per-scene", action="store_true", default=False)
     parser.add_argument("--verbose", action="store_true", default=False)
     args = parser.parse_args()
     main(args)
