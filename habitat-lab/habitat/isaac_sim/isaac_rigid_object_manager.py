@@ -21,11 +21,11 @@ class IsaacRigidObjectWrapper:
         self._rigid_prim = RigidPrim(str(prim.GetPath()))
 
     @property
-    def object_id(self):
+    def object_id(self) -> int:
         return self._object_id
 
     @property
-    def transformation(self):
+    def transformation(self) -> mn.Matrix4:
         return isaac_prim_utils.get_transformation(self._rigid_prim)
 
     @transformation.setter
@@ -44,7 +44,7 @@ class IsaacRigidObjectWrapper:
         # todo: consider self._rigid_prim.set_world_pose
 
     @property
-    def translation(self):
+    def translation(self) -> mn.Vector3:
         pos_usd, _ = self._rigid_prim.get_world_pose()
         pos_habitat = isaac_prim_utils.usd_to_habitat_position(pos_usd)
         return mn.Vector3(*pos_habitat)
@@ -55,6 +55,19 @@ class IsaacRigidObjectWrapper:
             [translation.x, translation.y, translation.z]
         )
         isaac_prim_utils.set_translation(self._prim, translation_usd)
+
+    @property
+    def rotation(self) -> mn.Quaternion:
+        _, rot_usd = self._rigid_prim.get_world_pose()
+        rot_habitat = isaac_prim_utils.usd_to_habitat_rotation(rot_usd)
+        return isaac_prim_utils.rotation_wxyz_to_magnum_quat(rot_habitat)
+
+    @rotation.setter
+    def rotation(self, rotation: mn.Quaternion):
+        rotation_usd = isaac_prim_utils.habitat_to_usd_rotation(
+            isaac_prim_utils.magnum_quat_to_list_wxyz(rotation)
+        )
+        isaac_prim_utils.set_rotation(self._prim, rotation_usd)
 
     # todo: implement angular_velocity and linear_velocity
     @property
@@ -83,7 +96,7 @@ class IsaacRigidObjectWrapper:
         pass
 
     @property
-    def awake(self):
+    def awake(self) -> bool:
         # assume awake for now
         return True
 
@@ -91,6 +104,19 @@ class IsaacRigidObjectWrapper:
     def awake(self, a: bool):
         # ignore these requests for now and leave dynamic object awake
         pass
+
+    def get_aabb(self) -> mn.Range3D:
+        """
+        Returns the global AABB of the object in Habitat coordinate system as Range3D.
+        """
+        isaac_bounds = isaac_prim_utils.get_bounding_box(self._prim)
+        hab_min = mn.Vector3(
+            *isaac_prim_utils.usd_to_habitat_position(isaac_bounds[:3])
+        )
+        hab_max = mn.Vector3(
+            *isaac_prim_utils.usd_to_habitat_position(isaac_bounds[3:])
+        )
+        return mn.Range3D(hab_min, hab_max)
 
 
 class IsaacRigidObjectManager:

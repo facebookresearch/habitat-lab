@@ -9,7 +9,7 @@ import numpy as np
 
 if TYPE_CHECKING:
     from omni.isaac.core.prims.rigid_prim import RigidPrim
-    from pxr import Gf
+    from pxr import Gf, Usd
 
 
 def to_gf_vec3(src: Union[List[float], mn.Vector3, np.ndarray]) -> "Gf.Vec3f":
@@ -50,7 +50,9 @@ def usd_to_habitat_rotation(
     return rotation_habitat
 
 
-def usd_to_habitat_position(position: List[float]) -> List[float]:
+def usd_to_habitat_position(
+    position: Union[List[float], np.ndarray]
+) -> List[float]:
     x, y, z = position
     return [-x, z, y]
 
@@ -248,3 +250,14 @@ def get_com_world(rigid_prim: "RigidPrim") -> mn.Vector3:
     transformation = get_transformation(rigid_prim)
     com_world = transformation.transform_point(com_local_habitat)
     return com_world
+
+
+def get_bounding_box(prim: "Usd.Prim") -> np.ndarray:
+    """
+    Computes the bounding box of a rigid.
+    Returns [x_min, y_min, z_min, x_max, y_max, z_max]
+    """
+    import omni.isaac.core.utils.bounds as bounds_utils
+
+    bb_cache = bounds_utils.create_bbox_cache()
+    return bounds_utils.compute_aabb(bb_cache, prim_path=prim.GetPath())

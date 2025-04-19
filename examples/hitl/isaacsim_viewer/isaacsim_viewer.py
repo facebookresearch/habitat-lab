@@ -97,7 +97,8 @@ class AppStateIsaacSimViewer(AppState):
         # not supported
         assert not self._app_service.hitl_config.camera.first_person_mode
 
-        self._cursor_pos = mn.Vector3(-7.2, 0.8, -7.7)
+        # initial state is looking at the table
+        self._cursor_pos = mn.Vector3(-3.6, 0.8, -7.22)
         self._camera_helper.update(self._cursor_pos, 0.0)
 
         # Either the HITL app is headless or Isaac is headless. They can't both spawn a window.
@@ -162,19 +163,26 @@ class AppStateIsaacSimViewer(AppState):
 
         self.init_mouse_raycaster()
 
-    def add_or_reset_rigid_objects(self):
-        path_to_configs = "data/objects/ycb/configs"
-
-        handle = f"{path_to_configs}/024_bowl.object_config.json"
-        # on dining table
-        drop_pos = mn.Vector3(-3.6, 0.8, -7.22)
-
+    def add_rigid_object(
+        self, handle: str, bottom_pos: mn.Vector3 = None
+    ) -> None:
+        """
+        Adds the specified rigid object to the scene and records it in self._rigid_objects.
+        If specified, aligns the bottom most point of the object with bottom_pos.
+        NOTE: intended to be used with raycasting to place objects on horizontal surfaces.
+        """
         ro = self._isaac_rom.add_object_by_template_handle(handle)
         self._rigid_objects.append(ro)
+        ro.rotation = mn.Quaternion.rotation(-mn.Deg(90), mn.Vector3.x_axis())
 
-        rotation = mn.Quaternion.rotation(-mn.Deg(90), mn.Vector3.x_axis())
-        trans = mn.Matrix4.from_(rotation.to_matrix(), drop_pos)
-        ro.transformation = trans
+        # set a translation if specified offset such that the bottom most point of the object is coincident with bottom_pos
+        if bottom_pos is not None:
+            bounds = ro.get_aabb()
+            obj_height = ro.translation[1] - bounds.bottom
+            print(f"bounds = {bounds}")
+            print(f"obj_height = {obj_height}")
+
+            ro.translation = bottom_pos + mn.Vector3(0, obj_height, 0)
 
     def draw_lookat(self):
         if self._hide_gui:
@@ -365,8 +373,20 @@ class AppStateIsaacSimViewer(AppState):
         if gui_input.get_key_down(KeyCode.H):
             self._hide_gui = not self._hide_gui
 
-        if gui_input.get_key_down(KeyCode.J):
-            self.add_or_reset_rigid_objects()
+        if (
+            gui_input.get_key_down(KeyCode.J)
+            and self._recent_mouse_ray_hit_info is not None
+        ):
+            # place an object at the mouse raycast endpoint
+            hab_hit_pos = mn.Vector3(
+                *isaac_prim_utils.usd_to_habitat_position(
+                    self._recent_mouse_ray_hit_info["position"]
+                )
+            )
+            self.add_rigid_object(
+                handle="data/objects/ycb/configs/024_bowl.object_config.json",
+                bottom_pos=hab_hit_pos,
+            )
 
         if gui_input.get_key_down(KeyCode.K):
             self._app_service.video_recorder.start_recording()
@@ -482,8 +502,6 @@ class AppStateIsaacSimViewer(AppState):
         self.draw_lookat()
 
         self.draw_world_origin()
-
-        self.debug_draw_rigid_objects()
 
         self._update_help_text()
 
