@@ -129,7 +129,8 @@ class ExpertDatagen:
             "articulated_agent_arm_depth",
         ]
         mode = "train"
-        save_pth_base = f"/fsx-siro/jtruong/data/sim_robot_data/heuristic_expert_open/open_fridge/right_usd_zed_mini"
+        save_pth_base = f"/fsx-siro/jtruong/data/sim_robot_data/heuristic_expert_open/open_fridge/right_usd_zed_mini_rand"
+        os.makedirs(save_pth_base, exist_ok=True)
         self.json_save_path = f"{save_pth_base}/{mode}/ep_{self.ep_id}"
         os.makedirs(self.json_save_path, exist_ok=True)
 
@@ -387,6 +388,19 @@ class ExpertDatagen:
         )
         self.base_trans = mn.Matrix4.from_(rotation.to_matrix(), position)
         self.env.sim.articulated_agent.base_transformation = self.base_trans
+        murp_joint_limits_lower = np.deg2rad(
+            np.array([-157, -102, -166, -174, -160, 31, -172])
+        )
+        murp_joint_limits_upper = np.deg2rad(
+            np.array([157, 102, 166, -8, 160, 258, 172])
+        )
+        start_joint_pos = np.random.uniform(
+            murp_joint_limits_lower, murp_joint_limits_upper
+        )
+        self.env.sim.articulated_agent._robot_wrapper._robot.set_joint_positions = (
+            start_joint_pos
+        )
+
         print(f"set base to {name}: {start_position}, {start_rotation}")
 
     def pin_right_arm(self):
@@ -987,7 +1001,7 @@ class ExpertDatagen:
         self.move_to_ee(
             self.target_ee_pos,
             self.target_ee_rot,
-            grasp="pre_grasp" if hand == "right" else "open",
+            grasp="pre_grasp" if hand == "left" else "open",
             timeout=300 if hand == "left" else 200,
         )
 
