@@ -18,6 +18,7 @@ sys.setdlopenflags(sys.getdlopenflags() | ctypes.RTLD_GLOBAL)
 import habitat_llm_loader
 import hydra
 from state_machine import StateMachine
+from state_machine_short import StateMachineShort
 
 from habitat_hitl.core.hitl_main import hitl_main
 from habitat_hitl.core.hydra_utils import register_hydra_plugins
@@ -33,10 +34,18 @@ def main(config):
     # Attempt to load 'habitat_llm' (external project).
     habitat_llm_loader.register_habitat_llm_extensions(config)
 
-    hitl_main(
-        config,
-        lambda app_service: StateMachine(app_service),
-    )
+    # Hack for skipping the state machine to debug the app.
+    if hasattr(config, "SHORT_CIRCUIT") and config.SHORT_CIRCUIT:
+        hitl_main(
+            config,
+            lambda app_service: StateMachineShort(app_service),
+        )
+    # Launch state machine normally.
+    else:
+        hitl_main(
+            config,
+            lambda app_service: StateMachine(app_service),
+        )
 
 
 if __name__ == "__main__":

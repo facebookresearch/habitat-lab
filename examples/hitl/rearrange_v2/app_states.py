@@ -56,11 +56,14 @@ def create_app_state_start_screen(
 
 
 def create_app_state_rearrange(
-    app_service: AppService, app_data: AppData, session: Session
+    app_service: AppService,
+    app_data: AppData,
+    session: Session,
+    short_circuit: bool = False,
 ) -> AppStateBase:
     from rearrange_v2 import AppStateRearrangeV2  # type: ignore
 
-    return AppStateRearrangeV2(app_service, app_data, session)
+    return AppStateRearrangeV2(app_service, app_data, session, short_circuit)
 
 
 def create_app_state_feedback(

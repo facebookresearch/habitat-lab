@@ -576,7 +576,11 @@ class AppStateRearrangeV2(AppStateBase):
     """
 
     def __init__(
-        self, app_service: AppService, app_data: AppData, session: Session
+        self,
+        app_service: AppService,
+        app_data: AppData,
+        session: Session,
+        short_circuit: bool = False,
     ):
         super().__init__(app_service, app_data)
         sim = app_service.sim
@@ -612,6 +616,10 @@ class AppStateRearrangeV2(AppStateBase):
         rearrange_v2_config = RearrangeV2Config.load(
             rearrange_v2_config_raw, app_service.sim
         )
+
+        if short_circuit:
+            self._users.activate_user(0)
+            self._set_short_circuit_episode(1)
 
         # NOTE: The simulator has only 1 agent with all sensors. See 'create_sim_config() in habitat_simulator.py'.
         sim_agent = sim.agents[0]
@@ -966,3 +974,24 @@ class AppStateRearrangeV2(AppStateBase):
         )
 
         return task_successful and all_agents_reported_success
+
+    def _set_short_circuit_episode(self, episode_index: int):
+        session = self._session
+        session.current_episode_index = episode_index
+        session.episode_indices.append(episode_index)
+        app_service = self._app_service
+        app_service.episode_helper.set_next_episode_by_index(episode_index)
+        app_service.end_episode(do_reset=True)
+        client_message_manager = app_service.client_message_manager
+        if client_message_manager:
+            client_message_manager.signal_scene_change(Mask.ALL)
+
+        episode = self._app_service.episode_helper.current_episode
+        self._session.session_recorder.start_episode(
+            episode_index=self._session.current_episode_index,
+            episode_id=episode.episode_id,
+            scene_id=episode.scene_id,
+            dataset=episode.scene_dataset_config,
+            user_index_to_agent_index_map={},
+            episode_info=episode.info,
+        )
