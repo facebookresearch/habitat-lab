@@ -802,21 +802,68 @@ class AppStateRobotTeleopViewer(AppState):
                 )
 
         if gui_input.get_key_down(KeyCode.Y):
-            # insert an object at the mouse raycast position
-            obj_shortname = "002_master_chef_can"
-            obj_template_handle = list(
-                self._sim.get_object_template_manager()
-                .get_templates_by_handle_substring(obj_shortname)
-                .keys()
-            )[0]
-            new_obj = self.add_object_at(obj_template_handle)
-            obj_size_down = sutils.get_obj_size_along(
-                self._sim, new_obj.object_id, mn.Vector3(0, -1, 0)
-            )
-            placement_position = self.mouse_cast_results.hits[
-                0
-            ].point + mn.Vector3(0, obj_size_down[0], 0)
-            new_obj.translation = placement_position
+
+            if self._app_cfg.ycb_objects.use_cursor:
+                # insert an object at the mouse raycast position. Ask for the index position of object.
+                idx = input(
+                    "Enter the index of the object to add 0 - " + str(len(self._app_cfg.ycb_objects.names) - 1 ) + " > ")
+                
+                assert idx.isnumeric(), "Index must be a number."
+                assert idx != "", "Index must be a number."
+                assert int(idx) >= 0, "Index must be a positive number."
+                assert int(idx) < len(self._app_cfg.ycb_objects.names), "Invalid index for object to add."
+
+                obj_shortname = self._app_cfg.ycb_objects.names[int(idx)]
+                obj_template_handle = list(
+                    self._sim.get_object_template_manager()
+                    .get_templates_by_handle_substring(obj_shortname)
+                    .keys()
+                )[0]
+                new_obj = self.add_object_at(obj_template_handle)
+                obj_size_down = sutils.get_obj_size_along(
+                    self._sim, new_obj.object_id, mn.Vector3(0, -1, 0)
+                )
+                placement_position = self.mouse_cast_results.hits[
+                    0
+                ].point + mn.Vector3(0, obj_size_down[0], 0)
+                new_obj.translation = placement_position
+
+                # TO DO: ensure habitat gets these from the object itself instead of manual setting.
+                new_obj.mass = 0.01
+                new_obj.rolling_friction_coefficient = 5
+                new_obj.spinning_friction_coefficient = 5
+                new_obj.friction_coefficient = 5
+
+            else:
+
+                assert len(self._app_cfg.ycb_objects.names) == len(
+                    self._app_cfg.ycb_objects.positions
+                ), "YCB object names and positions must be the same length."
+
+                
+                for idx in range(len(self._app_cfg.ycb_objects.names)):
+                    obj_shortname = self._app_cfg.ycb_objects.names[idx]
+                    obj_template_handle = list(
+                        self._sim.get_object_template_manager()
+                        .get_templates_by_handle_substring(obj_shortname)
+                        .keys()
+                    )[0]
+
+                    new_obj = self.add_object_at(obj_template_handle)
+                    obj_size_down = sutils.get_obj_size_along(
+                    self._sim, new_obj.object_id, mn.Vector3(0, -1, 0)
+                    )
+
+                    position = self._app_cfg.ycb_objects.positions[idx]
+                    new_obj.translation = mn.Vector3(position[0], position[1], position[2])
+                    # TO DO: ensure habitat gets these from the object itself instead of manual setting.
+                    new_obj.mass = 0.01
+                    new_obj.rolling_friction_coefficient = 5
+                    new_obj.spinning_friction_coefficient = 5
+                    new_obj.friction_coefficient = 5
+
+
+
 
         if gui_input.get_key_down(KeyCode.U):
             self.remove_object(self.mouse_cast_results.hits[0].object_id)
