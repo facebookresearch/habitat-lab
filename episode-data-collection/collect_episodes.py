@@ -11,18 +11,23 @@ import cv2
 import numpy as np
 import random
 import pickle
+import torch
 
 import utils
 import agent
-from env import SimpleRLEnv
+
+from PIL import Image
 
 import habitat
+from env import SimpleRLEnv
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 from habitat.utils.visualizations import maps
 from habitat.utils.visualizations.utils import images_to_video
 from habitat.utils.geometry_utils import quaternion_to_list
 from habitat.config import read_write
+
+from utils import draw_top_down_map, load_embedding, animate_episode
 
 MIN_STEPS_TO_SAVE = 10
 
@@ -31,9 +36,12 @@ if not os.path.exists(IMAGE_DIR):
     os.makedirs(IMAGE_DIR)
 
 def shortest_path_navigation(args):
-    overrides = [
-        # "+habitat/task/measurements@habitat.task.measurements.top_down_map=top_down_map",
-    ]
+    if args.eval_model is not None:
+        model, transform = load_embedding(args.eval_model)
+        model.eval()
+        overrides = ["+habitat/task/measurements@habitat.task.measurements.top_down_map=top_down_map"]
+    else:
+        overrides = []
 
     config = habitat.get_config(
         config_path=os.path.join("benchmark/nav/pointnav", args.env_config),
@@ -48,7 +56,7 @@ def shortest_path_navigation(args):
             config.habitat.environment.max_episode_steps = 100000
 
     random.seed(42)
-
+    
     with SimpleRLEnv(config=config) as env:
         goal_radius = env.episodes[0].goals[0].radius
         if goal_radius is None:
@@ -70,6 +78,10 @@ def shortest_path_navigation(args):
 
             if random.random() < args.sample:
                 continue
+
+            if args.eval_model is not None:
+                maps = []
+                goal_image = observations['instance_imagegoal']
             
             goal = env.habitat_env.current_episode.goals[0]
             if hasattr(goal, "view_points"):
@@ -100,6 +112,10 @@ def shortest_path_navigation(args):
                 distances.append(observations["pointgoal_with_gps_compass"][0])
                 actions.append(best_action)
 
+                if args.eval_model is not None:
+                    top_down_map = draw_top_down_map(info, observations['rgb'].shape[0])
+                    maps.append(top_down_map)
+                    
                 if args.every_view and best_action == HabitatSimActions.move_forward:
                     original_state = env.habitat_env.sim.get_agent_state()  # Save current agent state
                     position_views = []
@@ -153,9 +169,36 @@ def shortest_path_navigation(args):
                     with open(f"{dirname}/views.pkl", "wb") as f:
                         pickle.dump(views, f)
 
+                if args.eval_model:
+                    batch = torch.stack([transform(Image.fromarray(f)) for f in images]).to('cuda')
+                    if args.eval_model in ('vip', 'r3m'):
+                        batch = batch * 255
+                    with torch.no_grad():
+                        if args.eval_model.startswith(('one_scene_decoder', 'dist_decoder', 'vint_dist', 'one_scene_quasi', 'quasi')):
+                            goal = batch[-1:].repeat(len(batch), 1, 1, 1)
+                            pred_distances = model(batch, goal).cpu().numpy().squeeze()
+                        else:
+                            emb = model(batch).cpu().numpy()
+                            goal = emb[-1]
+                            pred_distances = np.linalg.norm(emb - goal, axis=1)
+                    
+                    out_gif = os.path.join(dirname, f"model_eval.gif")
+                    animate_episode(
+                        frames=images,
+                        maps=maps,
+                        geo_distances=distances,
+                        pred_distances=pred_distances,
+                        goal_frame=images[-1],
+                        out_gif=os.path.join(dirname, "model_eval.gif"),
+                        max_len=args.max_len,
+                        fps=10,
+                    )
+                    if args.verbose:
+                        print(f"Saved 4-panel animation to {out_gif}")
+
+
             if args.verbose:
                 print("Episode finished")
-
 
 def main(args):
     shortest_path_navigation(args)
@@ -169,6 +212,9 @@ if __name__ == "__main__":
     parser.add_argument("--every-view", action="store_true", default=False)
     parser.add_argument("--sample", type=float, default=0.0)
     parser.add_argument("--save-per-scene", action="store_true", default=False)
+    parser.add_argument("--eval-model", type=str, default=None)
+    parser.add_argument("--max-len", type=int, default=100, help="Max frames to animate")
     parser.add_argument("--verbose", action="store_true", default=False)
     args = parser.parse_args()
+
     main(args)

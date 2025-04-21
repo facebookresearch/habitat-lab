@@ -24,8 +24,6 @@ class ImageNavShortestPathFollower(ShortestPathFollower):
         self.done = False
         self.turn_angle = turn_angle
 
-        self.cnt = 0
-
     def get_next_action(
         self, goal_pos: Union[List[float], np.ndarray]
     ) -> Optional[Union[int, np.ndarray]]:
@@ -33,8 +31,6 @@ class ImageNavShortestPathFollower(ShortestPathFollower):
 
         if self.done or best_action == HabitatSimActions.stop:
             self.done = True
-            self.cnt += 1
-            assert self.cnt <= 12
             
             current_q = self._sim.get_agent_state().rotation
             goal_q = self.goal_rotation
