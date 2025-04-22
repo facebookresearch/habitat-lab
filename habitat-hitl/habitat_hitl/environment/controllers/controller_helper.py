@@ -96,6 +96,7 @@ class ControllerHelper:
                     )
 
                     gui_agent_controller: Controller
+
                     if articulated_agent_type == "KinematicHumanoid":
                         gui_agent_controller = GuiHumanoidController(
                             agent_idx=agent_index,
@@ -110,7 +111,10 @@ class ControllerHelper:
                             ),
                         )
                     elif articulated_agent_type == "SpotRobot":
-                        agent_k = f"agent_{agent_index}"
+                        if is_multi_agent:
+                            agent_k = f"agent_{agent_index}_"
+                        else:
+                            agent_k = ""
                         original_action_space = clean_dict(
                             self._gym_habitat_env.original_action_space,
                             agent_k,
@@ -123,7 +127,7 @@ class ControllerHelper:
                             base_vel_action_idx,
                             base_vel_action_end_idx,
                         ) = find_action_range(
-                            original_action_space, "_base_velocity"
+                            original_action_space, "base_velocity"
                         )
 
                         assert len(action_space.shape) == 1
@@ -135,7 +139,7 @@ class ControllerHelper:
                         turn_scale = (
                             config.habitat.simulator.ctrl_freq
                             / config.habitat.task.actions[
-                                f"{agent_k}_base_velocity"
+                                f"{agent_k}base_velocity"
                             ].ang_speed
                         )
 
@@ -216,8 +220,8 @@ class ControllerHelper:
             raise ValueError(
                 "ControllerHelper only supports up to 2 controllers."
             )
-
-        return action
+        # convert action to float32
+        return np.float32(action)
 
     def on_environment_reset(self):
         for controller in self.controllers:
