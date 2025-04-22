@@ -141,8 +141,28 @@ The application has two options for placing the robot base.
 
 # VR Integration
 
-VR support is still under development. Follow the instructions in the [quest_reader](../quest_reader/README.md) application first, then run the following launch command:
+## Running Habitat
+To perform teleoperation using Quest3, first run the following command on your system running habitat.
 
 ```bash
 python examples/hitl/robot_teleop/robot_teleop.py --config-name robot_teleop_vr.yaml
 ```
+
+## Habitat Quest Viewer
+Please run the latest build of Quest-Habitat Unity build on your Quest headset after launching habitat. The Headset and Laptop need to be connected to the same network without VPN. 
+
+## User Interface
+
+### Robot Teleoperation
+This section describes teleoperating the robot. All commands are associated with the controllers.
+- `'X'` on the quest to align the user's current head position and orientation to the robot's base frame. This is necessary before starting teleoperation as the end-effector poses are captured with respect to this frame.
+- `'Y'` resets the robot to their `initial joint configuration`. This is particularly useful if the robot is accidentally driven into a singularity in trying to each beyond the robot's workspace OR the user moved in the physical world without using `'X'`
+- `Left Controller Joy Stick` moves the robot's base.
+- `Right Controller Joy Stick` moves the camera's orientation with respect to the robot's base. Enabling the user to not have to reorient themselves in the physical space.
+- `Quest Grip Button` press and hold to teleoperate the robot arm for the hand on which the button is pressed. The axis marker represents the desired end-effector position for each arm.
+- `Quest Trigger Button` press for closing the allegro hand gripper. Interpolation is implemented, i.e. the amount of the button pressed controls the amount the allegro gripper's closing.
+
+### Changing Scenes and adding YCB Objects
+- `0` on keyboard to change scenes.
+- `Y` *( if `use_cursor` is set to `True` in `robot_teleop_vr.yaml` )* : Object is loaded at the position the cursor is pointing at. The user can select which YCB object to add using the terminal. List of possible options that may be added can be modified in the `robot_teleop_vr.yaml`
+- `Y` *( if `use_cursor` is set to `False` in `robot_teleop_vr.yaml` )* : Objects are loaded in the scene at the defined positions inside yaml.
