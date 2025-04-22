@@ -111,7 +111,6 @@ class GuiRobotController(GuiController):
         base_name = f"{agent_k}base_velocity"
         ac_spaces = env.action_space.spaces
 
-        assert base_name in ac_spaces
         base_action_space = ac_spaces[base_name][base_k]
         base_action = np.zeros(base_action_space.shape[0])
 
