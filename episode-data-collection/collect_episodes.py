@@ -170,17 +170,47 @@ def shortest_path_navigation(args):
                         pickle.dump(views, f)
 
                 if args.eval_model:
+                    model, transform = load_embedding(args.eval_model)
+                    model.eval()
                     batch = torch.stack([transform(Image.fromarray(f)) for f in images]).to('cuda')
                     if args.eval_model in ('vip', 'r3m'):
                         batch = batch * 255
+
                     with torch.no_grad():
-                        if args.eval_model.startswith(('one_scene_decoder', 'dist_decoder', 'vint_dist', 'one_scene_quasi', 'quasi')):
+                        if args.eval_model.startswith(('one_scene_decoder', 'dist_decoder',
+                                                    'one_scene_quasi', 'quasi')):
                             goal = batch[-1:].repeat(len(batch), 1, 1, 1)
                             pred_distances = model(batch, goal).cpu().numpy().squeeze()
+                        elif args.eval_model.startswith('vint'):
+                            context = getattr(model, 'context_size', None) \
+                                    or getattr(model.module, 'context_size', None)
+                            N = batch.shape[0]
+                            obs_list, goal_list, past_list = [], [], []
+                            final_frame = batch[-1].unsqueeze(0)
+
+                            for i in range(N):
+                                obs_list.append(batch[i])
+                                goal_list.append(final_frame[0])
+
+                                if i >= context:
+                                    past = batch[i-context:i]
+                                else:
+                                    n_pad = context - i
+                                    pads = batch[0:1].repeat(n_pad, 1, 1, 1)
+                                    past = torch.cat([pads, batch[0:i]], dim=0) if i > 0 else pads
+                                past_list.append(past)
+
+                            obs_imgs  = torch.stack(obs_list,  dim=0)
+                            goal_imgs = torch.stack(goal_list, dim=0)
+                            past_imgs = torch.stack(past_list, dim=0)
+
+                            pred_distances = model(obs_imgs, goal_imgs, past_imgs)
+                            pred_distances = pred_distances.cpu().numpy()
                         else:
                             emb = model(batch).cpu().numpy()
                             goal = emb[-1]
                             pred_distances = np.linalg.norm(emb - goal, axis=1)
+
                     
                     out_gif = os.path.join(dirname, f"model_eval.gif")
                     animate_episode(

@@ -181,7 +181,7 @@ def animate_episode(
     maps   = maps[-(max_len+1):]
     geo    = np.array(geo_distances[-(max_len+1):],  dtype=float)
     pred   = np.array(pred_distances[-(max_len+1):], dtype=float)
-    baseline = np.linspace(geo[0], 0.0, len(frames))
+    baseline = np.linspace(pred[0], 0.0, len(frames))
 
     # Correlations
     τ_geo_base, _, sym = compute_correlation(geo,  baseline, corr_method)
