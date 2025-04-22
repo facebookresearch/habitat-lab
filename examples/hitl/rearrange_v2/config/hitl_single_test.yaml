@@ -3,19 +3,23 @@
 # Top-level configuration for running a headless HITL server in single-user mode.
 
 defaults:
-  - lang_rearrange_humanoid_only.yaml
+  - lang_rearrange_spot_only.yaml
   - _self_
 
 
 rearrange_v2:
   highlight_default_receptacles: True
   agents:
-    agent_0:
+    main_agent:
       head_sensor_substring: "head"
       can_change_object_states: True
 
 SHORT_CIRCUIT: True
 habitat_hitl:
+  window: ~
   networking:
     enable: True
     max_client_count: 1
+  experimental:
+    headless:
+      do_headless: True
