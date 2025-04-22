@@ -556,7 +556,8 @@ def convert_hab_scene(
             # Convert the URDF to USD using the UrdfConverter
             try:
                 base_type = ao_json_dict.get("base_type")
-                fixed_base = base_type == "fixed"
+                motion_type = obj_instance_json.get("motion_type")
+                fixed_base = base_type == "fixed" or motion_type == "static"
                 convert_urdf(urdf_full_filepath, out_usd_path, fixed_base)
                 add_habitat_visual_metadata_for_articulation(
                     out_usd_path,  # NOTE: should this be a temp intermediate file?
