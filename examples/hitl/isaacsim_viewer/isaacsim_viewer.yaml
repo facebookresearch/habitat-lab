@@ -60,7 +60,7 @@ habitat_hitl:
 isaacsim_viewer:
   camera_move_speed: 0.075
   #scene path relative to this file's directory
-  usd_scene_path: "../../../data/usd/scenes/102344193_with_stage.usda"
+  usd_scene_path: "../../../data/usd/scenes/102343992.usda"
 
 defaults:
   # Load default parameters for the HITL framework. See

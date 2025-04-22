@@ -4,7 +4,7 @@
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict
+from typing import Dict, List
 
 from habitat.isaac_sim import isaac_prim_utils
 
@@ -21,6 +21,7 @@ class RenderAsset:
     filepath: str
     # todo: possible color override
     semantic_id: int
+    scale: List[float]
 
 
 import numpy as np
@@ -59,7 +60,9 @@ class _InstanceGroup:
         for prim_path in prim_paths:
             render_asset = self._prim_path_to_render_asset[prim_path]
             self._render_instance_helper.add_instance(
-                render_asset.filepath, render_asset.semantic_id
+                render_asset.filepath,
+                render_asset.semantic_id,
+                render_asset.scale,
             )
 
     def flush_to_hab_sim(self):
@@ -169,12 +172,29 @@ class UsdVisualizer:
 
             # asset_path should be relative to the project root, which is hopefully our CWD
             asset_path = asset_path_attr.Get()
-            # asset_scale_attr = prim.GetAttribute("habitatVisual:assetScale")
-            # asset_scale = (
-            #    asset_scale_attr.Get()
-            #    if asset_scale_attr and asset_scale_attr.HasAuthoredValue()
-            #    else None
-            # )
+
+            # first get the asset's internally configured scaling (same for all instances of the object)
+            base_asset_scale_attr = prim.GetAttribute(
+                "habitatVisual:assetScale"
+            )
+            base_asset_scale = (
+                base_asset_scale_attr.Get()
+                if base_asset_scale_attr
+                and base_asset_scale_attr.HasAuthoredValue()
+                else [1.0, 1.0, 1.0]
+            )
+            # then get the object's instance scaling parsed from the scene config
+            instance_asset_scale_attr = prim.GetAttribute("xformOp:scale")
+            instance_asset_scale = (
+                instance_asset_scale_attr.Get()
+                if instance_asset_scale_attr
+                and instance_asset_scale_attr.HasAuthoredValue()
+                else [1.0, 1.0, 1.0]
+            )
+            # combine the internal object scale and the additional instance scaling from the scene config
+            final_scale = [
+                base_asset_scale[i] * instance_asset_scale[i] for i in range(3)
+            ]
 
             asset_abs_path = asset_path
 
@@ -189,7 +209,9 @@ class UsdVisualizer:
             group = self._instance_groups[group_type]
 
             group._prim_path_to_render_asset[prim_path] = RenderAsset(
-                filepath=asset_abs_path, semantic_id=semantic_id
+                filepath=asset_abs_path,
+                semantic_id=semantic_id,
+                scale=final_scale,
             )
             group.set_dirty()
 
