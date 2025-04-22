@@ -434,7 +434,10 @@ def convert_hab_scene(
     with open(scene_filepath, "r") as file:
         scene_json_data = json.load(file)
 
+    # rigid and articulated object counts to support instance naming
+    # NOTE: keeping AOs and ROs separate in case they share a name hash
     object_counts: Dict[str, int] = {}
+    aobject_counts: Dict[str, int] = {}
 
     max_count = -1  # 50  # temp only convert the first N objects
     count = 0
@@ -532,7 +535,17 @@ def convert_hab_scene(
         ao_shortname = obj_instance_json["template_name"]
         base_object_name = f"AOBJECT_{ao_shortname}"
         base_object_name = sanitize_usd_name(base_object_name)
-        # TODO: Does this need a per-instance suffix?
+
+        # per-instance suffix
+        if base_object_name in aobject_counts:
+            aobject_counts[base_object_name] += 1
+            unique_object_name = (
+                f"{base_object_name}_dup{aobject_counts[base_object_name]}"
+            )
+        else:
+            unique_object_name = base_object_name
+            aobject_counts[base_object_name] = 1
+
         out_usd_path = f"./data/usd/objects/{base_object_name}.usda"
         if overwrite_usd or not os.path.exists(out_usd_path):
             ao_config_filename = (
@@ -573,7 +586,7 @@ def convert_hab_scene(
         )
 
         object_xform = UsdGeom.Xform.Define(
-            usd_stage, f"/Scene/{base_object_name}"
+            usd_stage, f"/Scene/{unique_object_name}"
         )
         prim = object_xform.GetPrim()
         prim.GetReferences().AddReference(relative_usd_path)
