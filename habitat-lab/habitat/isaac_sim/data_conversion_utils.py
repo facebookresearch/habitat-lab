@@ -48,7 +48,6 @@ def add_habitat_visual_to_usd_root(
 
     # Save the updated USD file
     stage.GetRootLayer().Save()
-    # print(f"Added habitat visual metadata to root prim in: {usd_filepath}")
 
 
 def add_habitat_visual_to_usd_root_rigid_body(
@@ -118,8 +117,6 @@ def convert_meshes_to_static_colliders(stage, root_path):
     for prim in Usd.PrimRange(root_prim):
         # Check if the prim is a mesh
         if prim.IsA(UsdGeom.Mesh):
-            # print(f"Processing mesh: {prim.GetPath()}")
-
             # Check if MeshCollisionAPI is already applied
             UsdPhysics.CollisionAPI.Apply(prim)
             collision_api = UsdPhysics.MeshCollisionAPI.Apply(prim)
@@ -358,10 +355,6 @@ def habitat_to_usd_rotation(rotation: List[float]) -> List[float]:
     list[float]
         Quaternion in USD coordinates [w, x, y, z] (wxyz).
     """
-    if rotation is None:
-        # default identity rotation
-        print("--none orientation--")
-        return [1, 0, 0, 0]
 
     HALF_SQRT2 = 0.70710678  # √0.5
 
@@ -388,6 +381,11 @@ def habitat_to_usd_rotation(rotation: List[float]) -> List[float]:
         return [w, x, y, z]
 
     q_trans_inv = quat_multiply(q_x90_inv, q_y180_inv)
+
+    if rotation is None:
+        # default coordinate change rotation only
+        print("--none orientation--")
+        return q_trans_inv
 
     # Multiply q_trans_inv with the input rotation quaternion
     w, x, y, z = rotation
@@ -532,7 +530,7 @@ def convert_hab_scene(
 
     for obj_instance_json in scene_json_data["articulated_object_instances"]:
         ao_shortname = obj_instance_json["template_name"]
-        base_object_name = f"OBJECT_{ao_shortname}"
+        base_object_name = f"AOBJECT_{ao_shortname}"
         base_object_name = sanitize_usd_name(base_object_name)
         # TODO: Does this need a per-instance suffix?
         out_usd_path = f"./data/usd/objects/{base_object_name}.usda"
@@ -601,12 +599,7 @@ def convert_hab_scene(
         scale_op.Set(Gf.Vec3f(*scale))
         xform_op_order.append(scale_op)
 
-        # TODO: rotations seem to be incorrect, diagnose that
-        # Ensure rotation op exists
-        # rotation = habitat_to_usd_rotation([0.0, 0.0, 0.0, 1.0])
-        # rotation = [1.0, 0.0, 0.0, 0.0]
-        # 90 degrees about x in wxyz format
-        # rotation = [0.7071068,0.7071067,0.0,0.0]
+        # this conversion includes re-orientation from habitat to USD, even for missing rotation elements
         rotation = habitat_to_usd_rotation(obj_instance_json.get("rotation"))
         orient_op = next(
             (

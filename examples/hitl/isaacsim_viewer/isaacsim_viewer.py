@@ -408,6 +408,11 @@ class AppStateIsaacSimViewer(AppState):
             MouseButton.RIGHT
         ):
             pass
+        if (
+            self._app_service.gui_input.get_mouse_button_down(MouseButton.LEFT)
+            and self._recent_mouse_ray_hit_info is not None
+        ):
+            print(self._recent_mouse_ray_hit_info["rigidBody"])
 
     def debug_draw_rigid_objects(self):
         for ro in self._rigid_objects:
@@ -486,6 +491,7 @@ class AppStateIsaacSimViewer(AppState):
         self._update_cursor_pos()
         self.update_mouse_raycaster(dt)
         self.update_isaac(post_sim_update_dict)
+        self.handle_mouse_press()
 
         do_show_vr_cam_pose = False
         vr_cam_pose = self.get_vr_camera_pose()
