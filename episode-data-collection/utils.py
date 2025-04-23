@@ -18,6 +18,7 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 
 from vint_based import load_distance_model
 from vip import load_vip
+from vint_train.models.vint.vint import ViNT
 
 
 def transform_rgb_bgr(image):
@@ -133,9 +134,15 @@ def load_embedding(rep: str):
         model = load_vip(modelid=rep)
         transform = get_default_transform()
     # VIP original model
-    elif rep.startswith('vip'):
+    elif rep == 'vip':
         model = load_vip(modelid='resnet50')
         transform = get_default_transform(normalize=False)
+    # ViNT original model
+    elif rep == "vint":
+        model = ViNT(obs_encoder='efficientnet-b0', mha_num_attention_layers=4)
+        model.load_state_dict(torch.load("/cluster/home/lmilikic/.dist_models/vint/vint.pt"))
+        model = model.to('cuda')
+        transform = get_default_transform()
     # Distance decoders, Vint distance, and one-scene quasi MSE
     elif rep.startswith(('one_scene_decoder', 'dist_decoder', 'vint_dist', 'one_scene_quasi', 'quasi')):
         model = load_distance_model(modelid=rep)
