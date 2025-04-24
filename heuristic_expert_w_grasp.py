@@ -43,6 +43,11 @@ from habitat.config.default_structured_configs import (
     SimulatorConfig,
     TaskConfig,
     ThirdRGBSensorConfig,
+    TorsoSensorRGBConfig,
+    HeadCamSensorRGBConfig,
+    TorsoSensorDepthConfig,
+    HeadCamSensorDepthConfig,
+
 )
 from habitat.core.env import Env
 from habitat.isaac_sim import actions, isaac_prim_utils
@@ -97,7 +102,7 @@ class ExpertDatagen:
         # Define sensors that will be attached to this agent, here a third_rgb sensor and a head_rgb.
         # We will later talk about why we are giving the sensors these names
         main_agent_config.sim_sensors = {
-            "third_rgb": ThirdRGBSensorConfig(),
+            "torso_rgb": ThirdRGBSensorConfig(),
             "articulated_agent_arm_rgb": ArmRGBSensorConfig(hfov=110),
             "articulated_agent_arm_depth": ArmDepthSensorConfig(
                 min_depth=0.1, max_depth=8.0, hfov=110
@@ -242,7 +247,7 @@ class ExpertDatagen:
         return Env(res_cfg)
 
     def process_obs_img(self, obs):
-        im = obs["third_rgb"]
+        im = obs["torso_rgb"]
         im2 = obs["articulated_agent_arm_rgb"]
         im3 = (255 * obs["articulated_agent_arm_depth"]).astype(np.uint8)
         imt = np.zeros(im.shape, dtype=np.uint8)
@@ -705,7 +710,7 @@ class ExpertDatagen:
                 "base_pos": np.array([-4.4, 0.1, -3.5]),
                 "base_rot": 180,
                 "ee_pos": np.array([-5.6, 1.0, -3.9]),
-                "ee_rot": np.deg2rad([-60, 0, 0]),
+                "ee_rot": np.deg2rad([-60, -45, 0]),
             },
             "island": {
                 "base_pos": np.array([-5.3, 0.1, -1.6]),
@@ -735,7 +740,7 @@ class ExpertDatagen:
                 "base_pos": np.array([-4.0, 0.1, 1.28]),
                 "base_rot": 180,
                 "ee_pos": np.array([-6.3, 1.2, 1.3]),
-                "ee_rot": np.deg2rad([-60, 0, 0]),
+                "ee_rot": np.deg2rad([-60, -45, 0]),
             },
             "freezer": {
                 "base_pos": np.array([-4.9, 0.1, 0.7]),

@@ -1500,9 +1500,25 @@ class SimulatorDepthSensorConfig(SimulatorSensorConfig):
     max_depth: float = 10.0
     normalize_depth: bool = True
 
+@dataclass
+class SimulatorZedCameraSensorConfig(SimulatorSensorConfig):
+    hfov: int = 110  # horizontal field of view in degrees
+    sensor_subtype: str = "PINHOLE"
+    noise_model: str = "None"
+    noise_model_kwargs: Dict[str, Any] = field(default_factory=dict)
+
+@dataclass
+class SimulatorZedDepthSensorConfig(SimulatorSensorConfig):
+    min_depth: float = 0.3
+    max_depth: float = 20.0
+    normalize_depth: bool = True
 
 @dataclass
 class HabitatSimRGBSensorConfig(SimulatorCameraSensorConfig):
+    type: str = "HabitatSimRGBSensor"
+
+@dataclass
+class HabitatSimZedRGBSensorConfig(SimulatorZedCameraSensorConfig):
     type: str = "HabitatSimRGBSensor"
 
 
@@ -1513,6 +1529,12 @@ class HabitatSimDepthSensorConfig(SimulatorCameraSensorConfig):
     max_depth: float = 10.0
     normalize_depth: bool = True
 
+@dataclass
+class HabitatSimZedDepthSensorConfig(SimulatorCameraSensorConfig):
+    type: str = "HabitatSimDepthSensor"
+    min_depth: float = 0.3
+    max_depth: float = 10.0
+    normalize_depth: bool = True
 
 @dataclass
 class HabitatSimSemanticSensorConfig(SimulatorCameraSensorConfig):
@@ -1640,6 +1662,31 @@ class ThirdDepthSensorConfig(HabitatSimDepthSensorConfig):
     uuid: str = "third_depth"  # TODO: third_rgb on the main branch
     #  check if it won't cause any errors
 
+@dataclass
+class TorsoSensorRGBConfig(HabitatSimZedRGBSensorConfig):
+    uuid: str = "torso_rgb"
+    width: int = 512
+    height: int = 512
+
+
+@dataclass
+class TorsoSensorDepthConfig(HabitatSimZedDepthSensorConfig):
+    uuid: str = "torso_depth"
+    width: int = 256
+    height: int = 256
+
+@dataclass
+class HeadCamSensorRGBConfig(HabitatSimZedRGBSensorConfig):
+    uuid: str = "head_cam_rgb"
+    width: int = 512
+    height: int = 512
+
+
+@dataclass
+class HeadCamSensorDepthConfig(HabitatSimZedDepthSensorConfig):
+    uuid: str = "head_cam_depth"
+    width: int = 256
+    height: int = 256
 
 @dataclass
 class AgentConfig(HabitatBaseConfig):
@@ -2038,11 +2085,21 @@ cs.store(
     name="rgb_sensor",
     node=HabitatSimRGBSensorConfig,
 )
+cs.store(
+    group="habitat/simulator/sim_sensors",
+    name="rgb_zed_sensor",
+    node=HabitatSimZedRGBSensorConfig,
+)
 
 cs.store(
     group="habitat/simulator/sim_sensors",
     name="depth_sensor",
     node=HabitatSimDepthSensorConfig,
+)
+cs.store(
+    group="habitat/simulator/sim_sensors",
+    name="depth_zed_sensor",
+    node=HabitatSimZedDepthSensorConfig,
 )
 
 cs.store(
@@ -2130,7 +2187,26 @@ cs.store(
     name="third_rgb_sensor",
     node=ThirdRGBSensorConfig,
 )
-
+cs.store(
+    group="habitat/simulator/sim_sensors",
+    name="torso_rgb_sensor",
+    node=TorsoSensorRGBConfig,
+)
+cs.store(
+    group="habitat/simulator/sim_sensors",
+    name="torso_depth_sensor",
+    node=TorsoSensorDepthConfig,
+)
+cs.store(
+    group="habitat/simulator/sim_sensors",
+    name="head_cam_rgb_sensor",
+    node=HeadCamSensorRGBConfig,
+)
+cs.store(
+    group="habitat/simulator/sim_sensors",
+    name="head_cam_depth_sensor",
+    node=HeadCamSensorDepthConfig,
+)
 
 # Task Sensors
 cs.store(

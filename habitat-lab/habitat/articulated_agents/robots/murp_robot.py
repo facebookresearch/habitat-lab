@@ -140,6 +140,33 @@ class MurpRobot(MobileManipulator):
                     cam_look_at_pos=mn.Vector3(1.0, 0.0, -0.00),
                     attached_link_id=-1,
                 ),
+                #MURP ZED CAMERAS
+                "torso_depth": ArticulatedAgentCameraParams(
+                    cam_offset_pos=mn.Vector3(0.06, 0.664, 0.0),
+                    cam_orientation=mn.Vector3(0, -1.571, 0.0),
+                    attached_link_id=26,
+                    relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
+                ),
+                "torso_rgb": ArticulatedAgentCameraParams(
+                    cam_offset_pos=mn.Vector3(0.0, -0.06, 0.6604),
+                    cam_orientation=mn.Vector3(0.0, -1.571, 0.0),
+                    # attached_link_id=36,
+                    attached_link_id=26,
+                    relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
+                ),
+                "head_cam_depth": ArticulatedAgentCameraParams(
+                    cam_offset_pos=mn.Vector3(0.06, 0.664, 0.0),
+                    cam_orientation=mn.Vector3(0, -1.571, 0.0),
+                    attached_link_id=26,
+                    relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
+                ),
+                "head_cam_rgb": ArticulatedAgentCameraParams(
+                    cam_offset_pos=mn.Vector3(-0.06, 0.0, 1.016),
+                    cam_orientation=mn.Vector3(0.0, -1.571, 0.0),
+                    # attached_link_id=36,
+                    attached_link_id=26,
+                    relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
+                ),
             },
             gripper_closed_state=[0.0],
             gripper_open_state=[-1.56],
