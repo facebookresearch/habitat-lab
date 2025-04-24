@@ -443,6 +443,13 @@ class MurpRobotWrapper:
                 )
             )
 
+    def teleport_right_arm(self, joint_positions):
+
+        self._robot.set_joint_positions(
+            joint_positions,
+            joint_indices=self._right_arm_joint_indices,
+        )
+
     def drive_hand(self, step_size):
 
         if np.array(self._target_hand_joint_positions).any():

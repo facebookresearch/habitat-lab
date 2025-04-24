@@ -338,7 +338,7 @@ class VLAEvaluator:
         self.episode_json["episode_data"].append(ep_data)
 
     def save_json(self):
-        ep_path = f"{self.json_save_path}/ep_{self.ep_id}_50_horizon.json"
+        ep_path = f"{self.json_save_path}/ep_{self.ep_id}_50_horizon_actions_reset_arm.json"
         if self.episode_json["success"]:
             print(f"success! saving episode: {ep_path}")
             with open(ep_path, "w") as outfile:
@@ -389,6 +389,35 @@ class VLAEvaluator:
         )
         self.base_trans = mn.Matrix4.from_(rotation.to_matrix(), position)
         self.env.sim.articulated_agent.base_transformation = self.base_trans
+        murp_joint_limits_lower = np.deg2rad(
+            np.array([-157, -102, -166, -174, -160, 31, -172])
+        )
+        murp_joint_limits_upper = np.deg2rad(
+            np.array([157, 102, 166, -8, 160, 258, 172])
+        )
+        start_joint_pos = np.array(
+            [
+                0.14936262,
+                -0.65780519,
+                -0.26952777,
+                -2.65130757,
+                0.6578265,
+                2.40055512,
+                -0.56525831,
+            ]
+        )
+        # start_joint_pos += np.random.normal(-0.1, 0.1, start_joint_pos.shape)
+        start_joint_pos = np.clip(
+            start_joint_pos, murp_joint_limits_lower, murp_joint_limits_upper
+        )
+        print("start_joint_pos: ", np.rad2deg(start_joint_pos))
+        self.env.sim.articulated_agent._robot_wrapper.teleport_right_arm(
+            start_joint_pos
+        )
+
+        curr_arm_joints = self.get_curr_joint_pose()
+        print("curr_arm_joints: ", curr_arm_joints)
+
         print(f"set base to {name}: {start_position}, {start_rotation}")
 
     def pin_right_arm(self):
@@ -449,9 +478,9 @@ class VLAEvaluator:
         return grasp_modes[name]
 
     def visualize_pos(self, pos, name="target_ee_pos"):
-        # self.env.sim.viz_ids[name] = self.env.sim.visualize_position(
-        #     pos, self.env.sim.viz_ids[name]
-        # )
+        self.env.sim.viz_ids[name] = self.env.sim.visualize_position(
+            pos, self.env.sim.viz_ids[name]
+        )
         return
 
     def get_poses(self, name, pose_type="base"):
@@ -463,9 +492,10 @@ class VLAEvaluator:
                 "ee_rot": np.deg2rad([0, 80, -30]),
             },
             "shelf": {
-                "base_pos": np.array([-4.4, 0.1, -3.5]),
+                # "base_pos": np.array([-4.4, 0.1, -3.5]),
+                "base_pos": np.array([-4.5, 0.1, -3.5]),
                 "base_rot": 180,
-                "ee_pos": np.array([-5.6, 1.0, -3.9]),
+                "ee_pos": np.array([-5.0, 1.0, -3.9]),
                 "ee_rot": np.deg2rad([-60, 0, 0]),
             },
             "island": {
@@ -568,9 +598,14 @@ class VLAEvaluator:
         # ckpt = "step80000_0.047.pt"
         # exp_name = "open_cabinet_abs_local_ee_fingers_usd_60hz_v2"
         # ckpt = "step135000_0.027.pt"
-        exp_name = "open_cabinet_joints_fingers_60hz_horizon_50"
-        ckpt = "step125000_0.033.pt"
-        vla_skill_path = f"/opt/hpcaas/.mounts/fs-03ee9f8c6dddfba21/jtruong/repos/robot-skills/results/{exp_name}/train_lr_5e-05_seed_42/checkpoint/{ckpt}"
+        # exp_name = "open_cabinet_joints_fingers_60hz_horizon_50"
+        # ckpt = "step125000_0.033.pt"
+        # exp_name = "open_cabinet_joints_fingers_60hz_horizon_50"
+        # ckpt = "step125000_0.033.pt"
+        exp_name = "open_cabinet_joints_fingers_60hz_horizon_50_reset_arm"
+        ckpt = "step85000_0.060.pt"
+        # vla_skill_path = f"/opt/hpcaas/.mounts/fs-03ee9f8c6dddfba21/jtruong/repos/robot-skills/results/{exp_name}/train_lr_5e-05_seed_42/checkpoint/{ckpt}"
+        vla_skill_path = f"/opt/hpcaas/.mounts/fs-03ee9f8c6dddfba21/jtruong/repos/robot-skills/results/{exp_name}/good_ckpt/{ckpt}"
         main_config = {
             "cond_steps": 2,
             # "horizon_steps": 4,  # 50
@@ -633,6 +668,8 @@ class VLAEvaluator:
 
     def run_policy_replay(self):
         self.reset_robot(self.target_name)
+        ee_pos, ee_rot = self.get_poses(name, pose_type="ee")
+        self.visualize_pos(ee_pos, "ee_pos")
         vla_skill, vla_processor, vla_config = self.setup_policy()
         filepath = f"/fsx-siro/jtruong/data/sim_robot_data/heuristic_expert_open/fremont_open_cabinet_right_usd/train_60hz_npy/ep_0.npy"
         data = np.load(filepath, allow_pickle=True)
@@ -903,8 +940,8 @@ class VLAEvaluator:
                 ).unsqueeze(0)
             proprios = normalize(proprios, PROPRIO_P01, PROPRIO_P99)
 
-            print("image_raw: ", image_raw.shape)
-            print("proprios: ", proprios.shape)
+            # print("image_raw: ", image_raw)
+            # print("proprios: ", proprios)
 
             obs = {
                 "image_raw": image_raw,
@@ -923,7 +960,6 @@ class VLAEvaluator:
             )  # [batch size, prediction horizen, action dim]
             end_time = time.time()
             vla_actions = vla_actions[0].cpu().detach().numpy()
-            print("vla_actions: ", vla_actions.shape)
             for vla_action in vla_actions:
                 (
                     curr_arm_joints,
@@ -959,12 +995,18 @@ class VLAEvaluator:
                 ).tolist()
                 # for save_key in self.save_keys:
                 # sim_step_data = self.save_img(obs, save_key, sim_step_data)
-                self.episode_json["episode_data"].append(sim_step_data)
                 ctr = 0
                 timeout = 1
                 if action_type == "joints":
                     target_arm_joints = vla_action[:7]
                     target_hand_pos = vla_action[7:]
+                    sim_step_data["arm_joints_cmd"] = np.array(
+                        target_arm_joints
+                    ).tolist()
+                    sim_step_data["hand_joints_cmd"] = np.array(
+                        target_hand_pos
+                    ).tolist()
+
                     base_lin_vel = 0
                     base_ang_vel = 0
                     action = {
@@ -1051,7 +1093,9 @@ class VLAEvaluator:
                             )
                             break
                         self.writer.append_data(im)
-        self.save_json()
+                self.episode_json["episode_data"].append(sim_step_data)
+
+        # self.save_json()
         self.writer.close()
         print("saved video at: ", self.save_path)
 

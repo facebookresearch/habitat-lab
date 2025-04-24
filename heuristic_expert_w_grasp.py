@@ -107,10 +107,19 @@ class ExpertDatagen:
             "articulated_agent_arm_depth": ArmDepthSensorConfig(
                 min_depth=0.1, max_depth=8.0, hfov=110
             ),
+            "head_rgb": ArmRGBSensorConfig(hfov=110, uuid='head_rgb'),
+            "head_depth": ArmDepthSensorConfig(
+                min_depth=0.3, max_depth=20.0, hfov=110, uuid='head_depth'
+            ),
+            "torso_rgb": ArmRGBSensorConfig(hfov=110, uuid='torso_rgb'),
+            "torso_depth": ArmDepthSensorConfig(
+                min_depth=0.3, max_depth=20.0, hfov=110, uuid='torso_depth'
+            ),
         }
 
         # We create a dictionary with names of agents and their corresponding agent configuration
         agent_dict = {"main_agent": main_agent_config}
+        print('main_agent_config: ', main_agent_config)
 
         action_dict = {
             "base_velocity_action": BaseVelocityActionConfig(
@@ -255,7 +264,18 @@ class ExpertDatagen:
         imt[im2.shape[0] :, : im2.shape[1], 0] = im3[:, :, 0]
         imt[im2.shape[0] :, : im2.shape[1], 1] = im3[:, :, 0]
         imt[im2.shape[0] :, : im2.shape[1], 2] = im3[:, :, 0]
-        im = np.concatenate([im, imt], 1)
+
+        if "head_rgb" in obs.keys():
+            im2 = obs["head_rgb"]
+            im3 = (255 * obs["head_depth"]).astype(np.uint8)
+            imh = np.zeros(im.shape, dtype=np.uint8)
+            imh[: im2.shape[0], : im2.shape[1], :] = im2
+            imh[im2.shape[0] :, : im2.shape[1], 0] = im3[:, :, 0]
+            imh[im2.shape[0] :, : im2.shape[1], 1] = im3[:, :, 0]
+            imh[im2.shape[0] :, : im2.shape[1], 2] = im3[:, :, 0]
+            im = np.concatenate([im, imt, imh], 1)
+        else:
+            im = np.concatenate([im, imt], 1)
         return im
 
     def save_img(self, observations, img_key, ep_data):
@@ -399,12 +419,28 @@ class ExpertDatagen:
         murp_joint_limits_upper = np.deg2rad(
             np.array([157, 102, 166, -8, 160, 258, 172])
         )
-        start_joint_pos = np.random.uniform(
-            murp_joint_limits_lower, murp_joint_limits_upper
+        start_joint_pos = np.array(
+            [
+                0.14936262,
+                -0.65780519,
+                -0.26952777,
+                -2.65130757,
+                0.6578265,
+                2.40055512,
+                0.56525831,
+            ]
         )
-        self.env.sim.articulated_agent._robot_wrapper._robot.set_joint_positions = (
+        start_joint_pos += np.random.normal(-0.1, 0.1, start_joint_pos.shape)
+        start_joint_pos = np.clip(
+            start_joint_pos, murp_joint_limits_lower, murp_joint_limits_upper
+        )
+        print("start_joint_pos: ", np.rad2deg(start_joint_pos))
+        self.env.sim.articulated_agent._robot_wrapper.teleport_right_arm(
             start_joint_pos
         )
+
+        curr_arm_joints = self.get_curr_joint_pose()
+        print("curr_arm_joints: ", curr_arm_joints)
 
         print(f"set base to {name}: {start_position}, {start_rotation}")
 
@@ -1047,6 +1083,7 @@ class ExpertDatagen:
             self.move_base(-1.0, 0.0)
 
     def run_expert_w_grasp(self, hand="left"):
+        print('saving video to: ', self.save_path)
         self.reset_robot(self.target_name)
         self.grasp = "pre_grasp"
 

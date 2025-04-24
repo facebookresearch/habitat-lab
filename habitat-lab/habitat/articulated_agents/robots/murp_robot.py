@@ -101,7 +101,7 @@ class MurpRobot(MobileManipulator):
                     # attached_link_id=36,
                     # attached_link_id=67,
                     attached_link_id=73,
-                    relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
+                    # relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
                 ),
                 "articulated_agent_arm_rgb": ArticulatedAgentCameraParams(
                     cam_offset_pos=mn.Vector3(-0.06, 0.1, 0.04),
@@ -109,6 +109,32 @@ class MurpRobot(MobileManipulator):
                     # attached_link_id=36,
                     # attached_link_id=67,
                     attached_link_id=73,
+                    # relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
+                ),
+                "torso_depth": ArticulatedAgentCameraParams(
+                    cam_offset_pos=mn.Vector3(0.06, 0.664, 0.0),
+                    cam_orientation=mn.Vector3(0, -1.571, 0.0),
+                    attached_link_id=26,
+                    relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
+                ),
+                "torso_rgb": ArticulatedAgentCameraParams(
+                    cam_offset_pos=mn.Vector3(0.0, -0.06, 0.6604),
+                    cam_orientation=mn.Vector3(0.0, -1.571, 0.0),
+                    # attached_link_id=36,
+                    attached_link_id=26,
+                    relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
+                ),
+                "head_cam_depth": ArticulatedAgentCameraParams(
+                    cam_offset_pos=mn.Vector3(0.06, 0.664, 0.0),
+                    cam_orientation=mn.Vector3(0, -1.571, 0.0),
+                    attached_link_id=26,
+                    relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
+                ),
+                "head_cam_rgb": ArticulatedAgentCameraParams(
+                    cam_offset_pos=mn.Vector3(-0.06, 0.0, 1.016),
+                    cam_orientation=mn.Vector3(0.0, -1.571, 0.0),
+                    # attached_link_id=36,
+                    attached_link_id=26,
                     relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
                 ),
                 "articulated_agent_arm_panoptic": ArticulatedAgentCameraParams(
