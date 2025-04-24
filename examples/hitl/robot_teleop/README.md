@@ -6,26 +6,44 @@ TL;DR A HITL app that loads robots from URDF and simulates them in a Habitat Sim
 
 ## Install habitat-sim
 
-Install the `main` branch of habitat-sim from source ([35cf4c7c5e095053eed373f6c28d4194c4620e49](https://github.com/facebookresearch/habitat-sim/commit/35cf4c7c5e095053eed373f6c28d4194c4620e49) or newer):
+Install the habitat-sim from source using the following steps:
 
 ```
 #start from your project root directory
 git clone https://github.com/facebookresearch/habitat-sim.git
 cd habitat-sim
+git checkout 35cf4c7c5e095053eed373f6c28d4194c4620e49
 
 #we use python 3.10+ to support momentum IK
-conda create -n habitat_teleop python=3.10 cmake=3.14.0
+conda create -n habitat_teleop python=3.10
 conda activate habitat_teleop
+pip install cmake==3.31.6
 pip install -r requirements.txt
 
 #adjust the number of parallel threads for your system
 python setup.py build_ext --parallel 6 install --bullet
 ```
 
+If you encounter an error saying
+```
+error: Could not find suitable distribution for Requirement.parse('habitat-sim==0.3.3')
+```
+
+please re-run the command
+```
+python setup.py build_ext --parallel 6 install --bullet
+```
+
+you should see something like
+```
+Installing collected packages: magnum
+Successfully installed magnum-0.0.0
+```
+
 ## Install habitat-hitl and habitat-lab
 NOTE: habitat-lab is currently only required for utilities. The intent is to keep dependencies as close to habitat-sim as possible.
 
-Clone and install this [eundersander/isaacsim_viewer](https://github.com/facebookresearch/habitat-lab/tree/eundersander/isaacsim_viewer) branch of habitat-lab.
+Using the instructions below, clone and install this [asjad/sim_teleop](https://github.com/facebookresearch/habitat-lab/tree/asjad/sim_teleop) branch of habitat-lab.
 
 ```
 #start from your project root directory
@@ -50,7 +68,7 @@ pip install roboticstoolbox-python
 ## (optional) Install pymomentum for Inverse Kinematics
 https://github.com/facebookincubator/momentum
 
-*NOTE: build seems incompatible with habitat-baselines on main.*
+*NOTE: build seems incompatible with habitat-baselines on main. *
 
 > Momentum provides foundational algorithms for human kinematic motion and numerical optimization solvers to apply human motion in various applications.
 
@@ -85,7 +103,7 @@ With data and code installed you can run the local app with default configuratio
 python examples/hitl/robot_teleop/robot_teleop.py
 ```
 
-- default robot is TMR base + Franka with no end effectors
+- default robot is TMR base + Franka.
 - default scene dataset is hssd-hab-articulated
 - default scene is "103997403_171030405"
 - above settings can be changed in `robot_teleop.yaml` and `robot_settings.yaml`
