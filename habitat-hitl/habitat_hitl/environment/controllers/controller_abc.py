@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Dict, List, Tuple
 
 import numpy as np
-import torch
+# import torch
 
 import habitat
 # from habitat_baselines.common.obs_transformers import (

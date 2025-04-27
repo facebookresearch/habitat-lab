@@ -31,6 +31,8 @@ from habitat_hitl.core.text_drawer import TextOnScreenAlignment
 from habitat_hitl.environment.camera_helper import CameraHelper
 from habitat_sim.gfx import DebugLineRender
 
+import murp
+
 # path to this example app directory
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -80,6 +82,7 @@ class Robot:
             if hasattr(self.robot_cfg, "fixed_base")
             else False,
             force_reload=True,
+            maintain_link_order=False
         )
 
         # create joint motors
@@ -92,6 +95,24 @@ class Robot:
             pose_name=self.robot_cfg.initial_pose, set_positions=True
         )
         self.init_ik()
+
+        num_dof = len(self.ao.joint_positions)
+        dof_to_motor_id = [-1] * num_dof
+        for dof in range(num_dof):
+            found_link_ix = None
+            for link_ix in range(self.ao.num_links):
+                if self.ao.get_link_joint_pos_offset(link_ix) == dof:
+                    found_link_ix = link_ix
+                    break
+            assert found_link_ix is not None
+            found_motor_id = None
+            for motor_id, other_link_ix in self.motor_ids_to_link_ids.items():
+                if other_link_ix == found_link_ix:
+                    found_motor_id = motor_id
+            # may be None
+            dof_to_motor_id[dof] = found_motor_id   
+
+        pass
 
     def init_ik(self):
         """
@@ -299,6 +320,8 @@ class DoFEditor:
         for motor_id, link_ix in self.robot.motor_ids_to_link_ids.items():
             if link_ix == self.link_ix:
                 self.motor_id = motor_id
+
+        print(f"dof: {self.dof}, motor_id: {self.motor_id}")
 
     def update(self, dt: float) -> None:
         """
@@ -538,6 +561,8 @@ class AppStateRobotTeleopViewer(AppState):
         self._sps_tracker = AverageRateTracker(2.0)
         self._do_pause_physics = False
         self._timer = 0.0
+
+        self._init_mock_robot()
 
     def set_aos_dynamic(self) -> None:
         """
@@ -883,6 +908,52 @@ class AppStateRobotTeleopViewer(AppState):
                 self._sim.cast_ray(ray), self._sim
             )
 
+
+    def _init_mock_robot(self):
+
+        from murp.mock.mock_mobile_tmr_robot import MockMobileTMRRobot
+        self._murp_mock_robot = MockMobileTMRRobot()
+
+        
+        # left franka: dof 0-6, motor_id 46-52
+        # right franka: dof 23-29, motor_id 69-75
+
+        # left allegro
+        #   index fing: 7-10, 53-56
+        #   middle fing: 15-18, 61-64
+        #   pinky: 19-22, 65-68
+        #   thumb: 11-14, 57-60
+
+        # right allegro
+        #  index: 30-33, 76-79
+        #  middle: 38-41, 84-87
+        #  pinky: 42-45, 88-91
+        #  thumb: 34-37, 80-83
+
+    def _update_mock_robot_pre_sim_step(self):
+
+        self._murp_mock_robot.poll_for_messages()
+
+        pass
+
+        # if self.motor_id is not None:
+        #     jms = self.robot.ao.get_joint_motor_settings(self.motor_id)
+        #     jms.position_target = self.dof_value
+        #     self.robot.ao.update_joint_motor(self.motor_id, jms)
+        # else:
+        #     # this joint has no motor, so directly manipulate the position
+        #     cur_pos = self.robot.ao.joint_positions
+        #     cur_pos[self.dof] = self.dof_value
+
+
+    def _update_mock_robot_post_sim_step(self):
+
+        # temp hack. Todo: get results from real sim and push to self._robot
+        dt = 0.02
+        self._murp_mock_robot.dummy_simulate(dt)
+        self._murp_mock_robot.publish()
+
+
     def sim_update(
         self, dt: float, post_sim_update_dict: Dict[str, Any]
     ) -> None:
@@ -893,6 +964,8 @@ class AppStateRobotTeleopViewer(AppState):
 
         self._sps_tracker.increment()
 
+        self._update_mock_robot_pre_sim_step()
+
         # IO handling
         self.handle_keys(dt, post_sim_update_dict)
         self.handle_mouse_press()
@@ -901,6 +974,8 @@ class AppStateRobotTeleopViewer(AppState):
 
         # step the simulator
         self._sim.step_physics(dt)
+
+        self._update_mock_robot_post_sim_step()
 
         # update the camera position
         self._camera_helper.update(self._cursor_pos, dt)
