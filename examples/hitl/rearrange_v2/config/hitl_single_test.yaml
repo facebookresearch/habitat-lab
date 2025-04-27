@@ -16,10 +16,6 @@ rearrange_v2:
 
 SHORT_CIRCUIT: True
 habitat_hitl:
-  window: ~
   networking:
     enable: True
     max_client_count: 1
-  experimental:
-    headless:
-      do_headless: True

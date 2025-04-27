@@ -3,7 +3,7 @@
 # Top-level configuration for running a headless HITL server in single-user mode.
 
 defaults:
-  - lang_rearrange_humanoid_only.yaml
+  - lang_rearrange_spot_only.yaml
   - server.yaml
   - _self_
 
