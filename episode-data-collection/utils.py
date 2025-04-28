@@ -2,9 +2,11 @@ import cv2
 import numpy as np
 import torch
 import shutil
+import os
 import math
 import copy
 import habitat.utils.geometry_utils as geo_utils
+import imageio
 
 import torch
 import torchvision.transforms as T
@@ -14,7 +16,7 @@ from scipy import stats
 from habitat.utils.geometry_utils import quaternion_from_coeff, quaternion_to_list
 from habitat.utils.visualizations import maps
 from matplotlib import pyplot as plt
-from matplotlib.animation import FuncAnimation, PillowWriter
+from tqdm.auto import tqdm
 
 from vint_based import load_distance_model
 from vip import load_vip
@@ -172,18 +174,46 @@ def compute_correlation(distances, gt, method: str = 'kendall'):
     return corr.statistic, corr.pvalue, symbol
 
 
-def animate_episode(
-    frames,
-    maps,
-    geo_distances,
-    pred_distances,
-    goal_frame,
-    out_gif,
-    max_len,
-    fps,
-    corr_method: str = 'kendall'
+def images_to_video(
+    images: list,
+    output_path: str,
+    fps: int = 10,
+    quality: float = 5.0,
+    verbose: bool = True,
+    **kwargs,
 ):
-    # Truncate
+    """
+    Saves a list of RGB images to a video file using imageio/FFMPEG.
+    """
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    writer = imageio.get_writer(
+        output_path,
+        fps=fps,
+        quality=quality,
+        **kwargs,
+    )
+    iterator = images if not verbose else tqdm(images, desc='Writing frames')
+    for frame in iterator:
+        writer.append_data(frame)
+    writer.close()
+
+
+def animate_episode(
+    frames: list,
+    maps: list,
+    geo_distances: list,
+    pred_distances: list,
+    goal_frame: np.ndarray,
+    out_video: str,
+    max_len: int,
+    fps: int,
+    corr_method: str = 'kendall',
+    pause_sec: float = 0.0
+):
+    """
+    Renders an episode sequence (trajectory, top-down map, distances, goal) into a video file.
+    """
+    # Truncate sequences
     frames = frames[-(max_len+1):]
     maps   = maps[-(max_len+1):]
     geo    = np.array(geo_distances[-(max_len+1):],  dtype=float)
@@ -195,53 +225,59 @@ def animate_episode(
     τ_pred_base, _, _   = compute_correlation(pred, baseline, corr_method)
     τ_pred_geo,  _, _   = compute_correlation(pred, geo,      corr_method)
 
-    # 1×4 layout, wider figure
+    # Calculate pause frames
+    pause_frames = int(fps * pause_sec)
+    total_steps = len(frames) + pause_frames
+
+    # Prepare rendering
+    rendered = []
     fig, axes = plt.subplots(1, 4, figsize=(20, 5), constrained_layout=True)
     ax_curve, ax_video, ax_map, ax_goal = axes
-
     max_y = max(geo.max(), pred.max(), baseline.max())
 
-    def animate(i):
-        idx = min(i, len(frames) - 1)
-        x   = np.arange(idx + 1)
+    def render_step(i):
+        idx = min(i, len(frames)-1)
+        x = np.arange(idx + 1)
 
-        # — Distance curves —
+        # Distances curves
         ax_curve.clear()
-        ax_curve.plot(x, geo[:idx+1],
-                      label=f"Geo ({sym}: {τ_geo_base:.2f})", linewidth=2)
+        ax_curve.plot(x, geo[:idx+1], label=f"Geo ({sym}: {τ_geo_base:.2f})", linewidth=2)
         ax_curve.plot(x, pred[:idx+1], '-.',
-                      label=f"Pred ({sym}: {τ_pred_base:.2f}, vsGeo: {τ_pred_geo:.2f})",
-                      linewidth=2)
-        ax_curve.plot(x, baseline[:idx+1], '--',
-                      label="Baseline", linewidth=2)
+                      label=f"Pred ({sym}: {τ_pred_base:.2f}, vsGeo: {τ_pred_geo:.2f})", linewidth=2)
+        ax_curve.plot(x, baseline[:idx+1], '--', label="Baseline", linewidth=2)
         ax_curve.set(xlim=(0, len(frames)-1), ylim=(0, max_y),
                      xlabel="Frame", ylabel="Distance",
                      title="Geo & Pred vs Baseline")
         ax_curve.legend(loc="upper right", fontsize="x-small")
 
-        # — RGB trajectory —
+        # RGB trajectory
         ax_video.clear()
         ax_video.imshow(frames[idx])
         ax_video.axis("off")
         ax_video.set_title("Trajectory")
 
-        # — Top‑down map —
+        # Top-down map
         ax_map.clear()
         ax_map.imshow(maps[idx])
         ax_map.axis("off")
         ax_map.set_title("Top‑down Map")
 
-        # — Goal frame —
+        # Goal image
         ax_goal.clear()
         ax_goal.imshow(goal_frame)
         ax_goal.axis("off")
         ax_goal.set_title("Goal Image")
 
-        return []
+        fig.canvas.draw()
+        width, height = fig.canvas.get_width_height()
+        buf = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
+        rendered.append(buf.reshape(height, width, 3))
 
-    ani = FuncAnimation(fig, animate,
-                        frames=len(frames)+10,
-                        interval=100,
-                        repeat=False)
-    ani.save(out_gif, writer=PillowWriter(fps=fps))
+    # Render all frames
+    for i in range(total_steps):
+        render_step(i)
     plt.close(fig)
+
+    # Save video
+    images_to_video(rendered, out_video, fps=fps)
+    print(f"Saved animation to {out_video}")

@@ -219,7 +219,7 @@ def shortest_path_navigation(args):
                         geo_distances=distances,
                         pred_distances=pred_distances,
                         goal_frame=images[-1],
-                        out_gif=os.path.join(dirname, "model_eval.gif"),
+                        out_video=os.path.join(dirname, "model_eval.mp4"),
                         max_len=args.max_len,
                         fps=10,
                     )
