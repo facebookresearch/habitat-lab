@@ -1,0 +1,104 @@
+# @package _global_
+defaults:
+  - /habitat: habitat_config_base
+
+  - /habitat/simulator: isaac_rearrange_sim
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: murp
+
+  - /habitat/task: task_config_base
+  - /habitat/task/rearrange/actions: murp_base_arm
+  - /habitat/task/measurements:
+    - articulated_agent_force # TODO: jimmy: remove this since AttributeError: 'IsaacAgentData' object has no attribute 'grasp_mgr
+    - articulated_agent_colls # TODO: jimmy: the underlying implementation is a hack
+    - force_terminate # TODO: jimmy: the underlying implementation is a hack
+    - end_effector_to_object_distance
+    - end_effector_to_rest_distance
+    - num_steps
+    - art_obj_state
+    - art_obj_at_desired_state
+    - does_want_terminate
+    - art_obj_success
+    - art_obj_reward
+  - /habitat/task/lab_sensors:
+    - joint_sensor
+    - hand_joint_sensor
+    - target_start_sensor # Relative position from end effector to target object
+    - end_effector_sensor
+    - relative_resting_pos_sensor
+    - door_orientation_sensor
+
+  - _self_
+
+# Config for empty task to explore the scene.
+habitat:
+  gym:
+    obs_keys:
+      # Disable any rendering of the images to improve performance
+      # - articulated_agent_arm_depth # depth image of the arm: 224 by 224
+      # - head_depth # depth image of the head: 224 by 224
+      - joint # joint angle of the arm: 7-dim
+      - hand_joint # joint angle of the hand: 16-dim
+      - obj_start_sensor # relative position from ee to target object: 3-dim
+      - relative_resting_position # relative resting x,y,z location for the ee: 3-dim
+      - door_orientation # door yaw: 1-dim
+  task:
+    type: RearrangePickTask-v0
+    count_obj_collisions: True
+    reward_measure: art_obj_reward
+    success_measure: art_obj_success
+    render_target: True
+    ee_sample_factor: 0.8
+    base_angle_noise: 0.0
+    base_noise: 0.0
+    constraint_violation_ends_episode: False
+    force_regenerate: True
+
+    # Things added for Murp
+    desired_resting_position: [0.58, 0.00, 1.30]
+    success_state: 1.5708 # 90 degree for the fridge door
+    end_on_success: True
+    success_reward: 2.5
+    slack_reward: -0.1
+    measurements:
+      art_obj_reward:
+        success_js_state: 1.5708 # 90 degree for the fridge door
+        art_dist_reward: 10.0
+        art_at_desired_state_reward: 5.0
+        ee_dist_reward: 10.0
+        marker_dist_reward: 5.0
+      art_obj_at_desired_state:
+        success_dist_threshold: 0.17 #  10 degree
+        success_js_state: 1.5708 # 90 degree for the fridge door
+      art_obj_success:
+        rest_dist_threshold: 0.15
+        must_call_stop: False
+
+  environment:
+    max_episode_steps: 1500
+  simulator:
+    seed: 100
+    additional_object_paths:
+      - "data/objects/ycb/configs/"
+    agents:
+      main_agent:
+        radius: 0.3
+        # sim_sensors:
+        #   head_rgb_sensor:
+        #     height: 224
+        #     width: 224
+        #   head_depth_sensor:
+        #     height: 224
+        #     width: 224
+        #   arm_depth_sensor:
+        #     height: 224
+        #     width: 224
+        #   arm_rgb_sensor:
+        #     height: 224
+        #     width: 224
+        ik_arm_urdf: data/franka_tmr/franka_description_tmr/urdf/franka_tmr_right_arm_only.urdf
+    habitat_sim_v0:
+      enable_physics: False
+  dataset:
+    data_path: data/datasets/task_pick.json.gz
+    type: RearrangeDataset-v0
+    scenes_dir: "data/Fremont-Knuckles/"

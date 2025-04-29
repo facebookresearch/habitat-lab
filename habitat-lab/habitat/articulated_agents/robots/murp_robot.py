@@ -1,0 +1,182 @@
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
+from typing import Dict, List, Optional, Set
+
+import attr
+import magnum as mn
+import numpy as np
+
+from habitat.articulated_agents.mobile_manipulator import (
+    ArticulatedAgentCameraParams,
+    MobileManipulator,
+)
+
+
+@attr.s(auto_attribs=True, slots=True)
+class MurpParams:
+    """Data to configure a mobile manipulator.
+
+    :property arm_joints: The joint ids of the arm joints.
+    :property gripper_joints: The habitat sim joint ids of any grippers.
+    :property arm_init_params: The starting joint angles of the arm. If None,
+        resets to 0.
+    :property gripper_init_params: The starting joint positions of the gripper. If None,
+        resets to 0.
+    :property ee_offset: The 3D offset from the end-effector link to the true
+        end-effector position.
+    :property ee_link: The Habitat Sim link ID of the end-effector.
+    :property ee_constraint: A (2, 3) shaped array specifying the upper and
+        lower limits for the 3D end-effector position.
+    :property cameras: The cameras and where they should go. The key is the
+        prefix to match in the sensor names. For example, a key of `"head"`
+        will match sensors `"head_rgb"` and `"head_depth"`
+    :property gripper_closed_state: All gripper joints must achieve this
+        state for the gripper to be considered closed.
+    :property gripper_open_state: All gripper joints must achieve this
+        state for the gripper to be considered open.
+    :property gripper_state_eps: Error margin for detecting whether gripper is closed.
+    :property arm_mtr_pos_gain: The position gain of the arm motor.
+    :property arm_mtr_vel_gain: The velocity gain of the arm motor.
+    :property arm_mtr_max_impulse: The maximum impulse of the arm motor.
+    :property base_offset: The offset of the root transform from the center ground point for navmesh kinematic control.
+    :property base_link_names: The name of the links
+    :property ee_count: how many end effectors
+    """
+
+    arm_joints: List[int]
+    gripper_joints: List[int]
+
+    arm_init_params: Optional[List[float]]
+    gripper_init_params: Optional[List[float]]
+
+    ee_offset: List[mn.Vector3]
+    ee_links: List[int]
+    ee_constraint: np.ndarray
+
+    cameras: Dict[str, ArticulatedAgentCameraParams]
+
+    gripper_closed_state: List[float]
+    gripper_open_state: List[float]
+    gripper_state_eps: float
+
+    arm_mtr_pos_gain: float
+    arm_mtr_vel_gain: float
+    arm_mtr_max_impulse: float
+
+    base_offset: mn.Vector3
+    base_link_names: Set[str]
+
+    ik_pb_link_idx: int
+    ik_arm_len: int
+    ik_arm_start_idx: int
+
+    ee_count: Optional[int] = 1
+
+
+class MurpRobot(MobileManipulator):
+    @classmethod
+    def _get_murp_params(cls):
+        return MurpParams(
+            arm_joints=[0, 2, 4, 6, 8, 10, 12],
+            gripper_joints=[19],
+            arm_init_params=[
+                2.6116285,
+                1.5283098,
+                1.0930868,
+                -0.50559217,
+                0.48147443,
+                2.628784,
+                -1.3962275,
+            ],
+            gripper_init_params=[-1.56],
+            ee_offset=[mn.Vector3(0.08, 0, 0)],
+            ee_links=[7],
+            ee_constraint=np.array([[[0.1, 1.5], [-1.0, 1.0], [0.25, 1.5]]]),
+            cameras={
+                "articulated_agent_arm_depth": ArticulatedAgentCameraParams(
+                    cam_offset_pos=mn.Vector3(0.166, 0.0, 0.018),
+                    cam_orientation=mn.Vector3(0.0, -1.571, 0.0),
+                    attached_link_id=67,  # 36 for left hand; 67 for the right hand
+                    relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
+                ),
+                "articulated_agent_arm_rgb": ArticulatedAgentCameraParams(
+                    cam_offset_pos=mn.Vector3(0.166, 0.023, 0.03),
+                    cam_orientation=mn.Vector3(0, -1.571, 0.0),
+                    attached_link_id=67,
+                    relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
+                ),
+                "articulated_agent_arm_panoptic": ArticulatedAgentCameraParams(
+                    cam_offset_pos=mn.Vector3(0.166, 0.0, 0.018),
+                    cam_orientation=mn.Vector3(0, -1.571, 0.0),
+                    attached_link_id=6,
+                    relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
+                ),
+                "head_stereo_right": ArticulatedAgentCameraParams(
+                    cam_offset_pos=mn.Vector3(
+                        0.4164822634134684, 0.0, 0.03614789234067159
+                    ),
+                    cam_orientation=mn.Vector3(
+                        0.0290787, -0.940569, -0.38998877
+                    ),
+                    attached_link_id=-1,
+                ),
+                "head_stereo_left": ArticulatedAgentCameraParams(
+                    cam_offset_pos=mn.Vector3(
+                        0.4164822634134684, 0.0, -0.03740343144695029
+                    ),
+                    cam_orientation=mn.Vector3(
+                        -3.1125141, -0.940569, 2.751605
+                    ),
+                    attached_link_id=-1,
+                ),
+                "head_depth": ArticulatedAgentCameraParams(
+                    # x: forward; y: up; z: left
+                    cam_offset_pos=mn.Vector3(0.4, 0.75, 0),
+                    cam_orientation=mn.Vector3(0.0, -1.571, 0.0),
+                    attached_link_id=-1,
+                ),
+                "head_rgb": ArticulatedAgentCameraParams(
+                    cam_offset_pos=mn.Vector3(0.4, 0.75, 0),
+                    cam_orientation=mn.Vector3(0.0, -1.571, 0.0),
+                    attached_link_id=-1,
+                ),
+                "third": ArticulatedAgentCameraParams(
+                    cam_offset_pos=mn.Vector3(0.5, 2.5, 0.0),
+                    cam_look_at_pos=mn.Vector3(1, 0.0, 0),
+                    attached_link_id=-1,
+                ),
+            },
+            gripper_closed_state=[0.0],
+            gripper_open_state=[-1.56],
+            gripper_state_eps=0.01,
+            arm_mtr_pos_gain=0.3,
+            arm_mtr_vel_gain=0.3,
+            arm_mtr_max_impulse=10.0,
+            base_offset=mn.Vector3(0.0, -0.48, 0.0),
+            base_link_names={"base_link", "spine"},
+            # for left arm
+            ik_pb_link_idx=9,  # link to use for IK
+            ik_arm_len=7,  # num links in arm URDF for IK
+            ik_arm_start_idx=3,  # starting link for arm in URDF for IK
+        )
+
+    @property
+    def base_transformation(self):
+        # add_rot = mn.Matrix4.rotation(
+        #     mn.Rad(-np.pi / 2), mn.Vector3(1.0, 0, 0)
+        # )
+        return self.sim_obj.transformation  # @ add_rot
+
+    def __init__(
+        self, agent_cfg, sim, limit_robo_joints=True, fixed_base=True
+    ):
+        super().__init__(
+            self._get_murp_params(),
+            agent_cfg,
+            sim,
+            limit_robo_joints,
+            fixed_base,
+            base_type="mobile",
+        )

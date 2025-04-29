@@ -163,10 +163,14 @@ class LabDriver(AppDriver):
 
         gui_agent_controllers: Any = (
             self.ctrl_helper.get_gui_agent_controllers()
+            if self.ctrl_helper is not None
+            else []
         )
-        all_agent_controllers: List[
-            Controller
-        ] = self.ctrl_helper.get_all_agent_controllers()
+        all_agent_controllers: List[Controller] = (
+            self.ctrl_helper.get_all_agent_controllers()
+            if self.ctrl_helper is not None
+            else []
+        )
 
         self._app_service = AppService(
             config=config,

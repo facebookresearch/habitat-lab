@@ -40,6 +40,10 @@ class RearrangeEpisode(Episode):
     target_receptacles: List[Tuple[str, int]] = []
     goal_receptacles: List[Tuple[str, int]] = []
     name_to_receptacle: Dict[str, str] = {}
+    navmesh_path: str = ""
+    language_instruction: str = ""
+    # NOTE: adding things from task_pick.json
+    curr_action: str = ""
 
 
 @registry.register_dataset(name="RearrangeDataset-v0")
@@ -55,10 +59,10 @@ class RearrangeDatasetV0(PointNavDatasetV1):
     def __init__(self, config: Optional["DictConfig"] = None) -> None:
         self.config = config
 
-        if config and not self.check_config_paths_exist(config):
-            raise ValueError(
-                f"Requested RearrangeDataset config paths '{config.data_path.format(split=config.split)}' or '{config.scenes_dir}' are not downloaded locally. Aborting."
-            )
+        # if config and not self.check_config_paths_exist(config) and False:
+        #     raise ValueError(
+        #         f"Requested RearrangeDataset config paths '{config.data_path.format(split=config.split)}' or '{config.scenes_dir}' are not downloaded locally. Aborting."
+        #     )
 
         check_and_gen_physics_config()
 
@@ -70,7 +74,21 @@ class RearrangeDatasetV0(PointNavDatasetV1):
         deserialized = json.loads(json_str)
 
         for i, episode in enumerate(deserialized["episodes"]):
-            rearrangement_episode = RearrangeEpisode(**episode)
+            # NOTE: hack to sterilize the incoming config before instantiating the Episode
+            relevant_attrs = [
+                attr.name  # type:ignore[attr-defined]
+                for attr in RearrangeEpisode.__attrs_attrs__
+            ]
+            relevant_elements = {
+                k: v for k, v in episode.items() if k in relevant_attrs
+            }
+            rearrangement_episode = RearrangeEpisode(**relevant_elements)
+            # pack the other stuff into info
+            for k, v in episode.items():
+                if k not in relevant_attrs:
+                    rearrangement_episode.info[k] = v
+
+            # rearrangement_episode = RearrangeEpisode(**episode)
             rearrangement_episode.episode_id = str(i)
 
             self.episodes.append(rearrangement_episode)

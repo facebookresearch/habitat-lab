@@ -7,12 +7,15 @@
 
 import numpy as np
 from gym import spaces
+from scipy.spatial.transform import Rotation as R
 
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
+from habitat.tasks.rearrange.isaac_rearrange_sim import IsaacRearrangeSim
 from habitat.tasks.rearrange.rearrange_sensors import (
     DoesWantTerminate,
+    EndEffectorToObjectDistance,
     EndEffectorToRestDistance,
     RearrangeReward,
 )
@@ -20,6 +23,37 @@ from habitat.tasks.rearrange.utils import (
     UsesArticulatedAgentInterface,
     rearrange_logger,
 )
+
+
+def apply_rotation(quat_door):
+    hab_T_door = R.from_quat(quat_door)
+    isaac_T_hab_list = [-90, 0, 0]
+    isaac_T_hab = R.from_euler("xyz", isaac_T_hab_list, degrees=True)
+    isaac_T_door_mat = R.from_matrix(
+        isaac_T_hab.as_matrix() @ hab_T_door.as_matrix()
+    )
+    isaac_T_door_quat = isaac_T_door_mat.as_quat()
+    return isaac_T_door_quat
+
+
+def get_door_quat(task):
+    (
+        _,
+        door_orientation_rpy,
+    ) = task._sim.articulated_agent._robot_wrapper.get_prim_transform(
+        "_urdf_kitchen_FREMONT_KITCHENSET_FREMONT_KITCHENSET_CLEANED_urdf/kitchenset_fridgedoor2"
+    )
+    # self.visualize_pos(door_trans, "door")
+    quat_door = door_orientation_rpy.GetQuaternion()
+    # Getting Quaternion Val to Array
+    scalar = quat_door.GetReal()
+    vector = quat_door.GetImaginary()
+    quat_door = [scalar, vector[0], vector[1], vector[2]]
+    isaac_T_door_quat = apply_rotation(quat_door)
+    door_orienation_quat_R = R.from_quat(isaac_T_door_quat)
+    door_orientation_rpy = door_orienation_quat_R.as_euler("xyz", degrees=True)
+
+    return door_orientation_rpy
 
 
 @registry.register_sensor
@@ -143,11 +177,19 @@ class ArtObjState(Measure):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        self._metric = task.get_use_marker().get_targ_js()
+        if type(task._sim) == IsaacRearrangeSim:
+            # Fully close, the value is -180 degree
+            # when opening, the value is 90 degree
+            # it can be opened to 45 degree
+            # We use absolute value here to indicate openning or not
+            rpy = np.deg2rad(abs(get_door_quat(task)))
+            self._metric = rpy[0]
+        else:
+            self._metric = task.get_use_marker().get_targ_js()
 
 
 @registry.register_measure
@@ -168,11 +210,16 @@ class ArtObjAtDesiredState(Measure):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        dist = task.success_js_state - task.get_use_marker().get_targ_js()
+        if type(task._sim) == IsaacRearrangeSim:
+            dist = self._config.success_js_state - np.deg2rad(
+                abs(get_door_quat(task)[0])
+            )
+        else:
+            dist = task.success_js_state - task.get_use_marker().get_targ_js()
 
         # If not absolute distance, we can have a joint state greater than the
         # target.
@@ -205,7 +252,7 @@ class ArtObjSuccess(Measure):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
@@ -252,7 +299,7 @@ class EndEffectorDistToMarker(UsesArticulatedAgentInterface, Measure):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
 
     def update_metric(self, *args, task, **kwargs):
@@ -298,16 +345,21 @@ class ArtObjReward(RearrangeReward):
             ArtObjState.cls_uuid
         ].get_metric()
 
-        dist_to_marker = task.measurements.measures[
-            EndEffectorDistToMarker.cls_uuid
-        ].get_metric()
+        if type(task._sim) == IsaacRearrangeSim:
+            dist_to_marker = task.measurements.measures[
+                EndEffectorToObjectDistance.cls_uuid
+            ].get_metric()["0"]
+        else:
+            dist_to_marker = task.measurements.measures[
+                EndEffectorDistToMarker.cls_uuid
+            ].get_metric()
 
         ee_to_rest_distance = task.measurements.measures[
             EndEffectorToRestDistance.cls_uuid
         ].get_metric()
 
         self._prev_art_state = link_state
-        self._any_has_grasped = task._sim.grasp_mgr.is_grasped
+        self._any_has_grasped = False  # TODO: task._sim.grasp_mgr.is_grasped
         self._prev_ee_dist_to_marker = dist_to_marker
         self._prev_ee_to_rest = ee_to_rest_distance
         self._any_at_desired_state = False
@@ -316,7 +368,7 @@ class ArtObjReward(RearrangeReward):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
@@ -325,7 +377,7 @@ class ArtObjReward(RearrangeReward):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
         reward = self._metric
         link_state = task.measurements.measures[
@@ -340,19 +392,32 @@ class ArtObjReward(RearrangeReward):
             ArtObjAtDesiredState.cls_uuid
         ].get_metric()
 
-        cur_dist = abs(link_state - task.success_js_state)
-        prev_dist = abs(self._prev_art_state - task.success_js_state)
+        if type(task._sim) == IsaacRearrangeSim:
+            cur_dist = abs(link_state - self._config.success_js_state)
+            prev_dist = abs(
+                self._prev_art_state - self._config.success_js_state
+            )
+        else:
+            cur_dist = abs(link_state - task.success_js_state)
+            prev_dist = abs(self._prev_art_state - task.success_js_state)
 
         # Dense reward to the target articulated object state.
         dist_diff = prev_dist - cur_dist
         if not is_art_obj_state_succ:
             reward += self._config.art_dist_reward * dist_diff
 
-        cur_has_grasped = task._sim.grasp_mgr.is_grasped
+        # TODO: jimmy: have to implement grasping logics
+        cur_has_grasped = False  # task._sim.grasp_mgr.is_grasped
 
-        cur_ee_dist_to_marker = task.measurements.measures[
-            EndEffectorDistToMarker.cls_uuid
-        ].get_metric()
+        if type(task._sim) == IsaacRearrangeSim:
+            cur_ee_dist_to_marker = task.measurements.measures[
+                EndEffectorToObjectDistance.cls_uuid
+            ].get_metric()["0"]
+        else:
+            cur_ee_dist_to_marker = task.measurements.measures[
+                EndEffectorDistToMarker.cls_uuid
+            ].get_metric()
+
         if cur_has_grasped and not self._any_has_grasped:
             if task._sim.grasp_mgr.snapped_marker_id != task.use_marker_name:
                 # Grasped wrong marker

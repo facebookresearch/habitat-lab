@@ -151,6 +151,7 @@ class UsdVisualizer:
                         f"UsdVisualizer Warning: no Habitat visual found for RigidBody prim {prim_path} in {usd_path}."
                     )
                 continue
+            print(f"asset_path = {asset_path_attr.Get()}")
 
             # we found a habitatVisual; it will visualize the entire subtree, so let's ignore children
             it.PruneChildren()

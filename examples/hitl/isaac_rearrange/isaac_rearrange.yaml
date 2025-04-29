@@ -1,0 +1,18 @@
+# isaac_rearrange.yaml
+
+# For more info about Hydra in Habitat, see habitat-lab/habitat/config/README.md
+# @package _global_
+
+defaults:
+  - benchmark/rearrange/skills/pick_murp
+  # Load default parameters for the HITL framework. See
+  # habitat-hitl/habitat_hitl/config/hitl_defaults.yaml.
+  - hitl_defaults
+  - _self_
+
+habitat_hitl:
+  disable_policies_and_stepping: True
+  window:
+    title: "Isaac Rearrange"
+    width: 1300
+    height: 1000

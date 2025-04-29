@@ -154,6 +154,8 @@ class AppStateIsaacSimViewer(AppState):
         isaac_world.reset()
         self._isaac_rom.post_reset()
 
+        self.load_robot()
+
         self._hide_gui = False
         self._is_recording = False
 
@@ -183,6 +185,18 @@ class AppStateIsaacSimViewer(AppState):
             print(f"obj_height = {obj_height}")
 
             ro.translation = bottom_pos + mn.Vector3(0, obj_height, 0)
+
+    def load_robot(self) -> None:
+        """
+        Loads a robot from USD file into the scene for testing.
+        """
+        from habitat.isaac_sim._internal.murp_robot_wrapper import (
+            MurpRobotWrapper,
+        )
+
+        self.robot = MurpRobotWrapper(
+            isaac_service=self._isaac_wrapper.service
+        )
 
     def draw_lookat(self):
         if self._hide_gui:
@@ -344,7 +358,7 @@ class AppStateIsaacSimViewer(AppState):
         if not remote_client_state:
             return None
 
-        pos, rot_quat = remote_client_state.get_head_pose()
+        pos, rot_quat = remote_client_state.get_head_pose(user_index=0)
         if not pos:
             return None
 
@@ -387,18 +401,6 @@ class AppStateIsaacSimViewer(AppState):
                 handle="data/objects/ycb/configs/024_bowl.object_config.json",
                 bottom_pos=hab_hit_pos,
             )
-
-        if gui_input.get_key_down(KeyCode.K):
-            self._app_service.video_recorder.start_recording()
-            self._is_recording = True
-            self._hide_gui = True
-
-        elif gui_input.get_key_down(KeyCode.L):
-            self._app_service.video_recorder.stop_recording_and_save_video(
-                self._video_output_prefix
-            )
-            self._is_recording = False
-            self._hide_gui = False
 
     def handle_mouse_press(self) -> None:
         """

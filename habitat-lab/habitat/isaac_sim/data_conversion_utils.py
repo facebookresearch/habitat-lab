@@ -982,10 +982,36 @@ if __name__ == "__main__":
     # example usage:
 
     # convert_urdf_test()
-    convert_hab_scene(
-        "data/scene_datasets/hssd-hab/scenes-articulated/102343992.scene_instance.json",
-        project_root_folder="./",
-        enable_collision_for_stage=True,
-        overwrite_usd=True,
-    )
+
+    # convert a scene
+    if True:
+        convert_hab_scene(
+            "data/scene_datasets/hssd-hab/scenes-articulated/102343992.scene_instance.json",
+            project_root_folder="./",
+            enable_collision_for_stage=True,
+            overwrite_usd=True,
+        )
+
+    # convert YCB dataset
     # convert_objects_folder_to_usd("data/objects/ycb", "data/usd/objects/ycb/configs", "./")
+
+    # convert MURP
+    if True:
+        # murp_filepath = find_file(folder="data/hab_murp/", filename="franka_with_hand_v2.urdf")
+        murp_filepath = find_file(
+            folder="data/hab_murp/", filename="murp_tmr_franka_metahand.urdf"
+        )
+        usd_path = os.path.join(
+            "data/usd/robots/", "murp_tmr_franka_metahand.usda"
+        )
+        convert_urdf(
+            urdf_filepath=murp_filepath,
+            out_usd_filepath=usd_path,
+            fix_base=False,
+        )
+        add_habitat_visual_metadata_for_articulation(
+            usd_filepath=usd_path,  # NOTE: should this be a temp intermediate file?
+            reference_urdf_filepath=murp_filepath,
+            out_usd_filepath=usd_path,
+            project_root_folder="./",
+        )

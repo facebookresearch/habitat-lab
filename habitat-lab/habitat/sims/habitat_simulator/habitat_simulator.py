@@ -350,6 +350,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
                 "max_climb",
                 "max_slope",
                 "joint_start_override",
+                "right_left_hand",
                 "auto_update_sensor_transform",
             },
         )

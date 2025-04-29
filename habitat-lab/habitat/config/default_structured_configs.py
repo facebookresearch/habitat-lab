@@ -60,6 +60,8 @@ __all__ = [
     "IsHoldingSensorConfig",
     "EEPositionSensorConfig",
     "JointSensorConfig",
+    "HandJointSensorConfig",
+    "DoorOrientationSensorConfig",
     "HumanoidJointSensorConfig",
     "TargetStartSensorConfig",
     "GoalSensorConfig",
@@ -267,6 +269,30 @@ class BaseVelocityActionConfig(ActionConfig):
     ang_speed: float = 10.0
     allow_dyn_slide: bool = True
     allow_back: bool = True
+
+
+@dataclass
+class BaseVelIsaacActionConfig(ActionConfig):
+    r"""
+    In Rearrangement only for the non cylinder shape of the robot. Corresponds to the base velocity. Contains two continuous actions, the first one controls forward and backward motion, the second the rotation.
+    """
+    type: str = "BaseVelIsaacAction"
+    lin_speed: float = 10.0
+    ang_speed: float = 10.0
+    allow_dyn_slide: bool = True
+    allow_back: bool = True
+
+
+@dataclass
+class ArmReachEEActionConfig(ActionConfig):
+    r"""
+    In Rearrangement only for the non cylinder shape of the robot. Corresponds to the base velocity. Contains two continuous actions, the first one controls forward and backward motion, the second the rotation.
+    """
+    type: str = "ArmReachEEAction"
+    right_left_hand: str = "right"
+    max_ee_xyz_movement: float = 0.1
+    max_ee_rpy_movement: float = 0.52  # 30 degree
+    max_finger_movement: float = 0.26  # 15 degree
 
 
 @dataclass
@@ -513,6 +539,26 @@ class JointSensorConfig(LabSensorConfig):
     type: str = "JointSensor"
     dimensionality: int = 7
     arm_joint_mask: Optional[List[int]] = None
+    right_left_hand: str = "right"
+
+
+@dataclass
+class HandJointSensorConfig(LabSensorConfig):
+    r"""
+    Rearrangement only. Returns the hand joint positions of the robot.
+    """
+    type: str = "HandJointSensor"
+    dimensionality: int = 16
+    right_left_hand: str = "right"
+
+
+@dataclass
+class DoorOrientationSensorConfig(LabSensorConfig):
+    r"""
+    The door roll
+    """
+    type: str = "DoorOrientationSensor"
+    dimensionality: int = 1
 
 
 @dataclass
@@ -889,6 +935,7 @@ class ArtObjAtDesiredStateMeasurementConfig(MeasurementConfig):
     type: str = "ArtObjAtDesiredState"
     use_absolute_distance: bool = True
     success_dist_threshold: float = 0.05
+    success_js_state: float = 3.14
 
 
 @dataclass
@@ -945,6 +992,7 @@ class ArtObjRewardMeasurementConfig(MeasurementConfig):
     count_coll_pen: float = -1.0
     max_count_colls: int = -1
     count_coll_end_pen: float = 1.0
+    success_js_state: float = 3.14
 
 
 @dataclass
@@ -1680,6 +1728,8 @@ class AgentConfig(HabitatBaseConfig):
     ik_arm_urdf: Optional[str] = None
     # File to motion data, used to play pre-recorded motions
     motion_data_path: str = ""
+    # For murp
+    right_left_hand: str = "right"
     auto_update_sensor_transform: bool = True
     """
     If `True`, the agent's sensor transforms are automatically updated every frame.
@@ -1946,6 +1996,18 @@ cs.store(
     group="habitat/task/actions",
     name="base_velocity_non_cylinder",
     node=BaseVelocityNonCylinderActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.base_vel_isaac",
+    group="habitat/task/actions",
+    name="base_vel_isaac",
+    node=BaseVelIsaacActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.arm_reach_ee",
+    group="habitat/task/actions",
+    name="arm_reach_ee",
+    node=ArmReachEEActionConfig,
 )
 cs.store(
     package="habitat.task.actions.humanoidjoint_action",
@@ -2224,6 +2286,18 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="joint_sensor",
     node=JointSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.hand_joint_sensor",
+    group="habitat/task/lab_sensors",
+    name="hand_joint_sensor",
+    node=HandJointSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.door_orientation_sensor",
+    group="habitat/task/lab_sensors",
+    name="door_orientation_sensor",
+    node=DoorOrientationSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.humanoid_joint_sensor",
