@@ -167,7 +167,7 @@ python examples/hitl/robot_teleop/robot_teleop.py --config-name robot_teleop_vr.
 ```
 
 ## Habitat Quest Viewer
-Please run the latest build of Quest-Habitat Unity build on your Quest headset after launching habitat. The Headset and Laptop need to be connected to the same network without VPN. 
+Please run the latest build of Quest-Habitat Unity build on your Quest headset after launching habitat. The Headset and Laptop need to be connected to the same network without VPN.
 
 ## User Interface
 
@@ -184,3 +184,32 @@ This section describes teleoperating the robot. All commands are associated with
 - `0` on keyboard to change scenes.
 - `Y` *( if `use_cursor` is set to `True` in `robot_teleop_vr.yaml` )* : Object is loaded at the position the cursor is pointing at. The user can select which YCB object to add using the terminal. List of possible options that may be added can be modified in the `robot_teleop_vr.yaml`
 - `Y` *( if `use_cursor` is set to `False` in `robot_teleop_vr.yaml` )* : Objects are loaded in the scene at the defined positions inside yaml.
+
+# Simulator Process
+
+The robot teleop app can used as our "Simulator Process" for deployment in sim; see our [Workplace post](https://fb.workplace.com/groups/1643312812949607/permalink/1711217802825774/) for an overview. See also this murp mock API [example integration with a simulator](https://github.com/fairinternal/murp/blob/smoke_test/core/murp/murp/mock/README.md#example-integration-with-a-simulator).
+
+## Requirements
+
+* I've only tested on a Lambda with Ubuntu 22.
+* We don't require `sudo` or assume any special system installation; the steps below will install ROS, deoxys, and all other dependencies in the conda env.
+
+## Installation
+We recommend creating a new env from scratch starting with the instructions [here](https://github.com/fairinternal/murp/blob/smoke_test/core/murp/murp/mock/README.md#installation). Then, follow the earlier instructions in this README (install habitat-sim, habitat-lab, etc.).
+
+## Foxglove for ROS visualization
+Foxglove is optional and requires `sudo`. To install and run:
+```
+# Install foxglove-studio via internet instructions. Run it.
+foxglove-studio
+
+# In a separate terminal, install the foxglove ROS bridge.
+sudo apt install ros-humble-foxglove-bridge
+
+# Run the bridge.
+ros2 run foxglove_bridge foxglove_bridge
+
+# note terminal output like [INFO] [1746028748.752950452] [foxglove_bridge]: [WS] WebSocket server listening at ws://0.0.0.0:8765
+
+# In Foxglove's GUI, click the top-left icon, select Open Connection, and use ws://0.0.0.0:8765 or whatever the bridge printed earlier
+```

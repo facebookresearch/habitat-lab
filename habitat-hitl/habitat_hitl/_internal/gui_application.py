@@ -35,6 +35,9 @@ class InputHandlerApplication(Application):
         self._gui_input = GuiInput()
         self._mouse_ray = None
 
+        # Sloppy: disable v-sync to improve SPS. Todo: hook this up to a HITL config.
+        self.swap_interval = 0
+
     def key_press_event(self, event: Application.KeyEvent) -> None:
         key = MagnumKeyConverter.convert_key(event.key)
         if key is not None:
@@ -141,7 +144,8 @@ class GuiApplication(InputHandlerApplication):
 
     def draw_event(self):
         # tradeoff between responsiveness and simulation speed
-        max_sim_updates_per_render = 1
+        # Sloppy: set to 2 to improve sim steps/sec (while reducing rendered FPS!). Todo: hook up to a HITL config.
+        max_sim_updates_per_render = 2
 
         sim_dt = 1 / self._target_sps
 
