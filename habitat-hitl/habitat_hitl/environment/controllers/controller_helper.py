@@ -6,6 +6,7 @@
 
 from typing import TYPE_CHECKING, List
 
+from habitat_hitl.environment.controllers.spot_skills_controller import SpotSkillsController
 import numpy as np
 
 import habitat.gym.gym_wrapper as gym_wrapper
@@ -21,6 +22,7 @@ from habitat_hitl.environment.controllers.gui_controller import (
     GuiRobotController,
 )
 
+from habitat_llm.agent.env.environment_interface import EnvironmentInterface
 if TYPE_CHECKING:
     from omegaconf import DictConfig
 
@@ -143,6 +145,7 @@ class ControllerHelper:
                             ].ang_speed
                         )
 
+                        """
                         gui_agent_controller = GuiRobotController(
                             agent_idx=agent_index,
                             is_multi_agent=is_multi_agent,
@@ -152,6 +155,28 @@ class ControllerHelper:
                             base_vel_action_idx=base_vel_action_idx,
                             num_base_vel_actions=base_vel_action_end_idx
                             - base_vel_action_idx,
+                            turn_scale=turn_scale,
+                        )
+                        """
+                        habitat_llm_env_interface =EnvironmentInterface(
+                            conf=config,
+                            dataset=None,
+                            init_wg=False,
+                            init_env=False,
+                            gym_habitat_env=self._gym_habitat_env
+                        )
+                        gui_agent_controller = SpotSkillsController(
+                            agent_index=agent_index,
+                            articulated_agent=articulated_agent,
+                            gui_input=gui_input,
+                            skill_config=config.habitat_hitl.skill_config,
+                            observation_space=self._gym_habitat_env.observation_space,
+                            action_space=self._gym_habitat_env.action_space,
+                            batch_size=1,
+                            env=habitat_llm_env_interface,
+                            num_actions=num_actions,
+                            base_vel_action_idx=base_vel_action_idx,
+                            num_base_vel_actions=base_vel_action_end_idx - base_vel_action_idx,
                             turn_scale=turn_scale,
                         )
                     else:

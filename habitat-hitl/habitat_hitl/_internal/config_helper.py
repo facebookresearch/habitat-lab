@@ -71,6 +71,7 @@ def update_config(
                 )
 
             # avoid camera sensors for GUI-controlled agents
+            # TODO: Remove this.
             gui_controlled_agent_config = get_agent_config(
                 sim_config, agent_id=gui_controlled_agent_index
             )

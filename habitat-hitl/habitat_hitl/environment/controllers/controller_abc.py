@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from abc import ABC, abstractmethod
-
+from habitat_hitl.core.gui_input import GuiInput
 
 class Controller(ABC):
     """Abstract controller."""
@@ -24,7 +24,7 @@ class Controller(ABC):
 class GuiController(Controller):
     """Abstract controller for gui agents."""
 
-    def __init__(self, agent_idx, is_multi_agent, gui_input):
+    def __init__(self, agent_idx: int, is_multi_agent: bool, gui_input: GuiInput):
         super().__init__(is_multi_agent)
         self._agent_idx = agent_idx
         self._gui_input = gui_input

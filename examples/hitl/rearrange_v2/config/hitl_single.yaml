@@ -5,6 +5,7 @@
 defaults:
   - lang_rearrange_spot_only.yaml
   - server.yaml
+  - hitl_skills.yaml
   - _self_
 
 

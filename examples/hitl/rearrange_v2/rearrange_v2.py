@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
 
+from habitat_hitl.environment.controllers.spot_skills_controller import SpotSkillsController
 import magnum as mn
 import numpy as np
 from app_data import AppData
@@ -621,6 +622,9 @@ class AppStateRearrangeV2(AppStateBase):
             self._users.activate_user(0)
             self._set_short_circuit_episode(1)
 
+        # sim.agents_mgr._all_agent_data[0].articulated_agent.params.cameras['articulated_agent_arm_rgb'].attached_link_id
+        # Link ID: 6
+
         # NOTE: The simulator has only 1 agent with all sensors. See 'create_sim_config() in habitat_simulator.py'.
         sim_agent = sim.agents[0]
         self._agent_data: List[AgentData] = []
@@ -775,8 +779,9 @@ class AppStateRearrangeV2(AppStateBase):
         # TODO: Read/write from grasp manager.
         gui_agent_controller = self._user_data[user_index].gui_agent_controller
         assert isinstance(
-            gui_agent_controller, (GuiHumanoidController, GuiRobotController)
+            gui_agent_controller, SpotSkillsController
         )
+        """
         gui_agent_controller.set_act_hints(
             walk_dir=None,
             distance_multiplier=1.0,
@@ -788,6 +793,7 @@ class AppStateRearrangeV2(AppStateBase):
             throw_vel=None,
             reach_pos=None,
         )
+        """
 
     def _update_ui_overlay(self, user_index: int):
         """

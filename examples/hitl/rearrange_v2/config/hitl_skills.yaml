@@ -1,0 +1,52 @@
+# @package _global_
+
+# Mock skill configuration.
+# Copied from habitat-llm.
+
+rearrange_v2:
+  skill_config:
+    nav_skill_config:
+      name                       : 'Navigate'
+      description                : 'Navigate towards a target object or receptacle, you need to provide the id of the place you want to navigate to.'
+      policy                     : "PointNavResNetPolicy"
+      action_distribution_type   : "gaussian"
+      load_ckpt_file             : "data/models/point_nav/point_nav_sample_version.torchscript"
+      obs_space                  : ["articulated_agent_arm_depth", "goal_to_agent_gps_compass", "humanoid_detector_sensor"]
+      action_space               : ["base_velocity"]
+      max_skill_steps            : 1200
+      nav_success_dis_threshold  : 1.5
+      force_end_on_timeout       : True
+
+    pick_skill_config:
+      name                       : 'Pick'
+      description                : 'Pick up an object, you need to provide the id of the object'
+      load_ckpt_file              : "data/models/pick/pick_latest_sample.torchscript"
+      obs_space                  : ['articulated_agent_arm_depth', 'obj_start_sensor', 'joint', 'is_holding', 'relative_resting_position']
+      action_space               : ["arm_action", "base_velocity"]
+      max_skill_steps            : 350
+      at_resting_threshold       : 0.01
+      joint_rest_state           : [0.0, -3.14, 0.0, 3.0, 0.0, 0.0, 0.0]
+      threshold_for_ao_state         : 0.01  # Threshold to determine whether the receptacle is closed
+      force_end_on_timeout       : True
+      pick_distance              : 0.4
+      grasping_distance          : 2.0
+
+    place_skill_config:
+      name                       : 'Place'
+      description                : "Place an object, you must provide the id of the receptacle where you want to place the object. Do not provide id of the object that needs to be placed!"
+      policy                     : "PointNavResNetPolicy"
+      action_distribution_type   : "gaussian"
+      load_ckpt_file             : "data/models/pick/pick_latest_sample.torchscript"
+      obs_space                  : ['articulated_agent_arm_depth', 'obj_start_sensor', 'joint', 'is_holding', 'relative_resting_position']
+      action_space               : ["arm_action", "base_velocity"]
+      max_skill_steps            : 350
+      at_resting_threshold       : 0.01
+      placing_distance           : 0.4
+      joint_rest_state           : [0.0, -3.14, 0.0, 3.0, 0.0, 0.0, 0.0]
+      force_end_on_timeout       : True
+      thresh_for_art_state       : 0.01
+
+# Boilerplate for EnvironmentInterface to initialize.
+device: cpu
+mode: "dataset"
+env: habitat

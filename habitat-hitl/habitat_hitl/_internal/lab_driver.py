@@ -97,6 +97,7 @@ class LabDriver(AppDriver):
         self._num_recorded_episodes = 0
 
         # If all agents are gui-controlled, we should have no camera sensors and thus no renderer.
+        # TODO: Remove this.
         if len(config.habitat_hitl.gui_controlled_agents) == len(
             config.habitat.simulator.agents
         ):
@@ -247,6 +248,7 @@ class LabDriver(AppDriver):
         return dataset
 
     def _get_recent_metrics(self):
+        # TODO: Remove
         assert self._metrics
         return self._metrics
 
@@ -259,6 +261,7 @@ class LabDriver(AppDriver):
         ) = self.gym_habitat_env.step(action)
 
     def _compute_action_and_step_env(self):
+        # TODO: Remove
         if self._hitl_config.disable_policies_and_stepping:
             return
 
