@@ -5,7 +5,7 @@ from typing import Any, Dict
 from scripts.utilities import import_robot, build_navmesh_lines
 
 class KeyboardInputs:
-    def __init__(self, app_service, cursor_pos, camera_move_speed=0.1, robot = None):
+    def __init__(self, app_service, cursor_pos, camera_move_speed=0.1, robot = None) -> None:
         
         self._app_service = app_service
         self._cursor_pos = cursor_pos
@@ -58,7 +58,12 @@ class KeyboardInputs:
             
 
     def _handle_application_characteristics(self ) -> None:
-
+        """
+        Handles application characteristics such as:
+        - Exiting the application
+        - Hiding the GUI
+        """
+        
         gui_input = self._app_service.gui_input
         if gui_input.get_key_down(KeyCode.ESC):
             self._exit_app = True
@@ -69,7 +74,11 @@ class KeyboardInputs:
 
 
     def _handle_navmesh_features(self) -> None:
-
+        """
+        Handles navmesh features such as:
+        - Recomputing the navmesh
+        - Building navmesh lines for visualization
+        """
         gui_input = self._app_service.gui_input
         # navmesh features
         if gui_input.get_key_down(KeyCode.N):
@@ -80,6 +89,14 @@ class KeyboardInputs:
     
     
     def _handle_robot_characteristics(self) -> None:
+
+        """
+        Handles robot characteristics such as:
+        - Teleporting the robot to a random position on the navmesh
+        - Moving the robot via keyboard input
+        - Hot reloading the robot
+        - Saving/loading robot poses to/from cache
+        """
 
         gui_input = self._app_service.gui_input
 
@@ -219,7 +236,7 @@ class KeyboardInputs:
             self._cursor_pos -= xz_right * speed
 
     
-    def _move_robot_on_navmesh(self):
+    def _move_robot_on_navmesh(self) -> None:
         """
         Handles key press updates the robot on the navmesh.
         """
