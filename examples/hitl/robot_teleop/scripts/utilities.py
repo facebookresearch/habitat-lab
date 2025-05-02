@@ -1,6 +1,8 @@
 from hydra import compose
 from scripts.robot import Robot
 import habitat_sim
+import magnum as mn
+from scripts.hitobjectinfo import HitObjectInfo
 
 def recompute_navmesh(obj) -> None:
     """
@@ -86,3 +88,53 @@ def import_robot(obj) -> None:
         return obj.robot
     else:
         print("No robot configured.")
+
+
+def add_object_at(
+        obj,
+        obj_template_handle: str,
+        translation: mn.Vector3 = None,
+        rotation: mn.Quaternion = None,
+    ) -> habitat_sim.physics.ManagedRigidObject:
+    """
+    Add the desired object and assign it the provided translation and rotation if applicable.
+    Returns a ManagedObject and also registers the object_id in a global list for later cleanup.
+    """
+    ro = (
+        obj._sim.get_rigid_object_manager().add_object_by_template_handle(
+            obj_template_handle
+        )
+    )
+    if ro is not None:
+        # obj.added_object_ids.append(ro.object_id)
+        if translation is not None:
+            ro.translation = translation
+        if rotation is not None:
+            ro.rotation = rotation
+    return ro
+
+def remove_object(obj, object_id: int) -> None:
+    """
+    Remove the specified object. Only accepts removal of objects added to the scene.
+    """
+    try:
+        added_id = next(
+            obj_id
+            for obj_id in obj.added_object_ids
+            if object_id == obj_id
+        )
+        obj._sim.get_rigid_object_manager().remove_object_by_id(added_id)
+    except StopIteration:
+        print(f"No object with id {object_id} to remove.")
+
+def get_mouse_cast(obj) -> None:
+    """
+    Raycast in the scene to get the 3D point directly under the mouse.
+    Updates obj.mouse_cast_results
+    """
+    ray = obj._app_service.gui_input.mouse_ray
+    if ray is not None:
+        obj.mouse_cast_results = HitObjectInfo(
+            obj._sim.cast_ray(ray), obj._sim
+        )
+    return obj.mouse_cast_results
