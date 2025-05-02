@@ -2,22 +2,29 @@ from habitat_hitl.core.key_mapping import KeyCode, MouseButton
 from habitat_hitl.environment.camera_helper import CameraHelper
 import magnum as mn
 from typing import Any, Dict
-from scripts.utilities import import_robot, build_navmesh_lines
+import habitat.sims.habitat_simulator.sim_utilities as sutils
+from scripts.utilities import (import_robot, build_navmesh_lines, 
+                               add_object_at, get_mouse_cast, remove_object)
 
 class KeyboardInputs:
-    def __init__(self, app_service, cursor_pos, camera_move_speed=0.1, robot = None) -> None:
+    def __init__(self, app_service, cursor_pos, _app_cfg, robot = None) -> None:
         
         self._app_service = app_service
         self._cursor_pos = cursor_pos
+        self._app_cfg = _app_cfg
+
+
         self._camera_helper = CameraHelper(
             self._app_service.hitl_config, self._app_service.gui_input
         )
         self._camera_helper.update(self._cursor_pos, 0.0)
-        self.camera_move_speed = camera_move_speed
+        self.camera_move_speed = self._app_cfg.camera_move_speed
         self.robot = robot
         self._moving_robot = False
         self._sim = app_service.sim
 
+        self.added_object_ids = []
+        self.mouse_cast_results = None
 
         self._exit_app = False
         self._hide_gui = False
@@ -55,7 +62,101 @@ class KeyboardInputs:
 
         # handle robot characteristics (teleoperation, etc.)
         self._handle_robot_characteristics()
-            
+
+        # Handle object placement and removal
+        self._handle_object_placement()
+
+    def _handle_object_placement(self) -> None:
+        """
+        Handles object placement and removal.
+        """
+        gui_input = self._app_service.gui_input
+        self.mouse_cast_results = get_mouse_cast(self)
+
+
+        # Place objects
+        if gui_input.get_key_down(KeyCode.Y):
+
+
+            if self._app_cfg.ycb_objects.use_cursor:
+                # insert an object at the mouse raycast position. Ask for the index position of object.
+                idx = input(
+                    "Enter the index of the object to add 0 - " + str(len(self._app_cfg.ycb_objects.names) - 1 ) + " > ")
+                
+                # check if the index is a number
+                if not idx.isnumeric():
+                    print("Index must be a number.")
+                    return
+                # check if the index is a positive number
+                if idx == "":
+                    print("Index must be a number.")
+                    return
+                
+                # check if index is within the range of the object list
+                if int(idx) < 0 or int(idx) >= len(self._app_cfg.ycb_objects.names): 
+                    print("Invalid index for object to add.")
+                    return
+
+                obj_shortname = self._app_cfg.ycb_objects.names[int(idx)]
+                obj_template_handle = list(
+                    self._sim.get_object_template_manager()
+                    .get_templates_by_handle_substring(obj_shortname)
+                    .keys()
+                )[0]
+                new_obj = add_object_at(self, obj_template_handle)
+                self.added_object_ids.append(new_obj.object_id)
+                obj_size_down = sutils.get_obj_size_along(
+                    self._sim, new_obj.object_id, mn.Vector3(0, -1, 0)
+                )
+                placement_position = self.mouse_cast_results.hits[
+                    0
+                ].point + mn.Vector3(0, obj_size_down[0], 0)
+                new_obj.translation = placement_position
+
+                # TO DO: ensure habitat gets these from the object itself instead of manual setting.
+                new_obj.mass = 0.01
+                new_obj.rolling_friction_coefficient = 5
+                new_obj.spinning_friction_coefficient = 5
+                new_obj.friction_coefficient = 5
+
+            else:
+
+                if len(self._app_cfg.ycb_objects.names) != len(
+                    self._app_cfg.ycb_objects.positions
+                ):
+                    print("YCB object names and positions must be the same length.")
+                    return
+
+                
+                for idx in range(len(self._app_cfg.ycb_objects.names)):
+                    obj_shortname = self._app_cfg.ycb_objects.names[idx]
+                    obj_template_handle = list(
+                        self._sim.get_object_template_manager()
+                        .get_templates_by_handle_substring(obj_shortname)
+                        .keys()
+                    )[0]
+
+                    new_obj = add_object_at(self, obj_template_handle)
+                    self.added_object_ids.append(new_obj.object_id)
+                    obj_size_down = sutils.get_obj_size_along(
+                    self._sim, new_obj.object_id, mn.Vector3(0, -1, 0)
+                    )
+
+                    position = self._app_cfg.ycb_objects.positions[idx]
+                    new_obj.translation = mn.Vector3(position[0], position[1], position[2])
+                    # TO DO: ensure habitat gets these from the object itself instead of manual setting.
+                    new_obj.mass = 0.01
+                    new_obj.rolling_friction_coefficient = 5
+                    new_obj.spinning_friction_coefficient = 5
+                    new_obj.friction_coefficient = 5
+
+        # Remove objects
+        if gui_input.get_key_down(KeyCode.U):
+            remove_object(self, self.mouse_cast_results.hits[0].object_id)
+            self.added_object_ids.remove(self.mouse_cast_results.hits[0].object_id)
+
+
+
 
     def _handle_application_characteristics(self ) -> None:
         """
@@ -63,7 +164,7 @@ class KeyboardInputs:
         - Exiting the application
         - Hiding the GUI
         """
-        
+
         gui_input = self._app_service.gui_input
         if gui_input.get_key_down(KeyCode.ESC):
             self._exit_app = True
