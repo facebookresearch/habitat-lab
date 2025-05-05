@@ -22,6 +22,7 @@ class KeyboardInputs:
         self.robot = robot
         self._moving_robot = False
         self._sim = app_service.sim
+        self.navmesh_lines = None
 
         self.added_object_ids = []
         self.mouse_cast_results = None
@@ -58,7 +59,7 @@ class KeyboardInputs:
         self._handle_application_characteristics()
 
         # handle navmesh features
-        #self._handle_navmesh_features()
+        self._handle_navmesh_features()
 
         # handle robot characteristics (teleoperation, etc.)
         self._handle_robot_characteristics()
