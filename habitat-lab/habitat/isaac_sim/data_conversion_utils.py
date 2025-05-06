@@ -986,7 +986,7 @@ if __name__ == "__main__":
     # convert a scene
     if True:
         convert_hab_scene(
-            "data/scene_datasets/hssd-hab/scenes-articulated/102343992.scene_instance.json",
+            "data/scene_datasets/hssd-hab/scenes-articulated/103997403_171030405.scene_instance.json",
             project_root_folder="./",
             enable_collision_for_stage=True,
             overwrite_usd=True,
@@ -999,11 +999,9 @@ if __name__ == "__main__":
     if True:
         # murp_filepath = find_file(folder="data/hab_murp/", filename="franka_with_hand_v2.urdf")
         murp_filepath = find_file(
-            folder="data/hab_murp/", filename="murp_tmr_franka_metahand.urdf"
+            folder="data/hab_murp/", filename="franka_with_hand_v2.urdf"
         )
-        usd_path = os.path.join(
-            "data/usd/robots/", "murp_tmr_franka_metahand.usda"
-        )
+        usd_path = os.path.join("data/usd/robots/", "franka_with_hand_v2.usda")
         convert_urdf(
             urdf_filepath=murp_filepath,
             out_usd_filepath=usd_path,

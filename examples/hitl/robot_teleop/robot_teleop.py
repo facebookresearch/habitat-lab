@@ -39,25 +39,6 @@ from scripts.xr_pose_adapter import XRPose, XRPoseAdapter, XRTrajectory
 # path to this example app directory
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
-# TODO LIST:
-# - setup pymomentum IK API
-
-# GRASPING
-# - Add a grasp manager API to constrain an object in the palm's coordinate space with successful pre-grasp and update the constraint frame when moving
-# - Add a "release grasp" control to toggle default hand pose and break the constraint
-
-# IK:
-# - get IK frame aligned (Asjad)
-# - test and stabilize IK (Asjad)
-
-# COMBINE:
-# - use ik to guide the wrist and try grasping objects
-# - try grasping furniture
-# - try "hand off" cycles
-
-# BASE CONTROL
-# hook up a constraint to lock the base to the navmesh which is controlled by a target. Should be more stable for dynamic interactions.
-
 
 class HitDetails:
     """

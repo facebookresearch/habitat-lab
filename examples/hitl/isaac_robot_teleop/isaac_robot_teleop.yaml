@@ -1,0 +1,30 @@
+# For more info about Hydra in Habitat, see habitat-lab/habitat/config/README.md
+# @package _global_
+
+habitat_hitl:
+  driver: "SimDriver"
+  disable_policies_and_stepping: True
+
+  # experimental:
+  #   headless:
+  #     do_headless: True
+  # window: ~
+
+  window:
+    title: "IsaacSim Robot Teleop Viewer"
+    width: 1920
+    height: 1080
+    display_font_size: 24
+
+
+isaac_robot_teleop:
+  camera_move_speed: 0.1
+  #scene path relative to this file's directory
+  usd_scene_path: "../../../data/usd/scenes/103997403_171030405.usda"
+  navmesh_path: "data/hssd-hab/navmeshes/103997403_171030405.navmesh"
+
+defaults:
+  # Load default parameters for the HITL framework. See
+  # habitat-hitl/habitat_hitl/config/hitl_defaults.yaml.
+  - hitl_defaults
+  - _self_

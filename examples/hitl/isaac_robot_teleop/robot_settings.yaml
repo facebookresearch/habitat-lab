@@ -1,0 +1,106 @@
+# @package _global_
+
+#This config file can be hot-reloaded with 'T' to quickly change robot settings
+
+#global robot settings
+# urdf: "data/hab_murp/murp_tmr_franka/franka_with_hand_v2.urdf"
+usd: "data/usd/robots/murp_tmr_franka_metahand.usda"
+#NOTE: this is used to construct a prim path within the world
+robot_prim_path_name: "Murp"
+
+#what radius is required to represent the robot on the navmesh
+navmesh_radius: 0.45
+navmesh_height: 1.2
+
+#offset from the robot's origin of the XR "head" viewpoint in local space
+viewpoint_offset: [0,0,1.0]
+
+#joint motor settings
+create_joint_motors: True
+max_joint_velocity: 200
+angular_drive_stiffness: 10 #position gain
+angular_drive_damping: 0.1 #velocity gain
+angular_drive_max_force: 50 #max force/torque
+linear_drive_stiffness: 1000 #position gain
+angular_damping: 10
+linear_damping: 50
+
+#base velocity controller settings
+max_linear_speed: 1.0 #m/s
+max_angular_speed: 1.0 #rad/sec
+track_waypoints: True
+
+
+configuration_subsets:
+  #define the hand and arm joint indices
+  #NOTE: we assume these are in the same order such that setting a symmetric pose is straightforward
+  left_arm: [
+            "fr3_one_joint1",
+            "fr3_one_joint2",
+            "fr3_one_joint3",
+            "fr3_one_joint4",
+            "fr3_one_joint5",
+            "fr3_one_joint6",
+            "fr3_one_joint7",
+        ]
+  right_arm: [
+            "fr3_two_joint1",
+            "fr3_two_joint2",
+            "fr3_two_joint3",
+            "fr3_two_joint4",
+            "fr3_two_joint5",
+            "fr3_two_joint6",
+            "fr3_two_joint7",
+        ]
+  left_hand: [
+            "allegro_joint_one_0",
+            "allegro_joint_one_1",
+            "allegro_joint_one_2",
+            "allegro_joint_one_3",
+            "allegro_joint_one_4",
+            "allegro_joint_one_5",
+            "allegro_joint_one_6",
+            "allegro_joint_one_7",
+            "allegro_joint_one_8",
+            "allegro_joint_one_9",
+            "allegro_joint_one_10",
+            "allegro_joint_one_11",
+            "allegro_joint_one_12",
+            "allegro_joint_one_13",
+            "allegro_joint_one_14",
+            "allegro_joint_one_15",
+        ]
+  right_hand: [
+            "allegro_joint_two_0",
+            "allegro_joint_two_1",
+            "allegro_joint_two_2",
+            "allegro_joint_two_3",
+            "allegro_joint_two_4",
+            "allegro_joint_two_5",
+            "allegro_joint_two_6",
+            "allegro_joint_two_7",
+            "allegro_joint_two_8",
+            "allegro_joint_two_9",
+            "allegro_joint_two_10",
+            "allegro_joint_two_11",
+            "allegro_joint_two_12",
+            "allegro_joint_two_13",
+            "allegro_joint_two_14",
+            "allegro_joint_two_15",
+        ]
+
+link_subsets:
+  #link ixs for finger tips on each hand
+  left_thumb_tip: ["allegro_link_two_15_0_tip"]
+  right_thumb_tip: ["allegro_link_one_15_0_tip"]
+  #[index, middle, ring]
+  left_finger_tips: ["allegro_link_two_3_0_tip", "allegro_link_two_7_0_tip", "allegro_link_two_11_0_tip"]
+  right_finger_tips: ["allegro_link_one_3_0_tip", "allegro_link_one_7_0_tip", "allegro_link_one_11_0_tip"]
+  #arm base links (the fixed attachment point)
+  left_arm_base: ["fr3_two_link0"]
+  right_arm_base: ["fr3_one_link0"]
+
+
+
+#initial pose options. This refers to an entry in the robot_poses.json file.
+initial_pose: "initial"
