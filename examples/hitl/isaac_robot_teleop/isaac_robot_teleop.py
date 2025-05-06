@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import os
-from typing import TYPE_CHECKING, List, Tuple
+from typing import TYPE_CHECKING, List
 
 import hydra
 import magnum as mn
@@ -78,20 +78,6 @@ def bind_physics_material_to_hierarchy(
         bindingStrength=UsdShade.Tokens.strongerThanDescendants,
         materialPurpose="physics",
     )
-
-
-def multiply_transforms(
-    rot_a: mn.Quaternion,
-    pos_a: mn.Vector3,
-    rot_b: mn.Quaternion,
-    pos_b: mn.Vector3,
-) -> Tuple[mn.Quaternion, mn.Vector3]:
-    """
-    Multiplies transforms composed of separated translation and rotation elements and returns the result.
-    """
-    out_pos = rot_b.transform_vector(pos_a) + pos_b
-    out_rot = rot_b * rot_a
-    return (out_rot, out_pos)
 
 
 class AppStateIsaacSimViewer(AppState):
@@ -190,6 +176,10 @@ class AppStateIsaacSimViewer(AppState):
         # setup the configured navmesh
         self._sim.pathfinder.load_nav_mesh(self._app_cfg.navmesh_path)
         assert self._sim.pathfinder.is_loaded
+        # place the robot on the navmesh
+        self.robot.set_root_pose(
+            pos=self._sim.pathfinder.get_random_navigable_point()
+        )
 
     def add_rigid_object(
         self, handle: str, bottom_pos: mn.Vector3 = None
