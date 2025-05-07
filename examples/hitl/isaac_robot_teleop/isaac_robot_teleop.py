@@ -188,6 +188,7 @@ class AppStateIsaacSimViewer(AppState):
         self.robot.set_root_pose(
             pos=self._sim.pathfinder.get_random_navigable_point()
         )
+        self._app_service.users.activate_user(0)
 
     def add_rigid_object(
         self, handle: str, bottom_pos: mn.Vector3 = None

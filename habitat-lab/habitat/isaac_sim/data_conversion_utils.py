@@ -985,8 +985,9 @@ if __name__ == "__main__":
 
     # convert a scene
     if True:
+        # NOTE: HitL client app expects data/hssd-hab/ pathing
         convert_hab_scene(
-            "data/scene_datasets/hssd-hab/scenes-articulated/103997403_171030405.scene_instance.json",
+            "data/hssd-hab/scenes-articulated/103997403_171030405.scene_instance.json",
             project_root_folder="./",
             enable_collision_for_stage=True,
             overwrite_usd=True,
