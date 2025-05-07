@@ -145,10 +145,11 @@ class ConfigurationSubset:
         Get the current motor targets for the subset.
         Assumes exactly one motor per joint.
         """
-        applied_action = self._robot._robot.get_applied_action()
-        subset_target = [
-            applied_action.get_dof_action(ix) for ix in self.joint_ixs
+        applied_action = self._robot._robot.get_applied_action().get_dict()[
+            "joint_positions"
         ]
+
+        subset_target = [applied_action[ix] for ix in self.joint_ixs]
         return subset_target
 
     def set_cached_pose(

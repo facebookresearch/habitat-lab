@@ -421,6 +421,7 @@ class AppStateIsaacSimViewer(AppState):
             print("synced headset state...")
         if left.get_button_up(XRButton.ONE):
             pass
+
         if left.get_button_down(XRButton.TWO):
             print("Resetting Robot Joint Positions")
             for reset_joint_values, arm_subset_key in [
@@ -432,9 +433,9 @@ class AppStateIsaacSimViewer(AppState):
                     set_motor_targets=True,
                     set_positions=False,
                 )
-
         if left.get_button_up(XRButton.TWO):
             pass
+
         if left.get_button_down(XRButton.START):
             print("pressed START left")
             # NOTE: reserved by QuestReader for now...
@@ -538,9 +539,7 @@ class AppStateIsaacSimViewer(AppState):
         ##############################################
         # Waypoint base control via mouse right click
         if (
-            self._app_service.gui_input.get_mouse_button_down(
-                MouseButton.RIGHT
-            )
+            gui_input.get_mouse_button_down(MouseButton.RIGHT)
             and self._recent_mouse_ray_hit_info is not None
         ):
             self.robot.base_vel_controller.track_waypoints = True
@@ -561,7 +560,7 @@ class AppStateIsaacSimViewer(AppState):
                 print("Cannot set waypoint to non-navigable target.")
 
         if (
-            self._app_service.gui_input.get_mouse_button(MouseButton.RIGHT)
+            gui_input.get_mouse_button(MouseButton.RIGHT)
             and self._recent_mouse_ray_hit_info is not None
         ):
             hab_hit_pos = mn.Vector3(
@@ -586,7 +585,7 @@ class AppStateIsaacSimViewer(AppState):
 
         # start control on button release
         if (
-            self._app_service.gui_input.get_mouse_button_up(MouseButton.RIGHT)
+            gui_input.get_mouse_button_up(MouseButton.RIGHT)
             and self._sim.pathfinder.is_loaded
             and self._sim.pathfinder.is_navigable(
                 self.robot.base_vel_controller.target_position
@@ -683,22 +682,6 @@ class AppStateIsaacSimViewer(AppState):
             world.pause()
         else:
             world.play()
-
-    def get_vr_camera_pose(self):
-        remote_client_state = self._app_service.remote_client_state
-        if not remote_client_state:
-            return None
-
-        pos, rot_quat = remote_client_state.get_head_pose(user_index=0)
-        if not pos:
-            return None
-
-        extra_rot = mn.Quaternion.rotation(mn.Deg(180), mn.Vector3.y_axis())
-
-        # change from forward=z+ to forward=z-
-        rot_quat = rot_quat * extra_rot
-
-        return mn.Matrix4.from_(rot_quat.to_matrix(), pos)
 
     def handle_keys(self, dt, post_sim_update_dict):
         """
@@ -896,15 +879,8 @@ class AppStateIsaacSimViewer(AppState):
         self.update_robot_base_control(dt)
         self.update_isaac(post_sim_update_dict)
 
-        do_show_vr_cam_pose = False
-        vr_cam_pose = self.get_vr_camera_pose()
-
-        if do_show_vr_cam_pose and vr_cam_pose:
-            self._cam_transform = vr_cam_pose
-        else:
-            self._camera_helper.update(self._cursor_pos, dt)
-            self._cam_transform = self._camera_helper.get_cam_transform()
-
+        self._camera_helper.update(self._cursor_pos, dt)
+        self._cam_transform = self._camera_helper.get_cam_transform()
         post_sim_update_dict["cam_transform"] = self._cam_transform
 
         # draw lookat ring
