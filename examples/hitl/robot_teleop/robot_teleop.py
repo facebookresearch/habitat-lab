@@ -10,8 +10,10 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import hydra
 import magnum as mn
+import numpy as np
 from hydra import compose
 from omegaconf import DictConfig
+from robot_camera_sensor_suite import RobotCameraSensorSuite
 
 import habitat.sims.habitat_simulator.sim_utilities as sutils
 import habitat_sim  # unfortunately we can't import this earlier
@@ -205,6 +207,7 @@ class AppStateRobotTeleopViewer(AppState):
         self.cursor_cast_results: HitObjectInfo = None
         self.mouse_cast_results: HitObjectInfo = None
         self._hide_gui = False
+        self._hide_camera_sensors = True
 
         # additional object management
         self.added_object_ids: List[int] = []
@@ -213,6 +216,10 @@ class AppStateRobotTeleopViewer(AppState):
         self.cursor_follow_robot = True
 
         self.robot: Optional[Robot] = None
+        self._robot_camera_sensor_suite: Optional[
+            RobotCameraSensorSuite
+        ] = None
+
         # in-memory cache of hand poses for quick LERP grasping
         self.hand_grasp_poses: List[List[float]] = []
         self.dof_editor: Optional[DoFEditor] = None
@@ -254,9 +261,11 @@ class AppStateRobotTeleopViewer(AppState):
             self.xr_traj.load_json("test_xr_pose.json")
             self.sync_xr_local_state(self.xr_traj.get_pose(0))
 
-        self._sps_tracker = AverageRateTracker(2.0)
+        self._sps_tracker = AverageRateTracker(0.5)
         self._do_pause_physics = False
         self._app_service.users.activate_user(0)
+
+        self._init_mock_robot()
 
     def next_scene(self) -> None:
         scenes = self._app_cfg.scenes
@@ -425,6 +434,12 @@ class AppStateRobotTeleopViewer(AppState):
                 )
                 for hand_subset_key in ["hand_open", "grasp"]
             ]
+            if self._robot_camera_sensor_suite:
+                self._robot_camera_sensor_suite.close()
+            if "camera_sensors" in robot_cfg:
+                self._robot_camera_sensor_suite = RobotCameraSensorSuite(
+                    self._sim, self.robot.ao, robot_cfg["camera_sensors"]
+                )
         else:
             print("No robot configured.")
 
@@ -473,12 +488,20 @@ class AppStateRobotTeleopViewer(AppState):
         if self._hide_gui:
             return
 
+        base_xyz = self.robot.ao.translation
         help_text = (
             "Controls:\n"
             + " 'WASD' to translate laterally and 'ZX' to move up|down.\n"
             + " hold 'R' and move the mouse to rotate camera and mouse wheel to zoom.\n"
             + " '0' to change scene.\n"
+            + " hide camera sensors: 'C'\n"
+            + f"Pos: {base_xyz.x:.2f}, {base_xyz.z:.2f}\n"
         )
+
+        if self._sps_tracker.get_smoothed_rate():
+            help_text += (
+                f"{self._sps_tracker.get_smoothed_rate():.1f} steps/sec\n"
+            )
 
         # show some details about hits under the cursor
         cursor_cast_results_text = "\nCursor RayCast: "
@@ -702,13 +725,14 @@ class AppStateRobotTeleopViewer(AppState):
             color=mn.Color3(1, 0.75, 0),  # yellow
             normal=mn.Vector3(0, 1, 0),
         )
-        # a cursor centered green circle with camera normal
-        self._app_service.gui_drawer.draw_circle(
-            self._cursor_pos,
-            radius=0.02,
-            color=mn.Color3(0.8, 0.8, 0.8),  # yellow
-            normal=self.cursor_cast_results.ray.direction,
-        )
+        if self.cursor_cast_results:
+            # a cursor centered green circle with camera normal
+            self._app_service.gui_drawer.draw_circle(
+                self._cursor_pos,
+                radius=0.02,
+                color=mn.Color3(0.8, 0.8, 0.8),  # yellow
+                normal=self.cursor_cast_results.ray.direction,
+            )
 
     def handle_keys(
         self, dt: float, post_sim_update_dict: Dict[str, Any]
@@ -727,6 +751,9 @@ class AppStateRobotTeleopViewer(AppState):
 
         if gui_input.get_key_down(KeyCode.H):
             self._hide_gui = not self._hide_gui
+
+        if gui_input.get_key_down(KeyCode.C):
+            self._hide_camera_sensors = not self._hide_camera_sensors
 
         if gui_input.get_key_down(KeyCode.T):
             # remove the current robot and reload from URDF
@@ -802,18 +829,22 @@ class AppStateRobotTeleopViewer(AppState):
                 )
 
         if gui_input.get_key_down(KeyCode.Y):
-
             if self._app_cfg.ycb_objects.use_cursor:
                 # insert an object at the mouse raycast position. Ask for the index position of object.
-                idx = input(
-                    "Enter the index of the object to add 0 - " + str(len(self._app_cfg.ycb_objects.names) - 1 ) + " > ")
-                
-                assert idx.isnumeric(), "Index must be a number."
-                assert idx != "", "Index must be a number."
-                assert int(idx) >= 0, "Index must be a positive number."
-                assert int(idx) < len(self._app_cfg.ycb_objects.names), "Invalid index for object to add."
+                idx_str = input(
+                    "Enter the index of the object to add 0 - "
+                    + str(len(self._app_cfg.ycb_objects.names) - 1)
+                    + " > "
+                )
 
-                obj_shortname = self._app_cfg.ycb_objects.names[int(idx)]
+                assert idx_str.isnumeric(), "Index must be a number."
+                assert idx_str != "", "Index must be a number."
+                assert int(idx_str) >= 0, "Index must be a positive number."
+                assert int(idx_str) < len(
+                    self._app_cfg.ycb_objects.names
+                ), "Invalid index for object to add."
+
+                obj_shortname = self._app_cfg.ycb_objects.names[int(idx_str)]
                 obj_template_handle = list(
                     self._sim.get_object_template_manager()
                     .get_templates_by_handle_substring(obj_shortname)
@@ -835,12 +866,10 @@ class AppStateRobotTeleopViewer(AppState):
                 new_obj.friction_coefficient = 5
 
             else:
-
                 assert len(self._app_cfg.ycb_objects.names) == len(
                     self._app_cfg.ycb_objects.positions
                 ), "YCB object names and positions must be the same length."
 
-                
                 for idx in range(len(self._app_cfg.ycb_objects.names)):
                     obj_shortname = self._app_cfg.ycb_objects.names[idx]
                     obj_template_handle = list(
@@ -851,19 +880,18 @@ class AppStateRobotTeleopViewer(AppState):
 
                     new_obj = self.add_object_at(obj_template_handle)
                     obj_size_down = sutils.get_obj_size_along(
-                    self._sim, new_obj.object_id, mn.Vector3(0, -1, 0)
+                        self._sim, new_obj.object_id, mn.Vector3(0, -1, 0)
                     )
 
                     position = self._app_cfg.ycb_objects.positions[idx]
-                    new_obj.translation = mn.Vector3(position[0], position[1], position[2])
+                    new_obj.translation = mn.Vector3(
+                        position[0], position[1], position[2]
+                    )
                     # TO DO: ensure habitat gets these from the object itself instead of manual setting.
                     new_obj.mass = 0.01
                     new_obj.rolling_friction_coefficient = 5
                     new_obj.spinning_friction_coefficient = 5
                     new_obj.friction_coefficient = 5
-
-
-
 
         if gui_input.get_key_down(KeyCode.U):
             self.remove_object(self.mouse_cast_results.hits[0].object_id)
@@ -1249,6 +1277,173 @@ class AppStateRobotTeleopViewer(AppState):
                     current_xr_pose
                 ).draw_pose(dblr)
 
+    def _init_mock_robot(self):
+        from murp.mock.mock_mobile_tmr_robot import MockMobileTMRRobot
+
+        self._murp_mock_robot = MockMobileTMRRobot(do_synthesize_images=False)
+
+    def _update_mock_robot_pre_sim_step(self, dt):
+        if not self._murp_mock_robot:
+            return
+
+        self._murp_mock_robot.poll_for_messages()
+
+        if True:  # base linear and angular vel
+            base_vel = self._murp_mock_robot.base.get_commanded_velocity()
+            assert base_vel[1] == 0.0
+
+            start = self.robot.ao.translation
+            end = mn.Vector3(start)
+
+            end = end + self.robot.ao.transformation.transform_vector(
+                mn.Vector3(base_vel[0] * dt, 0, 0)
+            )
+
+            r = mn.Quaternion.rotation(
+                mn.Rad(base_vel[2] * dt), mn.Vector3(0, 1, 0)
+            )
+            self.robot.ao.rotation = r * self.robot.ao.rotation
+
+            if start != end:
+                self.robot.ao.translation = self._sim.pathfinder.try_step(
+                    start, end
+                )
+
+        motor_ids = []
+        commanded_positions = np.array([], dtype=np.float32)
+
+        # convention for murp: index, middle, pinky, thumb
+        # convention for robot_settings.xml: should now be the same
+
+        if self.robot.using_joint_motors:
+            for hand_idx in range(2):
+                joint_motor_lists = self.robot.pos_subsets[
+                    "left_hand" if hand_idx == 0 else "right_hand"
+                ].joint_motors
+                for motor_list in joint_motor_lists:
+                    assert len(motor_list) == 1
+                    motor_ids.append(motor_list[0])
+                commanded_positions = np.append(
+                    commanded_positions,
+                    (
+                        self._murp_mock_robot.left_hand
+                        if hand_idx == 0
+                        else self._murp_mock_robot.right_hand
+                    ).commanded_positions,
+                )
+                assert len(motor_ids) == len(commanded_positions)
+
+            for arm_idx in range(2):
+                joint_motor_lists = self.robot.pos_subsets[
+                    "left_arm" if arm_idx == 0 else "right_arm"
+                ].joint_motors
+                for motor_list in joint_motor_lists:
+                    assert len(motor_list) == 1
+                    motor_ids.append(motor_list[0])
+                commanded_positions = np.append(
+                    commanded_positions,
+                    (
+                        self._murp_mock_robot.left_arm
+                        if arm_idx == 0
+                        else self._murp_mock_robot.right_arm
+                    ).get_target_joint_positions(),
+                )
+                assert len(motor_ids) == len(commanded_positions)
+
+            for motor_id, commanded_pos in zip(motor_ids, commanded_positions):
+                jms = self.robot.ao.get_joint_motor_settings(motor_id)
+                jms.position_target = commanded_pos
+                self.robot.ao.update_joint_motor(motor_id, jms)
+        else:
+            # directly set joint positions
+            curr_robot_joint_positions = self.robot.ao.joint_positions
+
+            for hand_idx in range(2):
+                commanded_positions = (
+                    self._murp_mock_robot.left_hand
+                    if hand_idx == 0
+                    else self._murp_mock_robot.right_hand
+                ).commanded_positions
+                link_ixs = self.robot.pos_subsets[
+                    "left_hand" if hand_idx == 0 else "right_hand"
+                ].link_ixs
+                for i, link_ix in enumerate(link_ixs):
+                    dof = self.robot.ao.get_link_joint_pos_offset(link_ix)
+                    curr_robot_joint_positions[dof] = commanded_positions[i]
+
+            for arm_idx in range(2):
+                commanded_positions = (
+                    self._murp_mock_robot.left_arm
+                    if arm_idx == 0
+                    else self._murp_mock_robot.right_arm
+                ).get_target_joint_positions()
+                link_ixs = self.robot.pos_subsets[
+                    "left_arm" if arm_idx == 0 else "right_arm"
+                ].link_ixs
+                for i, link_ix in enumerate(link_ixs):
+                    dof = self.robot.ao.get_link_joint_pos_offset(link_ix)
+                    curr_robot_joint_positions[dof] = commanded_positions[i]
+
+            self.robot.ao.joint_positions = curr_robot_joint_positions
+
+    def _update_mock_robot_post_sim_step(self, post_sim_update_dict):
+        if self._murp_mock_robot:
+            if True:  # base
+                base_xyz = self.robot.ao.translation
+
+                mat = self.robot.ao.transformation
+                yaw = np.arctan2(mat[2][0], mat[0][0])
+                self._murp_mock_robot.base.set_pose(
+                    base_xyz.x, base_xyz.z, yaw
+                )
+
+            curr_robot_joint_positions = self.robot.ao.joint_positions
+
+            for hand_idx in range(2):
+                link_ixs = self.robot.pos_subsets[
+                    "left_hand" if hand_idx == 0 else "right_hand"
+                ].link_ixs
+                curr_joint_positions = np.zeros(
+                    len(link_ixs), dtype=np.float32
+                )
+                for i, link_ix in enumerate(link_ixs):
+                    dof = self.robot.ao.get_link_joint_pos_offset(link_ix)
+                    curr_joint_positions[i] = curr_robot_joint_positions[dof]
+                mock_hand = (
+                    self._murp_mock_robot.left_hand
+                    if hand_idx == 0
+                    else self._murp_mock_robot.right_hand
+                )
+                mock_hand.set_joint_state(curr_joint_positions)
+
+            for arm_idx in range(2):  # temp
+                link_ixs = self.robot.pos_subsets[
+                    "left_arm" if arm_idx == 0 else "right_arm"
+                ].link_ixs
+                curr_joint_positions = np.zeros(
+                    len(link_ixs), dtype=np.float32
+                )
+                for i, link_ix in enumerate(link_ixs):
+                    dof = self.robot.ao.get_link_joint_pos_offset(link_ix)
+                    curr_joint_positions[i] = curr_robot_joint_positions[dof]
+                mock_arm = (
+                    self._murp_mock_robot.left_arm
+                    if arm_idx == 0
+                    else self._murp_mock_robot.right_arm
+                )
+                mock_arm.set_current_joint_positions(curr_joint_positions)
+
+            self._murp_mock_robot.publish_proprioception_state()  # todo: rename to publish_proprio or publish_state?
+
+            self._robot_camera_sensor_suite.draw_and_publish_observations(
+                self._murp_mock_robot.camera_suite
+            )
+
+            if not self._hide_camera_sensors:
+                post_sim_update_dict[
+                    "debug_images"
+                ] = self._robot_camera_sensor_suite.get_recent_observations()
+
     # this is where connect with the thread for controller positions
     def sim_update(
         self, dt: float, post_sim_update_dict: Dict[str, Any]
@@ -1266,15 +1461,13 @@ class AppStateRobotTeleopViewer(AppState):
         self.handle_xr_input(dt)
         self.move_robot_on_navmesh()
         self._update_cursor_pos()
+        self._update_mock_robot_pre_sim_step(dt)
 
         # step the simulator
         if self.robot is not None and self.robot.using_joint_motors:
             self._sim.step_physics(dt)
 
-        # update robot finger raycast sensors
-        if self.robot is not None:
-            for finger_raycast_sensor in self.robot.finger_raycast_sensors:
-                finger_raycast_sensor.update_sensor_raycasts()
+        self._update_mock_robot_post_sim_step(post_sim_update_dict)
 
         # update the camera position
         self._camera_helper.update(self._cursor_pos, dt)
@@ -1320,13 +1513,17 @@ class AppStateRobotTeleopViewer(AppState):
 
         # NOTE: do debug drawing here
         # draw lookat ring
-        self.draw_lookat()
-        self.debug_draw_quest()
-        self.robot.draw_debug(dblr)
-        if self.dof_editor is not None:
-            self.dof_editor.debug_draw(dblr, self._cam_transform.translation)
-        self.draw_navmesh_lines()
-        self._update_help_text()
+        if not self._hide_gui:
+            self.draw_lookat()
+            self.debug_draw_quest()
+            self.robot.draw_debug(dblr)
+            if self.dof_editor is not None:
+                self.dof_editor.debug_draw(
+                    dblr, self._cam_transform.translation
+                )
+            self.draw_navmesh_lines()
+            self._robot_camera_sensor_suite.draw_debug(dblr)
+            self._update_help_text()
 
 
 @hydra.main(version_base=None, config_path="./", config_name="robot_teleop")

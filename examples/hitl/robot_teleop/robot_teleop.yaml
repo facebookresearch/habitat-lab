@@ -9,6 +9,7 @@ habitat_hitl:
   #     do_headless: True
   # window: ~
 
+  target_sps: 30
   window:
     title: "Hab Robot Teleop Viewer"
     width: 1920

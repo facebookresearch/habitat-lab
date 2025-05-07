@@ -99,6 +99,8 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
 
         if "debug_images" in post_sim_update_dict:
             self._debug_images = post_sim_update_dict["debug_images"]
+        else:
+            self._debug_images = []
 
     def unproject(self, viewport_pos):
         return self._replay_renderer.unproject(0, viewport_pos)
