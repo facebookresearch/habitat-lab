@@ -4,9 +4,44 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from typing import Optional
+
+import magnum as mn
 import numpy as np
 import roboticstoolbox as rtb
 from pydrake.solvers import MathematicalProgram, Solve
+from spatialmath import SE3, Quaternion
+
+
+def to_ik_pose(
+    legacy_tuple: Optional[tuple[mn.Vector3, mn.Quaternion]]
+) -> str:
+    """
+    Converts a transformation into the expected type (spatialmath) and conventions for the IK solver.
+    """
+
+    if legacy_tuple is None:
+        return None
+
+    v = legacy_tuple[0]
+    q = legacy_tuple[1]
+
+    if v is None or q is None:
+        return None
+
+    # apply a corrective rotation to the local frame in order to align the palm
+    r = mn.Quaternion.rotation(-mn.Rad(0), mn.Vector3(0, 0, 1))
+    q = q * r
+
+    R = (
+        (Quaternion([q.scalar, q.vector[0], q.vector[1], q.vector[2]]))
+        .unit()
+        .SE3()
+    )
+    t = SE3([v.x, v.y, v.z])
+    pose = t * R
+
+    return pose
 
 
 class DifferentialInverseKinematics:

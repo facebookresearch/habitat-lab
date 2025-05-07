@@ -16,6 +16,16 @@ habitat_hitl:
     height: 1080
     display_font_size: 24
 
+  networking:
+    enable: True
+    max_client_count: 1
+    http_availability_server:
+      enable: False
+    enable_connections_by_default: True
+    client_sync:
+      server_camera: False
+      server_input: True
+      skinning: True
 
 isaac_robot_teleop:
   camera_move_speed: 0.1

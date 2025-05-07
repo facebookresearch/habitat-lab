@@ -25,7 +25,9 @@ from habitat_hitl.core.hydra_utils import (
 )
 from habitat_hitl.core.key_mapping import KeyCode, MouseButton
 from habitat_hitl.core.text_drawer import TextOnScreenAlignment
+from habitat_hitl.core.xr_input import HAND_LEFT, HAND_RIGHT
 from habitat_hitl.environment.camera_helper import CameraHelper
+from scripts.ik import DifferentialInverseKinematics, to_ik_pose
 from scripts.xr_pose_adapter import XRPose, XRPoseAdapter
 
 # path to this example app directory
@@ -104,7 +106,13 @@ class AppStateIsaacSimViewer(AppState):
         self._cursor_pos: mn.Vector3 = mn.Vector3()
         self._camera_helper.update(self._cursor_pos, 0.0)
         self.xr_pose_adapter = XRPoseAdapter()
+        self.xr_origin_offset = mn.Vector3(0, 0, 0)
+        self.xr_origin_rotation = mn.Quaternion()
+        self.xr_origin_yaw_offset: float = -mn.math.pi / 2.0
         self.dof_editor: "DoFEditor" = None
+        self._ik: DifferentialInverseKinematics = (
+            DifferentialInverseKinematics()
+        )
 
         # Either the HITL app is headless or Isaac is headless. They can't both spawn a window.
         do_isaac_headless = (
@@ -384,6 +392,20 @@ class AppStateIsaacSimViewer(AppState):
                 ).origin_rotation,
             )
 
+    def debug_draw_quest(self) -> None:
+        """
+        Debug draw the quest controller and headset poses as axis frames.
+        """
+        dblr = self._app_service.gui_drawer
+
+        current_xr_pose = XRPose(
+            remote_client_state=self._app_service.remote_client_state
+        )
+        if current_xr_pose.valid:
+            self.xr_pose_adapter.get_global_xr_pose(current_xr_pose).draw_pose(
+                dblr
+            )
+
     def handle_xr_input(self, dt: float):
         if self._app_service.remote_client_state is None:
             return
@@ -397,11 +419,111 @@ class AppStateIsaacSimViewer(AppState):
             print("pressed one left")
             self.sync_xr_local_state()
             print("synced headset state...")
+        if left.get_button_up(XRButton.ONE):
+            pass
+        if left.get_button_down(XRButton.TWO):
+            print("Resetting Robot Joint Positions")
+            for reset_joint_values, arm_subset_key in [
+                ("right_arm_in", "right_arm"),
+                ("left_arm_in", "left_arm"),
+            ]:
+                self.robot.pos_subsets[arm_subset_key].set_cached_pose(
+                    pose_name=reset_joint_values,
+                    set_motor_targets=True,
+                    set_positions=False,
+                )
 
-        if right.get_button_up(XRButton.TWO):
+        if left.get_button_up(XRButton.TWO):
+            pass
+        if left.get_button_down(XRButton.START):
+            print("pressed START left")
+            # NOTE: reserved by QuestReader for now...
+        if left.get_button_up(XRButton.START):
             pass
 
-        # TODO: fill the rest of the XR control
+        # RIGHT CONTROLLER BUTTONS
+        # TODO: trajectory recording?
+        # if right.get_button_down(XRButton.ONE):
+        #     print("pressed one right")
+        #     print("Starting to record a new trajectory")
+        #     self.xr_traj = XRTrajectory()
+        #     self.recording_xr_traj = True
+        #     self.replay_xr_traj = False
+        # if right.get_button_up(XRButton.ONE):
+        #     print("released one right")
+        #     self.recording_xr_traj = False
+        #     self.xr_traj.save_json()
+        #     print(
+        #         f"Saved the trajectory with {len(self.xr_traj.traj)} poses to 'xr_pose.json'."
+        #     )
+        # if right.get_button_down(XRButton.TWO):
+        #     print("pressed two right")
+        #     self.replay_xr_traj = not self.replay_xr_traj
+        #     self.recording_xr_traj = False
+        #     print(f"XR Traj playback = {self.replay_xr_traj}")
+        if right.get_button_up(XRButton.TWO):
+            pass
+        # NOTE: XRButton.START is reserved for Quest menu functionality
+
+        # NOTE: PRIMARY_HAND_TRIGGER mapped to IK toggle
+        # NOTE: PRIMARY_INDEX_TRIGGER mapped to grasping functionality
+
+        # TODO: PRIMARY_THUMBSTICK (click?) unmapped currently and available
+
+        # IK for each hand when trigger is pressed
+        xr_pose = XRPose(
+            remote_client_state=self._app_service.remote_client_state
+        )
+        if xr_pose.valid:
+            global_xr_pose = self.xr_pose_adapter.get_global_xr_pose(xr_pose)
+
+            # combine both hands' logic to reduce boilerplate code
+            for xrcontroller, base_link_key, arm_subset_key in [
+                (right, "right_arm_base", "right_arm"),
+                (left, "left_arm_base", "left_arm"),
+            ]:
+                if xrcontroller.get_hand_trigger() > 0:
+                    arm_base_link = self.robot.link_subsets[
+                        base_link_key
+                    ].link_ixs[0]
+                    (
+                        arm_base_positions,
+                        arm_base_rotations,
+                    ) = self.robot.get_link_world_poses(
+                        indices=[arm_base_link]
+                    )
+                    arm_base_transform = mn.Matrix4.from_(
+                        arm_base_rotations[0].to_matrix(),
+                        arm_base_positions[0],
+                    )
+                    xr_pose_in_robot_frame = (
+                        self.xr_pose_adapter.xr_pose_transformed(
+                            global_xr_pose,
+                            arm_base_transform.inverted(),
+                        )
+                    )
+                    arm_joint_subset = self.robot.pos_subsets[arm_subset_key]
+
+                    cur_arm_pose = arm_joint_subset.get_motor_pos()
+
+                    # TODO: a bit hacky way to get the correct hand here
+                    xr_pose = (
+                        xr_pose_in_robot_frame.pos_left,
+                        xr_pose_in_robot_frame.rot_left,
+                    )
+                    if "right" in base_link_key:
+                        xr_pose = (
+                            xr_pose_in_robot_frame.pos_right,
+                            xr_pose_in_robot_frame.rot_right,
+                        )
+
+                    new_arm_pose = self._ik.inverse_kinematics(
+                        to_ik_pose(xr_pose), cur_arm_pose
+                    )
+                    # using configuration subset to avoid accidental overwriting with noise
+                    self.robot.pos_subsets[arm_subset_key].set_motor_pos(
+                        new_arm_pose
+                    )
 
     def update_robot_base_control(self, dt: float):
         """
@@ -409,13 +531,12 @@ class AppStateIsaacSimViewer(AppState):
         keys: 'ijkl'
         """
 
-        # TODO: add base waypoint control
-
         gui_input = self._app_service.gui_input
         lin_speed = self.robot.robot_cfg.max_linear_speed
         ang_speed = self.robot.robot_cfg.max_angular_speed
 
-        # use the mouse selection to drive
+        ##############################################
+        # Waypoint base control via mouse right click
         if (
             self._app_service.gui_input.get_mouse_button_down(
                 MouseButton.RIGHT
@@ -473,6 +594,13 @@ class AppStateIsaacSimViewer(AppState):
         ):
             self.robot.base_vel_controller._pause_track_waypoints = False
 
+        # end waypoint control with mouse right click
+        #####################################################################
+
+        #####################################################################
+        # Base velocity control with keyboard 'IJKL'
+        # NOTE: interrupts waypoint control
+
         if not self.robot.base_vel_controller.track_waypoints:
             self.robot.base_vel_controller.reset()
 
@@ -490,6 +618,47 @@ class AppStateIsaacSimViewer(AppState):
             self.robot.base_vel_controller.track_waypoints = False
             self.robot.base_vel_controller.target_angular_vel = -ang_speed
             # self.robot.base_rot -= 0.1
+
+        # end base velocity control with keyboard
+        #####################################################################
+
+        #####################################################################
+        # XR joystick base velocity and camera control
+        # NOTE: interrupts waypoint control
+
+        if self._app_service.remote_client_state is not None:
+            xr_input = self._app_service.remote_client_state.get_xr_input(0)
+            if xr_input is not None:
+                left = xr_input.controllers[HAND_LEFT]
+                right = xr_input.controllers[HAND_RIGHT]
+
+                # use left thumbstick to move the robot
+                left_thumbstick = left.get_thumbstick()
+                if left_thumbstick[1] != 0:
+                    self.robot.base_vel_controller.target_linear_vel = (
+                        lin_speed * left_thumbstick[1]
+                    )
+                    self.robot.base_vel_controller.track_waypoints = False
+                if left_thumbstick[0] != 0:
+                    self.robot.base_vel_controller.target_angular_vel = (
+                        ang_speed * left_thumbstick[0]
+                    )
+                    self.robot.base_vel_controller.track_waypoints = False
+
+                # use right thumbstick up/down to raise/lower the head point
+                # use right thumbstick left/right to rotate the alignment
+                right_thumbstick = right.get_thumbstick()
+                yaw_scale = -0.06
+                y_scale = 0.02
+                self.xr_origin_yaw_offset += right_thumbstick[0] * yaw_scale
+                self.xr_origin_rotation = mn.Quaternion.rotation(
+                    mn.Rad(self.xr_origin_yaw_offset), mn.Vector3(0, 1, 0)
+                )
+                if abs(right_thumbstick[1]) > 0.1:
+                    self._cursor_pos[1] += right_thumbstick[1] * y_scale
+
+        # end base velocity control with XR joysticks
+        #####################################################################
 
         if self.cursor_follow_robot:
             self._cursor_pos = self.robot.get_global_view_offset()
@@ -720,12 +889,12 @@ class AppStateIsaacSimViewer(AppState):
         self._sps_tracker.increment()
 
         self.handle_keys(dt, post_sim_update_dict)
+        self.update_mouse_raycaster(dt)
         self.handle_mouse_press()
+        self.handle_xr_input(dt)
         self._update_cursor_pos()
         self.update_robot_base_control(dt)
-        self.update_mouse_raycaster(dt)
         self.update_isaac(post_sim_update_dict)
-        self.handle_mouse_press()
 
         do_show_vr_cam_pose = False
         vr_cam_pose = self.get_vr_camera_pose()
@@ -740,6 +909,7 @@ class AppStateIsaacSimViewer(AppState):
 
         # draw lookat ring
         self.draw_lookat()
+        self.debug_draw_quest()
         # draw the robot frame
         self.robot.draw_debug(self._app_service.gui_drawer)
         if self.dof_editor is not None:
