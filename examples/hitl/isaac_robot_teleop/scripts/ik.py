@@ -52,6 +52,12 @@ class DifferentialInverseKinematics:
         # 0 to have no secondary tasks
         self.epsilon = 0.1
 
+    def get_ee_T(self):
+        """
+        Get the end effector transform in robot base space as a Matrix4.
+        """
+        return mn.Matrix4(self.robot.fkine(self.robot.q).A)
+
     def inverse_kinematics(self, pose, q):
         if len(q) != 7:
             raise ValueError("q must be of length 7")

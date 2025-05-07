@@ -21,7 +21,7 @@ from scripts.utils import debug_draw_axis, normalize_angle
 dir_path = os.path.dirname(os.path.realpath(__file__)).split("scripts")[0]
 default_pose_cache_path = os.path.join(dir_path, "robot_poses.json")
 
-from omni.isaac.core.robots import Robot, RobotView
+from omni.isaac.core.robots import Robot
 from omni.isaac.core.utils.types import ArticulationAction
 from pxr import PhysxSchema, Usd, UsdPhysics  # Sdf UsdGeom
 
@@ -46,16 +46,22 @@ class LinkSubset:
         if links is None:
             # by default collect all links
             self.link_ixs = list(
-                range(robot._robot_view.num_bodies)
+                range(len(self._robot._body_prim_paths))
             )  # type:ignore[assignment]
         else:
             if isinstance(links[0], int):
                 self.link_ixs = links  # type:ignore[assignment]
             else:
-                model_body_names = self._robot._robot_view.body_names
-                self.link_ixs = [
-                    model_body_names.index(body_name) for body_name in links
-                ]
+                self.link_ixs = []
+                model_body_paths = self._robot._body_prim_paths
+                for link_name in links:
+                    for ix, body_path in enumerate(model_body_paths):
+                        if link_name in body_path:  # type:ignore[operator]
+                            self.link_ixs.append(ix)
+                            break
+                    # TODO: for now we know rigids are missing but this is an issue
+                    print(f"No body for link named {link_name}")
+                    # raise ValueError(f"No body for link named {link_name}")
 
 
 class ConfigurationSubset:
@@ -617,9 +623,6 @@ class RobotAppWrapper:
         )
         self._robot_controller = self._robot.get_articulation_controller()
         self._view_name = self._name + "_view"
-        self._robot_view = self._isaac_service.world.scene.add(
-            RobotView(self._robot_prim_path, self._view_name)
-        )
 
         # control waypoints for the platform
         # NOTE: should be set from navmesh
@@ -643,9 +646,6 @@ class RobotAppWrapper:
         for ix, name in enumerate(self._robot.dof_names):
             print(f"{ix}: {name}")
         print("")
-        print("BODY NAMES")
-        for ix, name in enumerate(self._robot_view.body_names):
-            print(f"{ix}: {name}")
 
         # define configuration subsets
         self.pos_subsets = {"full": ConfigurationSubset(self)}
@@ -658,16 +658,6 @@ class RobotAppWrapper:
             print(subset_cfg_name)
             self.pos_subsets[subset_cfg_name] = ConfigurationSubset(
                 self, dofs=subset_cfg_links
-            )
-
-        # load link subsets from the robot config file
-        self.link_subsets = {}
-        for (
-            subset_cfg_name,
-            subset_cfg_links,
-        ) in self.robot_cfg.link_subsets.items():
-            self.link_subsets[subset_cfg_name] = LinkSubset(
-                self, subset_cfg_links
             )
 
         # # setup the finger raycast sensors
@@ -691,15 +681,26 @@ class RobotAppWrapper:
         self._joint_relationships = self._collect_joint_relationships()
         self._joint_names_to_dof_ix = self._construct_dof_name_map()
 
+        print("BODY NAMES")
+        for ix, name in enumerate(self._body_prim_paths):
+            print(f"{ix}: {name}")
+        # load link subsets from the robot config file
+        self.link_subsets = {}
+        for (
+            subset_cfg_name,
+            subset_cfg_links,
+        ) in self.robot_cfg.link_subsets.items():
+            self.link_subsets[subset_cfg_name] = LinkSubset(
+                self, subset_cfg_links
+            )
+
         # set initial pose
         self.set_cached_pose(
             pose_name=self.robot_cfg.initial_pose,
             set_positions=True,
             set_motor_targets=True,
         )
-        self.pos_subsets["left_hand"].set_cached_pose(
-            pose_name="grasp", set_motor_targets=True, set_positions=True
-        )
+
         # clamp to joint limits
         # self.clamp_joints_to_limits()
         # self.clamp_motor_targets_to_limits()

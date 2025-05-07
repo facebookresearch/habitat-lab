@@ -28,6 +28,7 @@ from habitat_hitl.core.text_drawer import TextOnScreenAlignment
 from habitat_hitl.core.xr_input import HAND_LEFT, HAND_RIGHT
 from habitat_hitl.environment.camera_helper import CameraHelper
 from scripts.ik import DifferentialInverseKinematics, to_ik_pose
+from scripts.utils import LERP, debug_draw_axis
 from scripts.xr_pose_adapter import XRPose, XRPoseAdapter
 
 # path to this example app directory
@@ -104,6 +105,7 @@ class AppStateIsaacSimViewer(AppState):
 
         self.cursor_follow_robot = True
         self._cursor_pos: mn.Vector3 = mn.Vector3()
+        self._xr_cursor_pos: mn.Vector3 = mn.Vector3()
         self._camera_helper.update(self._cursor_pos, 0.0)
         self.xr_pose_adapter = XRPoseAdapter()
         self.xr_origin_offset = mn.Vector3(0, 0, 0)
@@ -225,6 +227,12 @@ class AppStateIsaacSimViewer(AppState):
         # TODO: figure out how to initialize the robot in isolation instead of resetting the world. Doesn't work as expected.
         self._isaac_wrapper.service.world.reset()
         self.robot.post_init()
+        self.hand_grasp_poses = [
+            self.robot.pos_subsets["left_hand"].fetch_cached_pose(
+                pose_name=hand_subset_key
+            )
+            for hand_subset_key in ["hand_open", "hand_closed"]
+        ]
 
     def draw_lookat(self):
         if self._hide_gui:
@@ -367,7 +375,7 @@ class AppStateIsaacSimViewer(AppState):
             # set the origin such that the headset is aligned with the cursor
             # NOTE: temporarily setting the mutable values of immutable xr_input.origin_position by reference until bugfix in unity app with pushing the state from client
             origin_position = list(
-                self._cursor_pos
+                self._xr_cursor_pos
                 + origin_transform.transform_vector(self.xr_origin_offset)
             )
             for i in range(3):
@@ -375,9 +383,14 @@ class AppStateIsaacSimViewer(AppState):
                     0
                 ).origin_position[i] = origin_position[i]
 
-            # TODO: check this
             _, robot_rot = self.robot.get_root_pose()
-            origin_orientation = robot_rot * self.xr_origin_rotation
+            origin_orientation = (
+                robot_rot
+                * mn.Quaternion.rotation(
+                    mn.Rad(mn.math.pi / 2.0), mn.Vector3(1, 0, 0)
+                )
+                * self.xr_origin_rotation
+            )
 
             self._app_service.remote_client_state.get_xr_input(
                 0
@@ -434,6 +447,7 @@ class AppStateIsaacSimViewer(AppState):
                     set_motor_targets=True,
                     set_positions=False,
                 )
+
         if left.get_button_up(XRButton.TWO):
             pass
 
@@ -522,10 +536,28 @@ class AppStateIsaacSimViewer(AppState):
                     new_arm_pose = self._ik.inverse_kinematics(
                         to_ik_pose(xr_pose), cur_arm_pose
                     )
+                    debug_draw_axis(
+                        self._app_service.gui_drawer,
+                        arm_base_transform.__matmul__(self._ik.get_ee_T()),
+                        scale=0.75,
+                    )
                     # using configuration subset to avoid accidental overwriting with noise
                     self.robot.pos_subsets[arm_subset_key].set_motor_pos(
                         new_arm_pose
                     )
+
+            # grasping logic
+            for xrcontroller, hand_subset_key in [
+                (right, "right_hand"),
+                (left, "left_hand"),
+            ]:
+                cur_pose = LERP(
+                    self.hand_grasp_poses[0],
+                    self.hand_grasp_poses[1],
+                    xrcontroller.get_index_trigger(),
+                )
+
+                self.robot.pos_subsets[hand_subset_key].set_motor_pos(cur_pose)
 
     def update_robot_base_control(self, dt: float):
         """
@@ -641,7 +673,7 @@ class AppStateIsaacSimViewer(AppState):
                     self.robot.base_vel_controller.track_waypoints = False
                 if left_thumbstick[0] != 0:
                     self.robot.base_vel_controller.target_angular_vel = (
-                        ang_speed * left_thumbstick[0]
+                        -ang_speed * left_thumbstick[0]
                     )
                     self.robot.base_vel_controller.track_waypoints = False
 
@@ -655,11 +687,15 @@ class AppStateIsaacSimViewer(AppState):
                     mn.Rad(self.xr_origin_yaw_offset), mn.Vector3(0, 1, 0)
                 )
                 if abs(right_thumbstick[1]) > 0.1:
-                    self._cursor_pos[1] += right_thumbstick[1] * y_scale
+                    # vertical is z in isaac
+                    self.robot.viewpoint_offset[2] += (
+                        right_thumbstick[1] * y_scale
+                    )
 
         # end base velocity control with XR joysticks
         #####################################################################
 
+        self._xr_cursor_pos = self.robot.get_global_view_offset()
         if self.cursor_follow_robot:
             self._cursor_pos = self.robot.get_global_view_offset()
 
@@ -879,6 +915,7 @@ class AppStateIsaacSimViewer(AppState):
         self._update_cursor_pos()
         self.update_robot_base_control(dt)
         self.update_isaac(post_sim_update_dict)
+        self._sync_xr_user_to_robot_cursor()
 
         self._camera_helper.update(self._cursor_pos, dt)
         self._cam_transform = self._camera_helper.get_cam_transform()

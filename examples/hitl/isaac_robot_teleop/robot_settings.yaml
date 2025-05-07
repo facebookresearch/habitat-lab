@@ -13,7 +13,7 @@ navmesh_radius: 0.45
 navmesh_height: 1.2
 
 #offset from the robot's origin of the XR "head" viewpoint in local space
-viewpoint_offset: [0,0,1.0]
+viewpoint_offset: [0,0,1.3]
 
 #joint motor settings
 create_joint_motors: True
@@ -91,14 +91,14 @@ configuration_subsets:
 
 link_subsets:
   #link ixs for finger tips on each hand
-  left_thumb_tip: ["allegro_link_two_15_0_tip"]
-  right_thumb_tip: ["allegro_link_one_15_0_tip"]
+  left_thumb_tip: ["allegro_link_one_15_0_tip"]
+  right_thumb_tip: ["allegro_link_two_15_0_tip"]
   #[index, middle, ring]
-  left_finger_tips: ["allegro_link_two_3_0_tip", "allegro_link_two_7_0_tip", "allegro_link_two_11_0_tip"]
-  right_finger_tips: ["allegro_link_one_3_0_tip", "allegro_link_one_7_0_tip", "allegro_link_one_11_0_tip"]
+  right_finger_tips: ["allegro_link_two_3_0_tip", "allegro_link_two_7_0_tip", "allegro_link_two_11_0_tip"]
+  left_finger_tips: ["allegro_link_one_3_0_tip", "allegro_link_one_7_0_tip", "allegro_link_one_11_0_tip"]
   #arm base links (the fixed attachment point)
-  left_arm_base: ["fr3_two_link0"]
-  right_arm_base: ["fr3_one_link0"]
+  left_arm_base: ["fr3_one_link0"]
+  right_arm_base: ["fr3_two_link0"]
 
 
 
