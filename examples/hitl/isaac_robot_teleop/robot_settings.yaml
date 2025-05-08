@@ -96,6 +96,20 @@ link_subsets:
   #[index, middle, ring]
   right_finger_tips: ["allegro_link_two_3_0_tip", "allegro_link_two_7_0_tip", "allegro_link_two_11_0_tip"]
   left_finger_tips: ["allegro_link_one_3_0_tip", "allegro_link_one_7_0_tip", "allegro_link_one_11_0_tip"]
+
+  # thumb links
+  left_thumb: [ "allegro_link_one_13","allegro_link_one_14","allegro_link_one_15","allegro_link_one_15_0_tip"]
+  right_thumb: ["allegro_link_two_13","allegro_link_two_14","allegro_link_two_15","allegro_link_two_15_0_tip"]
+  #index links
+  left_index_finger: ["allegro_link_one_0_0","allegro_link_one_1_0","allegro_link_one_2_0","allegro_link_one_3_0", "allegro_link_one_3_0_tip"]
+  right_index_finger: ["allegro_link_two_0_0","allegro_link_two_1_0","allegro_link_two_2_0","allegro_link_two_3_0", "allegro_link_two_3_0_tip"]
+  #middle links
+  left_middle_finger: ["allegro_link_one_4_0","allegro_link_one_5_0","allegro_link_one_6_0","allegro_link_one_7_0", "allegro_link_one_7_0_tip"]
+  right_middle_finger: ["allegro_link_two_4_0","allegro_link_two_5_0","allegro_link_two_6_0","allegro_link_two_7_0", "allegro_link_two_7_0_tip"]
+  #ring links
+  left_ring_finger: ["allegro_link_one_8_0","allegro_link_one_9_0","allegro_link_one_10_0","allegro_link_one_11_0", "allegro_link_one_11_0_tip"]
+  right_ring_finger: ["allegro_link_two_8_0","allegro_link_two_9_0","allegro_link_two_10_0","allegro_link_two_11_0", "allegro_link_two_11_0_tip"]
+
   #arm base links (the fixed attachment point)
   left_arm_base: ["fr3_one_link0"]
   right_arm_base: ["fr3_two_link0"]

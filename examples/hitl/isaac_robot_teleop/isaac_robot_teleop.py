@@ -533,9 +533,15 @@ class AppStateIsaacSimViewer(AppState):
                             xr_pose_in_robot_frame.rot_right,
                         )
 
-                    new_arm_pose = self._ik.inverse_kinematics(
-                        to_ik_pose(xr_pose), cur_arm_pose
-                    )
+                    last_solve_pose = cur_arm_pose
+                    iter_count = 0
+                    while iter_count < 5:
+                        new_arm_pose = self._ik.inverse_kinematics(
+                            to_ik_pose(xr_pose), last_solve_pose
+                        )
+                        last_solve_pose = new_arm_pose
+                        iter_count += 1
+
                     debug_draw_axis(
                         self._app_service.gui_drawer,
                         arm_base_transform.__matmul__(self._ik.get_ee_T()),
@@ -543,8 +549,9 @@ class AppStateIsaacSimViewer(AppState):
                     )
                     # using configuration subset to avoid accidental overwriting with noise
                     self.robot.pos_subsets[arm_subset_key].set_motor_pos(
-                        new_arm_pose
+                        last_solve_pose
                     )
+                    # self.robot.pos_subsets[arm_subset_key].set_pos(new_arm_pose)
 
             # grasping logic
             for xrcontroller, hand_subset_key in [
@@ -905,6 +912,47 @@ class AppStateIsaacSimViewer(AppState):
                 body_name, force_vec, hit_pos_usd
             )
 
+    def draw_robot_link_chain(
+        self, dblr, link_ixs: List[int], color: mn.Color3
+    ):
+        """
+        Draw a set of line segments connecting the passed links sequentially.
+        """
+        assert len(link_ixs) >= 2
+        link_positions, _ = self.robot.get_link_world_poses(link_ixs)
+        prev_pos = link_positions[0]
+        for link_position in link_positions[1:]:
+            dblr.draw_transformed_line(prev_pos, link_position, color)
+            prev_pos = link_position
+
+    def debug_draw_hands(self):
+        """
+        Draws colored lines for the hands to visualize state without meshes.
+        #NOTE: once the allegro meshes are rendering in headset client this won't be necessary.
+        """
+        dblr = self._app_service.gui_drawer
+        for ix, finger_subset_key in enumerate(
+            [
+                "left_thumb",
+                "right_thumb",
+                "left_index_finger",
+                "right_index_finger",
+                "left_middle_finger",
+                "right_middle_finger",
+                "left_ring_finger",
+                "right_ring_finger",
+            ]
+        ):
+            finger_link_subset = self.robot.link_subsets[finger_subset_key]
+            color = (
+                mn.Color3(0.6, 0.4, 0.6)
+                if (ix / 2) % 2 == 0
+                else mn.Color3(0.6, 0.6, 0.4)
+            )
+            self.draw_robot_link_chain(
+                dblr, finger_link_subset.link_ixs, color
+            )
+
     def sim_update(self, dt, post_sim_update_dict):
         self._sps_tracker.increment()
 
@@ -926,6 +974,7 @@ class AppStateIsaacSimViewer(AppState):
         self.debug_draw_quest()
         # draw the robot frame
         self.robot.draw_debug(self._app_service.gui_drawer)
+        self.debug_draw_hands()
         if self.dof_editor is not None:
             self.dof_editor.debug_draw(
                 self._app_service.gui_drawer, self._cam_transform.translation

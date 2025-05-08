@@ -55,13 +55,14 @@ class LinkSubset:
                 self.link_ixs = []
                 model_body_paths = self._robot._body_prim_paths
                 for link_name in links:
+                    found = False
                     for ix, body_path in enumerate(model_body_paths):
                         if link_name in body_path:  # type:ignore[operator]
                             self.link_ixs.append(ix)
+                            found = True
                             break
-                    # TODO: for now we know rigids are missing but this is an issue
-                    print(f"No body for link named {link_name}")
-                    # raise ValueError(f"No body for link named {link_name}")
+                    if not found:
+                        raise ValueError(f"No body for link named {link_name}")
 
 
 class ConfigurationSubset:
@@ -678,6 +679,14 @@ class RobotAppWrapper:
 
         # beware this poses the object
         self._xform_prim_view = self._create_xform_prim_view()
+
+        # cache of states updated each step to reduce transform queries
+        self._body_prim_states: Tuple[
+            List[mn.Vector3], List[mn.Quaternion]
+        ] = None
+        self._body_prim_states_dirty: bool = True
+        self.update_body_prim_states()
+
         self._joint_relationships = self._collect_joint_relationships()
         self._joint_names_to_dof_ix = self._construct_dof_name_map()
 
@@ -737,6 +746,8 @@ class RobotAppWrapper:
         self.base_vel_controller.apply(step_size)
 
         self.fix_base(step_size, base_position, base_orientation)
+        # NOTE: set the state cache to dirty. Next time a query is made, update it.
+        self._body_prim_states_dirty = True
         # TODO: apply robot controller drive actions here
         # self._step_count += 1
 
@@ -1114,28 +1125,44 @@ class RobotAppWrapper:
 
         return XFormPrimView(prim_paths)
 
-    def get_link_world_poses(
-        self, indices: List[int] = None, convention="hab"
-    ):
+    def update_body_prim_states(self) -> None:
         """
-        Get the global position and orientation of all specified prims by index.
+        Pulls the world transforms of all links and converts them into habitat conventions.
         """
-
-        if indices is None:
-            indices = list(range(self._xform_prim_view.count))
-        positions = []
+        body_prim_states = self._xform_prim_view.get_world_poses()
         rotations = []
-        positions_usd, rotations_usd = self._xform_prim_view.get_world_poses()
-        for ix in indices:
-            pos = positions_usd[ix]
-            rot = rotations_usd[ix]
-            if convention == "hab":
-                pos = isaac_prim_utils.usd_to_habitat_position(pos)
-                rot = isaac_prim_utils.usd_to_habitat_rotation(rot)
+        positions = []
+        for ix in range(len(body_prim_states[0])):
+            pos = body_prim_states[0][ix]
+            rot = body_prim_states[1][ix]
+            # convert to hab
+            pos = isaac_prim_utils.usd_to_habitat_position(pos)
+            rot = isaac_prim_utils.usd_to_habitat_rotation(rot)
+            # wrap for magnum
             pos = mn.Vector3(pos)
             rot = isaac_prim_utils.rotation_wxyz_to_magnum_quat(rot)
             positions.append(pos)
             rotations.append(rot)
+        self._body_prim_states = positions, rotations
+        self._body_prim_states_dirty = False
+
+    def get_link_world_poses(
+        self, indices: List[int] = None
+    ) -> Tuple[List[mn.Vector3], List[mn.Quaternion]]:
+        """
+        Get the global position and orientation of all specified prims by index.
+        """
+        if self._body_prim_states_dirty:
+            # NOTE: This costs 0.02sec so cached
+            self.update_body_prim_states()
+        if indices is None:
+            return self._body_prim_states
+        states = self._body_prim_states
+        positions = []
+        rotations = []
+        for ix in indices:
+            positions.append(states[0][ix])
+            rotations.append(states[1][ix])
 
         return positions, rotations
 
