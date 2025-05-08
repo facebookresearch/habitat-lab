@@ -4,7 +4,7 @@
 
 #global robot settings
 # urdf: "data/hab_murp/murp_tmr_franka/franka_with_hand_v2.urdf"
-usd: "data/usd/robots/murp_tmr_franka_metahand.usda"
+usd: "data/usd/robots/franka_with_hand_v2.usda"
 #NOTE: this is used to construct a prim path within the world
 robot_prim_path_name: "Murp"
 
@@ -18,12 +18,12 @@ viewpoint_offset: [0,0,1.3]
 #joint motor settings
 create_joint_motors: True
 max_joint_velocity: 200
-angular_drive_stiffness: 10 #position gain
-angular_drive_damping: 0.1 #velocity gain
-angular_drive_max_force: 50 #max force/torque
+angular_drive_stiffness: 100 #position gain
+angular_drive_damping: 1 #velocity gain
+angular_drive_max_force: 5000 #max force/torque
 linear_drive_stiffness: 1000 #position gain
-angular_damping: 10
-linear_damping: 50
+angular_damping: 1
+linear_damping: 5
 
 #base velocity controller settings
 max_linear_speed: 1.0 #m/s
@@ -35,84 +35,70 @@ configuration_subsets:
   #define the hand and arm joint indices
   #NOTE: we assume these are in the same order such that setting a symmetric pose is straightforward
   left_arm: [
-            "fr3_one_joint1",
-            "fr3_one_joint2",
-            "fr3_one_joint3",
-            "fr3_one_joint4",
-            "fr3_one_joint5",
-            "fr3_one_joint6",
-            "fr3_one_joint7",
+            "left_fr3_joint1",
+            "left_fr3_joint2",
+            "left_fr3_joint3",
+            "left_fr3_joint4",
+            "left_fr3_joint5",
+            "left_fr3_joint6",
+            "left_fr3_joint7",
         ]
   right_arm: [
-            "fr3_two_joint1",
-            "fr3_two_joint2",
-            "fr3_two_joint3",
-            "fr3_two_joint4",
-            "fr3_two_joint5",
-            "fr3_two_joint6",
-            "fr3_two_joint7",
+            "right_fr3_joint1",
+            "right_fr3_joint2",
+            "right_fr3_joint3",
+            "right_fr3_joint4",
+            "right_fr3_joint5",
+            "right_fr3_joint6",
+            "right_fr3_joint7",
         ]
   left_hand: [
-            "allegro_joint_one_0",
-            "allegro_joint_one_1",
-            "allegro_joint_one_2",
-            "allegro_joint_one_3",
-            "allegro_joint_one_4",
-            "allegro_joint_one_5",
-            "allegro_joint_one_6",
-            "allegro_joint_one_7",
-            "allegro_joint_one_8",
-            "allegro_joint_one_9",
-            "allegro_joint_one_10",
-            "allegro_joint_one_11",
-            "allegro_joint_one_12",
-            "allegro_joint_one_13",
-            "allegro_joint_one_14",
-            "allegro_joint_one_15",
+            "joint_l__0_0",
+            "joint_l_1_0",
+            "joint_l_2_0",
+            "joint_l_3_0",
+            "joint_l_4_0",
+            "joint_l_5_0",
+            "joint_l_6_0",
+            "joint_l_7_0",
+            "joint_l_8_0",
+            "joint_l_9_0",
+            "joint_l_10_0",
+            "joint_l_11_0",
+            "joint_l_12_0",
+            "joint_l_13_0",
+            "joint_l_14_0",
+            "joint_l_15_0"
         ]
   right_hand: [
-            "allegro_joint_two_0",
-            "allegro_joint_two_1",
-            "allegro_joint_two_2",
-            "allegro_joint_two_3",
-            "allegro_joint_two_4",
-            "allegro_joint_two_5",
-            "allegro_joint_two_6",
-            "allegro_joint_two_7",
-            "allegro_joint_two_8",
-            "allegro_joint_two_9",
-            "allegro_joint_two_10",
-            "allegro_joint_two_11",
-            "allegro_joint_two_12",
-            "allegro_joint_two_13",
-            "allegro_joint_two_14",
-            "allegro_joint_two_15",
+            "joint_0_0",
+            "joint_1_0",
+            "joint_2_0",
+            "joint_3_0",
+            "joint_4_0",
+            "joint_5_0",
+            "joint_6_0",
+            "joint_7_0",
+            "joint_8_0",
+            "joint_9_0",
+            "joint_10_0",
+            "joint_11_0",
+            "joint_12_0",
+            "joint_13_0",
+            "joint_14_0",
+            "joint_15_0"
         ]
 
 link_subsets:
   #link ixs for finger tips on each hand
-  left_thumb_tip: ["allegro_link_one_15_0_tip"]
-  right_thumb_tip: ["allegro_link_two_15_0_tip"]
+  left_thumb_tip: ["link_l15_0_digit2_sensor_base","link_l15_0_tip"]
+  right_thumb_tip: ["link_15_0_digit2_sensor_base","link_15_0_tip"]
   #[index, middle, ring]
-  right_finger_tips: ["allegro_link_two_3_0_tip", "allegro_link_two_7_0_tip", "allegro_link_two_11_0_tip"]
-  left_finger_tips: ["allegro_link_one_3_0_tip", "allegro_link_one_7_0_tip", "allegro_link_one_11_0_tip"]
-
-  # thumb links
-  left_thumb: [ "allegro_link_one_13","allegro_link_one_14","allegro_link_one_15","allegro_link_one_15_0_tip"]
-  right_thumb: ["allegro_link_two_13","allegro_link_two_14","allegro_link_two_15","allegro_link_two_15_0_tip"]
-  #index links
-  left_index_finger: ["allegro_link_one_0_0","allegro_link_one_1_0","allegro_link_one_2_0","allegro_link_one_3_0", "allegro_link_one_3_0_tip"]
-  right_index_finger: ["allegro_link_two_0_0","allegro_link_two_1_0","allegro_link_two_2_0","allegro_link_two_3_0", "allegro_link_two_3_0_tip"]
-  #middle links
-  left_middle_finger: ["allegro_link_one_4_0","allegro_link_one_5_0","allegro_link_one_6_0","allegro_link_one_7_0", "allegro_link_one_7_0_tip"]
-  right_middle_finger: ["allegro_link_two_4_0","allegro_link_two_5_0","allegro_link_two_6_0","allegro_link_two_7_0", "allegro_link_two_7_0_tip"]
-  #ring links
-  left_ring_finger: ["allegro_link_one_8_0","allegro_link_one_9_0","allegro_link_one_10_0","allegro_link_one_11_0", "allegro_link_one_11_0_tip"]
-  right_ring_finger: ["allegro_link_two_8_0","allegro_link_two_9_0","allegro_link_two_10_0","allegro_link_two_11_0", "allegro_link_two_11_0_tip"]
-
+  right_finger_tips: ["link_3_0_digit2_sensor_base","link_3_0_tip", "link_7_0_digit2_sensor_base","link_7_0_tip", "link_11_0_digit2_sensor_base","link_11_0_tip"]
+  left_finger_tips: ["link_l3_0_digit2_sensor_base","link_l3_0_tip", "link_l7_0_digit2_sensor_base", "link_l7_0_tip", "link_l11_0_digit2_sensor_base", "link_l11_0_tip"]
   #arm base links (the fixed attachment point)
-  left_arm_base: ["fr3_one_link0"]
-  right_arm_base: ["fr3_two_link0"]
+  left_arm_base: ["left_fr3_link0"]
+  right_arm_base: ["right_fr3_link0"]
 
 
 
