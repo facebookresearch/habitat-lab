@@ -438,8 +438,8 @@ class RobotBaseVelController:
         """
         pos, rot = self.robot.get_root_pose()
 
-        max_pos_error = 0.02
-        max_ang_error = 0.02
+        max_pos_error = 0.035
+        max_ang_error = 0.035
         if self._track_waypoints and not self._pause_track_waypoints:
             pos_error = self.target_position - pos
             pos_error[1] = 0
