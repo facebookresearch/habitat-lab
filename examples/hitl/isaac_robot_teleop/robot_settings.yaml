@@ -4,13 +4,15 @@
 
 #global robot settings
 # urdf: "data/hab_murp/murp_tmr_franka/franka_with_hand_v2.urdf"
-usd: "data/usd/robots/franka_with_hand_v2.usda"
+usd: "data/usd/robots/franka_with_hand_v2.1.usda"
 #NOTE: this is used to construct a prim path within the world
 robot_prim_path_name: "Murp"
 
 #what radius is required to represent the robot on the navmesh
 navmesh_radius: 0.45
 navmesh_height: 1.2
+#how much extra clearance to add between navmesh heights and base position heights
+ground_to_base_offset: 0.1
 
 #offset from the robot's origin of the XR "head" viewpoint in local space
 viewpoint_offset: [0,0,1.3]
@@ -53,7 +55,7 @@ configuration_subsets:
             "right_fr3_joint7",
         ]
   left_hand: [
-            "joint_l__0_0",
+            "joint_l_0_0",
             "joint_l_1_0",
             "joint_l_2_0",
             "joint_l_3_0",

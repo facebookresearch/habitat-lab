@@ -1000,9 +1000,11 @@ if __name__ == "__main__":
     if True:
         # murp_filepath = find_file(folder="data/hab_murp/", filename="franka_with_hand_v2.urdf")
         murp_filepath = find_file(
-            folder="data/hab_murp/", filename="franka_with_hand_v2.urdf"
+            folder="data/hab_murp/", filename="franka_with_hand_v2.1.urdf"
         )
-        usd_path = os.path.join("data/usd/robots/", "franka_with_hand_v2.usda")
+        usd_path = os.path.join(
+            "data/usd/robots/", "franka_with_hand_v2.1.usda"
+        )
         convert_urdf(
             urdf_filepath=murp_filepath,
             out_usd_filepath=usd_path,

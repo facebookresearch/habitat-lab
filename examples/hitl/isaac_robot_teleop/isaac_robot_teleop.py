@@ -191,6 +191,9 @@ class AppStateIsaacSimViewer(AppState):
             pos=self._sim.pathfinder.get_random_navigable_point()
         )
         self._app_service.users.activate_user(0)
+        from scripts.robot import unit_test_robot
+
+        unit_test_robot(self.robot)
 
     def add_rigid_object(
         self, handle: str, bottom_pos: mn.Vector3 = None
@@ -617,7 +620,7 @@ class AppStateIsaacSimViewer(AppState):
             ).normalized()
             if not np.isnan(norm_dir).any():
                 angle_to_target = self.robot.angle_to(
-                    dir_target=frame_to_mouse, dir_init=global_dir
+                    dir_target=norm_dir, dir_init=global_dir
                 )
                 self.robot.base_vel_controller.target_rotation = (
                     angle_to_target
@@ -936,7 +939,7 @@ class AppStateIsaacSimViewer(AppState):
                 "left_thumb_tip",
                 "right_thumb_tip",
                 "left_finger_tips",
-                "right_finger_tips"
+                "right_finger_tips",
             ]
         ):
             finger_link_subset = self.robot.link_subsets[finger_subset_key]
@@ -948,7 +951,6 @@ class AppStateIsaacSimViewer(AppState):
             self.draw_robot_link_chain(
                 dblr, finger_link_subset.link_ixs, color
             )
-        pass
 
     def sim_update(self, dt, post_sim_update_dict):
         self._sps_tracker.increment()

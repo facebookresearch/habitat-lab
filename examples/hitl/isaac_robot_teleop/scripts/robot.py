@@ -442,6 +442,7 @@ class RobotBaseVelController:
         max_ang_error = 0.02
         if self._track_waypoints and not self._pause_track_waypoints:
             pos_error = self.target_position - pos
+            pos_error[1] = 0
             dist_to_target = pos_error.length()
             if dist_to_target > max_pos_error:
                 # first move to the position waypoint
@@ -628,6 +629,9 @@ class RobotAppWrapper:
         # control waypoints for the platform
         # NOTE: should be set from navmesh
         self.target_base_height = 0.1
+        # how much extra clearance to add between navmesh heights and base position heights
+        # prevents the robot from getting stuck in the ground
+        self.ground_to_base_offset = self.robot_cfg.ground_to_base_offset
         # TODO: configure the base controller from settings yaml
         self.base_vel_controller = RobotBaseVelController(self)
 
@@ -739,9 +743,10 @@ class RobotAppWrapper:
                 isaac_prim_utils.usd_to_habitat_position(base_position)
             )
             if self.sim.pathfinder.is_navigable(hab_base_pos):
-                self.target_base_height = self.sim.pathfinder.snap_point(
-                    hab_base_pos
-                )[1]
+                self.target_base_height = (
+                    self.sim.pathfinder.snap_point(hab_base_pos)[1]
+                    + self.ground_to_base_offset
+                )
 
         self.base_vel_controller.apply(step_size)
 
@@ -788,7 +793,7 @@ class RobotAppWrapper:
                 isaac_prim_utils.magnum_quat_to_list_wxyz(rot)
             )
         if pos is not None and convention == "hab":
-            self.target_base_height = pos[1]
+            self.target_base_height = pos[1] + self.ground_to_base_offset
             pos = isaac_prim_utils.habitat_to_usd_position(pos)
 
         self._robot.set_world_pose(pos, rot)
@@ -962,7 +967,7 @@ class RobotAppWrapper:
         # don't change rotation about z
         desired_angular_velocity[2] = curr_angular_velocity[2]
 
-        self._robot.set_angular_velocity(desired_angular_velocity)
+        # self._robot.set_angular_velocity(desired_angular_velocity)
 
     def fix_base_height_via_linear_vel_z(
         self, step_size, base_position, base_orientation
@@ -1214,3 +1219,48 @@ class RobotAppWrapper:
                     color=mn.Color3(0, 0.75, 0),  # green
                     normal=global_axis,
                 )
+
+
+def unit_test_robot(robot: RobotAppWrapper):
+    """
+    Unit tests some assumptions about the robot. If these fail then other parts of the code are likely to exhibit undefined behavior.
+    """
+
+    initial_state = robot.get_root_pose()
+
+    def all_close(val0, val1, eps=0.001):
+        """
+        two values are close within epsilon error
+        """
+        if isinstance(val0, mn.Vector3):
+            return (val0 - val1).length() < eps
+        else:
+            return abs(val0 - val1) < eps
+
+    # robot local forward is X axis
+    local_forward = mn.Vector3(1.0, 0, 0)
+    local_up = mn.Vector3(0, 1.0, 0)
+    # in default pose this corresponds to the forward x axis
+    robot.set_root_pose(mn.Vector3(), mn.Quaternion())
+    pos, rot = robot.get_root_pose()
+    tform = mn.Matrix4.from_(rot.to_matrix(), pos)
+    global_forward = tform.transform_vector(local_forward)
+    assert all_close(
+        global_forward, mn.Vector3(1.0, 0, 0)
+    ), f"global_forward={global_forward}"
+    global_up = tform.transform_vector(local_up)
+    assert all_close(
+        global_up, mn.Vector3(0, 1.0, 0)
+    ), f"global_up={global_up}"
+    assert all_close(
+        robot.base_rot, 0
+    ), f"robot.base_rot = {robot.base_rot}, should be 0"
+    # breakpoint()
+    for angle in [
+        -mn.math.pi + 0.01 + (i / 10.0) * (mn.math.pi * 2) for i in range(10)
+    ]:
+        robot.base_rot = angle
+        print(f"base rot angel {angle} -> {robot.base_rot}")
+        assert all_close(robot.base_rot, angle)
+
+    robot.set_root_pose(initial_state[0], initial_state[1])
