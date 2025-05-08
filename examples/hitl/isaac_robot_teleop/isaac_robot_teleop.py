@@ -933,14 +933,10 @@ class AppStateIsaacSimViewer(AppState):
         dblr = self._app_service.gui_drawer
         for ix, finger_subset_key in enumerate(
             [
-                "left_thumb",
-                "right_thumb",
-                "left_index_finger",
-                "right_index_finger",
-                "left_middle_finger",
-                "right_middle_finger",
-                "left_ring_finger",
-                "right_ring_finger",
+                "left_thumb_tip",
+                "right_thumb_tip",
+                "left_finger_tips",
+                "right_finger_tips"
             ]
         ):
             finger_link_subset = self.robot.link_subsets[finger_subset_key]
@@ -952,6 +948,7 @@ class AppStateIsaacSimViewer(AppState):
             self.draw_robot_link_chain(
                 dblr, finger_link_subset.link_ixs, color
             )
+        pass
 
     def sim_update(self, dt, post_sim_update_dict):
         self._sps_tracker.increment()
