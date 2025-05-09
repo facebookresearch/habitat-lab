@@ -5,7 +5,8 @@
 # LICENSE file in the root directory of this source tree.
 
 import os
-from typing import TYPE_CHECKING, List
+import time
+from typing import TYPE_CHECKING, Any, Dict, List
 
 import hydra
 import magnum as mn
@@ -85,6 +86,264 @@ def bind_physics_material_to_hierarchy(
         bindingStrength=UsdShade.Tokens.strongerThanDescendants,
         materialPurpose="physics",
     )
+
+
+class FrameRecorder:
+    """
+    Data recording class encapsulating per-frame state records for use with the SessionRecorder API.
+    """
+
+    def __init__(self, app_state: "AppStateIsaacSimViewer"):
+        self._app_state = app_state
+
+        # sequentially cached frame data
+        self.frame_data: List[Dict[str, Any]] = []
+
+        # mutually exclusive execution modes
+        self._recording = False
+        self._replaying = False
+        self._replay_frame = 0
+
+    @property
+    def recording(self):
+        return self._recording
+
+    @recording.setter
+    def recording(self, do_recording: bool):
+        self._recording = do_recording
+        if self._recording:
+            self._replaying = False
+
+    @property
+    def replaying(self):
+        return self._replaying
+
+    @replaying.setter
+    def replaying(self, do_replay: bool):
+        self._replaying = do_replay
+        if self._replaying:
+            self._recording = False
+
+    @property
+    def replay_frame(self):
+        return self._replay_frame
+
+    @replay_frame.setter
+    def replay_frame(self, replay_frame: int):
+        """
+        Sets and validates the replay frame, but does not change the state.
+        """
+        if replay_frame >= len(self.frame_data):
+            raise IndexError(
+                f"Requested replay frame '{replay_frame}' out of range for loaded {len(self.frame_data)} frames."
+            )
+        self._replay_frame = replay_frame
+
+    @property
+    def replay_time(self):
+        if len(self.frame_data) == 0:
+            return 0
+        return self.frame_data[self._replay_frame]["t"]
+
+    @replay_time.setter
+    def replay_time(self, replay_time: float):
+        """
+        Sets replay frame to the closest frame to that time.
+        """
+        num_frames = len(self.frame_data)
+        if num_frames == 0:
+            return
+
+        # binary search for frame with time t
+        l = 0
+        r = len(self.frame_data) - 1
+        m = (r + l) // 2
+        while r > l:
+            if self.frame_data[m]["t"] > replay_time:
+                r = m - 1
+            elif self.frame_data[m]["t"] < replay_time:
+                l = m + 1
+            else:
+                break
+            m = (r + l) // 2
+        self._replay_frame = m
+
+    def get_robot_state(self):
+        """
+        Scrape the state from the Robot object.
+        """
+        robot = self._app_state.robot
+        pos, rot = robot.get_root_pose()
+        base_linear_velocity = isaac_prim_utils.usd_to_habitat_position(
+            robot._robot.get_linear_velocity()
+        )
+        base_linear_velocity = [float(val) for val in base_linear_velocity]
+        base_angular_velocity = isaac_prim_utils.usd_to_habitat_position(
+            robot._robot.get_angular_velocity()
+        )
+        base_angular_velocity = [float(val) for val in base_angular_velocity]
+        robot_state = {
+            # base state
+            "base_pos": np.array(pos).tolist(),
+            "base_rotation_quat": isaac_prim_utils.magnum_quat_to_list_wxyz(
+                rot
+            ),
+            "base_rotation_angle": robot.base_rot,
+            "base_linear_velocity": base_linear_velocity,
+            "base_angular_velocity": base_angular_velocity,
+            # joint states
+            "joint_positions": robot._robot.get_joint_positions().tolist(),
+            "joint_velocities": robot._robot.get_joint_velocities().tolist(),
+            # motor states
+            "motor_targets": robot._robot.get_applied_action().get_dict()[
+                "joint_positions"
+            ],
+        }
+
+        return robot_state
+
+    def get_object_states(self):
+        """
+        Scrape the dynamic state from all added rigid objects.
+        #TODO: also scrape AO states from the furniture.
+        """
+        object_states = []
+        active_rigid_objects = self._app_state._rigid_objects
+        for ro in active_rigid_objects:
+            object_states.append(
+                {
+                    "prim_path": ro._rigid_prim.prim_path,
+                    "object_id": ro.object_id,
+                    "transformation": np.array(ro.transformation).tolist(),
+                    "angular_velocity": np.array(ro.angular_velocity).tolist(),
+                    "linear_velocity": np.array(ro.linear_velocity).tolist(),
+                }
+            )
+        return object_states
+
+    def record_state(
+        self,
+        elapsed_time: float,
+    ) -> None:
+        """
+        Scrapes the app for relevant per-frame state information and aggregates it in a dict.
+        """
+
+        _frame_data: Dict[str, Any] = {
+            "t": elapsed_time,
+            "users": [],  # TODO
+            "object_states": self.get_object_states(),
+            "robot_state": self.get_robot_state(),
+        }
+        # TODO: user camera and cursor states
+        self.frame_data.append(_frame_data)
+
+    def set_object_states(self, obj_states: List[Dict[str, Any]]):
+        """
+        Applies the object states cached in a recorded frame data dict.
+        See get_object_states
+        #TODO: AO states
+        """
+        for object_state_record in obj_states:
+            ro = self._app_state._isaac_rom.get_object_by_id(
+                object_state_record["object_id"]
+            )
+            assert ro._rigid_prim.prim_path == object_state_record["prim_path"]
+            ro_t = mn.Matrix4(
+                [
+                    [
+                        object_state_record["transformation"][j][i]
+                        for j in range(4)
+                    ]
+                    for i in range(4)
+                ]
+            )
+            ro.transformation = ro_t
+            ro.angular_velocity = mn.Vector3(
+                *object_state_record["angular_velocity"]
+            )
+            ro.linear_velocity = mn.Vector3(
+                *object_state_record["linear_velocity"]
+            )
+
+    def set_robot_state(self, robot_state_dict: Dict[str, Any]):
+        """
+        Applies the robot state cached in a recorded frame data dict.
+        See get_robot_state
+        """
+        robot = self._app_state.robot
+        robot.set_root_pose(mn.Vector3(*robot_state_dict["base_pos"]))
+        robot.base_rot = robot_state_dict["base_rotation_angle"]
+        robot._robot.set_linear_velocity(
+            isaac_prim_utils.habitat_to_usd_position(
+                robot_state_dict["base_linear_velocity"]
+            )
+        )
+        robot._robot.set_angular_velocity(
+            isaac_prim_utils.habitat_to_usd_position(
+                robot_state_dict["base_angular_velocity"]
+            )
+        )
+        robot._robot.set_joint_positions(
+            np.array(robot_state_dict["joint_positions"])
+        )
+        robot._robot.set_joint_velocities(
+            np.array(robot_state_dict["joint_velocities"])
+        )
+        from omni.isaac.core.utils.types import ArticulationAction
+
+        action = ArticulationAction(
+            joint_positions=np.array(robot_state_dict["motor_targets"])
+        )
+        robot._robot.apply_action(action)
+
+    def apply_state(self, frame: int):
+        """
+        Applies the recorded frame state for self.replay_frame
+        """
+        frame_data = self.frame_data[frame]
+        self.set_object_states(frame_data["object_states"])
+        self.set_robot_state(frame_data["robot_state"])
+
+    def update(self, t: float) -> None:
+        """
+        Control loop callback.
+        Either records a frame or replays a frame depending on the configured mode variables.
+        """
+
+        if self.recording:
+            # in this case t is the current application wall clock time
+            self.record_state(t)
+        elif self.replaying:
+            # in this case t is the desired wall clock time to replay
+            # NOTE: will match to one of the closest frames not an exact time
+            self.replay_time = t
+            self.apply_state(self.replay_frame)
+
+    def save_json(self, filename: str = "frame_data.json"):
+        """
+        Serialize the frame data to JSON
+        """
+        import json
+
+        with open(filename, "w") as f:
+            json.dump(
+                self.frame_data,
+                f,
+                indent=4,
+            )
+        print(
+            f"Saved frame trajectory with {len(self.frame_data)} frames to {filename}"
+        )
+
+    def load_json(self, filename: str = "frame_data.json"):
+        """
+        Load a serialized frame data json for replay.
+        """
+        import json
+
+        with open(filename, "r") as f:
+            self.frame_data = json.load(f)
 
 
 class AppStateIsaacSimViewer(AppState):
@@ -217,7 +476,6 @@ class AppStateIsaacSimViewer(AppState):
 
         self._sps_tracker = AverageRateTracker(2.0)
         self._do_pause_physics = False
-        self._timer = 0.0
 
         self.init_mouse_raycaster()
 
@@ -229,9 +487,17 @@ class AppStateIsaacSimViewer(AppState):
             pos=self._sim.pathfinder.get_random_navigable_point()
         )
         self._app_service.users.activate_user(0)
+
+        self._frame_recorder = FrameRecorder(self)
+
         from scripts.robot import unit_test_robot
 
         unit_test_robot(self.robot)
+
+        # this is when the application starts after initialization
+        self._start_time = time.time()
+        # this tracks the relative time from start_time
+        self._timer = 0.0
 
     def load_episode_dataset(self, dataset_file: str):
         """
@@ -333,6 +599,29 @@ class AppStateIsaacSimViewer(AppState):
                     self._cam_transform.translation - ro.translation
                 ).normalized(),
             )
+            # test linear vel by showing it here
+            # dblr.draw_transformed_line(
+            #    ro.translation,
+            #    ro.translation + ro.linear_velocity,
+            #    mn.Color3(1.0,0.5,1.0)
+            # )
+            # debug_draw_axis(dblr, mn.Matrix4.from_(mn.Matrix3(), ro.translation))
+            # ang_vel = ro.angular_velocity
+            # for axis in range(3):
+            #     #for each angular velocity component, draw a line from that axis to illustrate
+            #     axis_vec = mn.Vector3()
+            #     axis_vec[axis] = 1.0
+            #     color = mn.Color3(axis_vec)
+            #     start_from = mn.Vector3()
+            #     start_from[(axis+1)%3] = 1.0
+            #     go_to = mn.Vector3()
+            #     go_to[(axis+2)%3] = 1.0
+
+            #     dblr.draw_transformed_line(
+            #         ro.translation+start_from,
+            #         ro.translation+start_from+go_to*ang_vel[axis],
+            #         color
+            #     )
 
     def load_robot(self) -> None:
         """
@@ -394,6 +683,14 @@ class AppStateIsaacSimViewer(AppState):
         if self._recent_mouse_ray_hit_info:
             status_str += self._recent_mouse_ray_hit_info["rigidBody"] + "\n"
         status_str += f"base_rot: {self.robot.base_rot}\n"
+        status_str += f"time: {self._timer}\n"
+        if self._frame_recorder.replaying:
+            status_str += f"-REPLAYING FRAMES [{self._frame_recorder.frame_data[0]['t'], self._frame_recorder.frame_data[-1]['t']}]-\n"
+        elif self._frame_recorder.recording:
+            status_str += (
+                f"-RECORDING FRAMES ({len(self._frame_recorder.frame_data)})-"
+            )
+
         return status_str
 
     def _update_help_text(self):
@@ -580,19 +877,13 @@ class AppStateIsaacSimViewer(AppState):
 
         # RIGHT CONTROLLER BUTTONS
         # TODO: trajectory recording?
-        # if right.get_button_down(XRButton.ONE):
-        #     print("pressed one right")
-        #     print("Starting to record a new trajectory")
-        #     self.xr_traj = XRTrajectory()
-        #     self.recording_xr_traj = True
-        #     self.replay_xr_traj = False
-        # if right.get_button_up(XRButton.ONE):
-        #     print("released one right")
-        #     self.recording_xr_traj = False
-        #     self.xr_traj.save_json()
-        #     print(
-        #         f"Saved the trajectory with {len(self.xr_traj.traj)} poses to 'xr_pose.json'."
-        #     )
+        if right.get_button_down(XRButton.ONE):
+            self._frame_recorder.recording = not self._frame_recorder.recording
+            print(
+                f"pressed one right, recording = {self._frame_recorder.recording}"
+            )
+        if right.get_button_up(XRButton.ONE):
+            pass
         # if right.get_button_down(XRButton.TWO):
         #     print("pressed two right")
         #     self.replay_xr_traj = not self.replay_xr_traj
@@ -867,8 +1158,20 @@ class AppStateIsaacSimViewer(AppState):
         if gui_input.get_key_down(KeyCode.ESC):
             post_sim_update_dict["application_exit"] = True
 
-        if gui_input.get_key(KeyCode.SPACE):
-            self._sim.step_physics(dt=1.0 / 60)
+        if gui_input.get_key_down(KeyCode.SPACE):
+            self._frame_recorder.recording = not self._frame_recorder.recording
+            print(f"Set state recording = {self._frame_recorder.recording}")
+
+        if gui_input.get_key_down(KeyCode.B):
+            self._frame_recorder.save_json()
+
+        if gui_input.get_key_down(KeyCode.V):
+            self._frame_recorder.load_json()
+            self._frame_recorder.replaying = True
+            self._timer = self._frame_recorder.frame_data[0]["t"]
+            self._start_time = time.time() - self._timer
+            # NOTE: would be nice to turn physics subsets off, but this disables the robot state updates for some reason
+            # self.set_physics_paused(True)
 
         if gui_input.get_key_down(KeyCode.P):
             self.set_physics_paused(not self._do_pause_physics)
@@ -1029,6 +1332,14 @@ class AppStateIsaacSimViewer(AppState):
 
         gui_input = self._app_service.gui_input
         if gui_input.get_key_down(KeyCode.Y):
+            # example applying linear velocity
+            # print(f" {body_name} in {self._isaac_rom._obj_wrapper_by_prim_path.keys()} = {body_name in self._isaac_rom._obj_wrapper_by_prim_path}")
+            # if body_name in self._isaac_rom._obj_wrapper_by_prim_path:
+            # this is a rigid object
+            # ro = self._isaac_rom.get_object_by_prim_path(body_name)
+            # ro.linear_velocity = mn.Vector3(0,1,0)
+            # ro.angular_velocity = mn.Vector3(0,1,0)
+
             force_mag = 200.0
             import carb
 
@@ -1110,6 +1421,8 @@ class AppStateIsaacSimViewer(AppState):
         self.highlight_added_objects()
 
         self._update_help_text()
+        self._timer = time.time() - self._start_time
+        self._frame_recorder.update(self._timer)
 
 
 @hydra.main(

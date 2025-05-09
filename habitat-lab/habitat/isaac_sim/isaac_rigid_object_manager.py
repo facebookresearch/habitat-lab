@@ -73,19 +73,30 @@ class IsaacRigidObjectWrapper:
     # todo: implement angular_velocity and linear_velocity
     @property
     def angular_velocity(self) -> mn.Vector3:
-        return mn.Vector3(0, 0, 0)
+        # NOTE: assuming angular vel convention of rotation around each axis which means we can transform the axes as if these were direction vectors
+        hab_angles = isaac_prim_utils.usd_to_habitat_position(
+            self._rigid_prim.get_angular_velocity()
+        )
+        return mn.Vector3(*hab_angles)
 
     @angular_velocity.setter
     def angular_velocity(self, vel: mn.Vector3):
-        pass
+        self._rigid_prim.set_angular_velocity(
+            isaac_prim_utils.habitat_to_usd_position(vel)
+        )
 
     @property
     def linear_velocity(self) -> mn.Vector3:
-        return mn.Vector3(0, 0, 0)
+        lin_vel = isaac_prim_utils.usd_to_habitat_position(
+            self._rigid_prim.get_linear_velocity()
+        )
+        return mn.Vector3(*lin_vel)
 
     @linear_velocity.setter
     def linear_velocity(self, vel: mn.Vector3):
-        pass
+        self._rigid_prim.set_linear_velocity(
+            isaac_prim_utils.habitat_to_usd_position(vel)
+        )
 
     @property
     def motion_type(self) -> habitat_sim.physics.MotionType:
@@ -136,6 +147,7 @@ class IsaacRigidObjectManager:
 
         self._obj_wrapper_by_object_id = {}
         self._obj_wrapper_by_object_handle = {}
+        self._obj_wrapper_by_prim_path = {}
         self._next_object_id = IsaacRigidObjectManager.FIRST_OBJECT_ID
 
     def get_library_has_handle(self, object_handle):
@@ -184,6 +196,7 @@ class IsaacRigidObjectManager:
 
         obj_wrapper = IsaacRigidObjectWrapper(object_id, prim)
         self._obj_wrapper_by_object_id[object_id] = obj_wrapper
+        self._obj_wrapper_by_prim_path[prim_path] = obj_wrapper
 
         return obj_wrapper
 
@@ -218,3 +231,6 @@ class IsaacRigidObjectManager:
 
     def get_object_handles(self):
         return self._obj_wrapper_by_object_handle.keys()
+
+    def get_object_by_prim_path(self, prim_path: str):
+        return self._obj_wrapper_by_prim_path[prim_path]
