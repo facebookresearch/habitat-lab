@@ -11,6 +11,10 @@ import hydra
 import magnum as mn
 import numpy as np
 
+from habitat.datasets.rearrange.rearrange_dataset import (
+    RearrangeDatasetV0,
+    RearrangeEpisode,
+)
 from habitat.isaac_sim import isaac_prim_utils
 from habitat.isaac_sim.isaac_app_wrapper import IsaacAppWrapper
 from habitat_hitl._internal.networking.average_rate_tracker import (
@@ -134,16 +138,46 @@ class AppStateIsaacSimViewer(AppState):
             rendering_dt=self._isaac_physics_dt,
         )
 
-        # load the asset from config
-        asset_path = os.path.join(dir_path, self._app_cfg.usd_scene_path)
+        usd_scenes_path = os.path.join(dir_path, self._app_cfg.usd_scene_path)
+        navmeshes_path = self._app_cfg.navmesh_path
 
+        ######################
+        ## NO EPISODES LOGIC (defaults)
+        # load the asset from config
+        scene_usd_file = usd_scenes_path + self._app_cfg.scene_name + ".usda"
+        scene_navmesh_file = (
+            navmeshes_path + self._app_cfg.scene_name + ".navmesh"
+        )
+
+        ######################
+        ## YES EPISODES LOGIC (load the episode)
+        self.episode_dataset: RearrangeDatasetV0 = None
+        self.episode_index = 0
+        self.episode: RearrangeEpisode = None
+        if hasattr(self._app_cfg, "episode_dataset"):
+            # NOTE: initializes self.episode_dataset
+            self.load_episode_dataset(self._app_cfg.episode_dataset)
+            if hasattr(self._app_cfg, "episode_index"):
+                self.episode_index = self._app_cfg.episode_index
+            self.episode = (
+                self.episode_dataset.episodes[  # type:ignore[attr-defined]
+                    self.episode_index
+                ]
+            )
+
+            scene_name = self.episode.scene_id.split("/")[-1].split(".")[0]
+            scene_usd_file = usd_scenes_path + scene_name + ".usda"
+            scene_navmesh_file = navmeshes_path + scene_name + ".navmesh"
+
+        ######################
+        ## instantiate isaac world
         from omni.isaac.core.utils.stage import add_reference_to_stage
 
         add_reference_to_stage(
-            usd_path=asset_path, prim_path="/World/test_scene"
+            usd_path=scene_usd_file, prim_path="/World/test_scene"
         )
         self._usd_visualizer.on_add_reference_to_stage(
-            usd_path=asset_path, prim_path="/World/test_scene"
+            usd_path=scene_usd_file, prim_path="/World/test_scene"
         )
 
         self._rigid_objects: List["IsaacRigidObjectWrapper"] = []
@@ -174,6 +208,10 @@ class AppStateIsaacSimViewer(AppState):
 
         self.load_robot()
 
+        # load episode contents
+        if self.episode is not None:
+            self.load_episode_contents()
+
         self._hide_gui = False
         self._is_recording = False
 
@@ -184,7 +222,7 @@ class AppStateIsaacSimViewer(AppState):
         self.init_mouse_raycaster()
 
         # setup the configured navmesh
-        self._sim.pathfinder.load_nav_mesh(self._app_cfg.navmesh_path)
+        self._sim.pathfinder.load_nav_mesh(scene_navmesh_file)
         assert self._sim.pathfinder.is_loaded
         # place the robot on the navmesh
         self.robot.set_root_pose(
@@ -195,9 +233,72 @@ class AppStateIsaacSimViewer(AppState):
 
         unit_test_robot(self.robot)
 
-    def add_rigid_object(
-        self, handle: str, bottom_pos: mn.Vector3 = None
-    ) -> None:
+    def load_episode_dataset(self, dataset_file: str):
+        """
+        Load a RearrangeDataset and setup local variables.
+        """
+        import gzip
+
+        with gzip.open(dataset_file, "rt") as f:
+            self.episode_dataset = RearrangeDatasetV0()
+            self.episode_dataset.from_json(f.read())
+
+    def load_episode_contents(self):
+        """
+        Loads the configured RearrangeEpisode's contents in the scene.
+        Assumes the episode is already configured.
+        """
+        # NOTE: only loads rigid objects currently
+        # TODO: handle initial ao states
+        # TODO: handle targets
+        # TODO: handle any additional metadata
+
+        # NOTE: assume added objects come from configured "additional_obj_config_paths"
+        self.episode_object_ids = []
+        for obj_config_name, _ in self.episode.rigid_objs:
+            added_object = False
+            for config_dir in self.episode.additional_obj_config_paths:
+                candidate_object_path = os.path.join(
+                    config_dir, obj_config_name
+                )
+                if os.path.exists(candidate_object_path):
+                    ro = self._isaac_rom.add_object_by_template_handle(
+                        candidate_object_path
+                    )
+                    self._rigid_objects.append(ro)
+                    self.episode_object_ids.append(ro.object_id)
+                    added_object = True
+                    break
+            if not added_object:
+                raise ValueError(
+                    f"Object {obj_config_name} not found in paths {self.episode.additional_obj_config_paths}."
+                )
+        # NOTE: this is where the states are set
+        self.reset_episode_objects()
+
+    def reset_episode_objects(self):
+        """
+        Places episode added objects back in their initial configurations.
+        """
+        for ix, (_, transform) in enumerate(self.episode.rigid_objs):
+            ro = self._isaac_rom.get_object_by_id(self.episode_object_ids[ix])
+            ro_t = mn.Matrix4(
+                [[transform[j][i] for j in range(4)] for i in range(4)]
+            )
+            # NOTE: this transform corrects for isaac's different coordinate system
+            isaac_correction = mn.Matrix4.from_(
+                mn.Quaternion.rotation(
+                    -mn.Deg(90), mn.Vector3.x_axis()
+                ).to_matrix(),
+                mn.Vector3(),
+            )
+            ro_t = ro_t @ isaac_correction
+
+            ro.transformation = ro_t
+            # NOTE: reset velocity after teleport to increase stability
+            ro.clear_dynamics()
+
+    def add_rigid_object_on(self, handle: str, bottom_pos: mn.Vector3 = None):
         """
         Adds the specified rigid object to the scene and records it in self._rigid_objects.
         If specified, aligns the bottom most point of the object with bottom_pos.
@@ -215,6 +316,23 @@ class AppStateIsaacSimViewer(AppState):
             print(f"obj_height = {obj_height}")
 
             ro.translation = bottom_pos + mn.Vector3(0, obj_height, 0)
+
+        return ro
+
+    def highlight_added_objects(self):
+        """
+        Uses debug drawing to highlight rigid objects with a circle.
+        """
+        dblr = self._app_service.gui_drawer
+        for ro in self._rigid_objects:
+            dblr.draw_circle(
+                ro.translation,
+                0.15,
+                mn.Color4(0.7, 0.7, 0.3, 1.0),
+                normal=(
+                    self._cam_transform.translation - ro.translation
+                ).normalized(),
+            )
 
     def load_robot(self) -> None:
         """
@@ -635,6 +753,14 @@ class AppStateIsaacSimViewer(AppState):
             )
         ):
             self.robot.base_vel_controller._pause_track_waypoints = False
+            # NOTE: hold Q while selecting the waypoint to teleport. Useful for crossing boundaries like doorframes.
+            if gui_input.get_key(KeyCode.Q):
+                target_pos = self.robot.base_vel_controller.target_position
+                # this setter will reset the waypoint target so we cache first
+                self.robot.base_rot = (
+                    self.robot.base_vel_controller.target_rotation
+                )
+                self.robot.set_root_pose(target_pos)
 
         # end waypoint control with mouse right click
         #####################################################################
@@ -760,7 +886,7 @@ class AppStateIsaacSimViewer(AppState):
                     self._recent_mouse_ray_hit_info["position"]
                 )
             )
-            self.add_rigid_object(
+            self.add_rigid_object_on(
                 handle="data/objects/ycb/configs/024_bowl.object_config.json",
                 bottom_pos=hab_hit_pos,
             )
@@ -808,6 +934,9 @@ class AppStateIsaacSimViewer(AppState):
                         self.robot.pos_subsets[subset_input].set_cached_pose(
                             pose_name=pose_key_input, set_motor_targets=True
                         )
+
+        if gui_input.get_key_down(KeyCode.ONE):
+            self.reset_episode_objects()
 
     def handle_mouse_press(self) -> None:
         """
@@ -978,6 +1107,7 @@ class AppStateIsaacSimViewer(AppState):
             self.dof_editor.debug_draw(
                 self._app_service.gui_drawer, self._cam_transform.translation
             )
+        self.highlight_added_objects()
 
         self._update_help_text()
 

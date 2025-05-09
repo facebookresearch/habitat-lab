@@ -5,6 +5,7 @@
 import os
 
 import magnum as mn
+import numpy as np
 import omni.physx.scripts.utils
 from omni.isaac.core.prims.rigid_prim import RigidPrim
 from omni.isaac.core.utils.stage import add_reference_to_stage
@@ -117,6 +118,13 @@ class IsaacRigidObjectWrapper:
             *isaac_prim_utils.usd_to_habitat_position(isaac_bounds[3:])
         )
         return mn.Range3D(hab_min, hab_max)
+
+    def clear_dynamics(self) -> None:
+        """
+        clears velocities for post-teleport stability
+        """
+        self._rigid_prim.set_angular_velocity(np.ndarray([0, 0, 0]))
+        self._rigid_prim.set_linear_velocity(np.ndarray([0, 0, 0]))
 
 
 class IsaacRigidObjectManager:
