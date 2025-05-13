@@ -17,7 +17,7 @@ navmesh_height: 1.2
 viewpoint_offset: [0.25,1.2,0]
 
 #joint motor settings
-create_joint_motors: True
+create_joint_motors: False  # temp turn off joint motors and physics because hand joint control isn't working very well
 joint_motor_pos_gains: 0.05
 joint_motor_vel_gains: 0.25
 joint_motor_max_impulse: 1.0
@@ -25,9 +25,9 @@ joint_motor_max_impulse: 1.0
 configuration_subsets:
   #define the hand link indices
   #NOTE: we assume these are in the same order such that setting a symmetric pose is straightforward
-  #[thumb(4), index(4), middle(4), ring(4)]
-  left_hand: [26,27,28,29,  44,45,46,47,  32,33,34,35, 38,39,40,41]
-  right_hand: [67,68,69,70, 61,62,63,64,  73,74,75,76,  79,80,81,82]
+  #[index(4), middle(4), pinky(4), thumb(4)]  # allegro finger convention used by murp library
+  left_hand: [44,45,46,47,  38,39,40,41, 26,27,28,29, 32,33,34,35]
+  right_hand: [61,62,63,64,  73,74,75,76,  79,80,81,82, 67,68,69,70]
   #define arm link indices
   left_arm: [17,18,19,20,21,22,23]
   right_arm: [52,53,54,55,56,57,58]
@@ -43,6 +43,35 @@ link_subsets:
   left_arm_base: [15]
   right_arm_base: [50]
 
+camera_sensors:
+    # when publishing via ROS, sensor_uuid will be used to find the full ROS topic name; see also https://github.com/fairinternal/murp/blob/smoke_test/core/murp/murp/mock/mock_camera_suite_topics.py .
+  - sensor_uuid: zed_multi/torso/rgb
+    # for resolution and hfov, see https://docs.google.com/document/d/1WI0YFor_FOXcGujfm3B7uERAv0VWoyhGRkOFZPs2WRQ/edit?tab=t.k9j45snkmy2h
+    # hfov must be derived from intrinsic matrix above
+    resolution: [600, 960]
+    hfov: 105.5
+    sensor_type: "color"
+    attached_link_id: 14  # 14==torso
+    cam_offset_pos: [0.4, 0.0, 0.62] # approximate
+    cam_orientation: [3.14159, 1.571, 0.0]  # look forward
+
+  - sensor_uuid: zed_multi/torso/depth
+    # for resolution and hfov, see https://docs.google.com/document/d/1WI0YFor_FOXcGujfm3B7uERAv0VWoyhGRkOFZPs2WRQ/edit?tab=t.k9j45snkmy2h
+    # hfov must be derived from intrinsic matrix above
+    resolution: [600, 960]
+    hfov: 105.5
+    sensor_type: "depth"
+    attached_link_id: 14  # 14==torso
+    cam_offset_pos: [0.4, 0.0, 0.62] # approximate
+    cam_orientation: [3.14159, 1.571, 0.0]  # look forward
+
+  - sensor_uuid: zed_multi/head/rgb
+    resolution: [600, 960]
+    hfov: 105.5
+    sensor_type: "color"
+    attached_link_id: 14  # 14==torso
+    cam_offset_pos: [0.4, 0.0, 0.9]  # approximate
+    cam_orientation: [3.14159, 1.571, 0.0]  # look forward    # todo: add other camera sensors! See https://github.com/fairinternal/murp/blob/smoke_test/core/murp/murp/mock/mock_camera_suite_topics.py .
 
 
 #initial pose options. This refers to an entry in the robot_poses.json file.

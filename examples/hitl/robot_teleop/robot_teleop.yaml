@@ -31,6 +31,9 @@ robot_teleop:
     - "108736677_177263328"
   camera_move_speed: 0.1
 
+  # See examples/hitl/robot_teleop/README.md Simulator Process
+  do_murp_mock_robot: False
+
 
 defaults:
   # Load default parameters for the HITL framework. See

@@ -35,6 +35,10 @@ class SimDriver(AppDriver):
         """
         HITL application driver that instantiates a `habitat-sim` simulator, without a `habitat-lab` environment.
         """
+        self._enable_renderer = config["habitat_hitl"][
+            "enable_sim_driver_renderer"
+        ]
+
         # Initialize simulator.
         cfg_settings = habitat_sim.utils.settings.default_sim_settings.copy()
         # keyword "NONE" initializes a scene with no scene mesh
@@ -43,8 +47,8 @@ class SimDriver(AppDriver):
             "scene_dataset_config_file"
         ] = "data/fpss/hssd-hab-siro.scene_dataset_config.json"
         cfg_settings["scene"] = "NONE"
-        cfg_settings["depth_sensor"] = False
-        cfg_settings["color_sensor"] = False
+        cfg_settings["depth_sensor"] = self._enable_renderer
+        cfg_settings["color_sensor"] = self._enable_renderer
         hab_cfg = habitat_sim.utils.settings.make_cfg(cfg_settings)
         # required for HITL apps
         hab_cfg.sim_cfg.enable_gfx_replay_save = True
@@ -59,7 +63,7 @@ class SimDriver(AppDriver):
             sim=sim,
         )
 
-        assert self.get_sim().renderer is None
+        assert (self.get_sim().renderer is not None) == self._enable_renderer
 
         data_collection_config = self._hitl_config.data_collection
 
@@ -129,14 +133,14 @@ class SimDriver(AppDriver):
         cfg_settings["scene_dataset_config_file"] = (
             dataset if dataset else None
         )
-        cfg_settings["depth_sensor"] = False
-        cfg_settings["color_sensor"] = False
+        cfg_settings["depth_sensor"] = self._enable_renderer
+        cfg_settings["color_sensor"] = self._enable_renderer
         hab_cfg = habitat_sim.utils.settings.make_cfg(cfg_settings)
         # required for HITL apps
         hab_cfg.sim_cfg.enable_gfx_replay_save = True
         self.get_sim().reconfigure(hab_cfg)
 
-        assert self.get_sim().renderer is None
+        assert (self.get_sim().renderer is not None) == self._enable_renderer
 
     def _reset_environment(self):
         if self.network_server_enabled:
