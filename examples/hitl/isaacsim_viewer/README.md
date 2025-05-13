@@ -13,7 +13,7 @@ The app is an interactive VR physics sandbox. It features an HSSD scene, YCB obj
 
 ### Create a Conda Env
 ```
-# We require python>=3.9 and cmake>=3.10
+# We use python=3.10 and cmake>=3.10
 conda create -n habitat-isaac python=3.10 cmake=3.14.0
 conda activate habitat-isaac
 ```

@@ -29,6 +29,7 @@ habitat_hitl:
 
 isaac_robot_teleop:
   camera_move_speed: 0.1
+  lock_pc_camera_to_robot: True
 
   #relative paths to the directories containing navmeshes and usd scene files
   usd_scene_path: "../../../data/usd/scenes/"

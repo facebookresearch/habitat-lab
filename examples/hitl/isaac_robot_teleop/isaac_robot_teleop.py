@@ -366,7 +366,7 @@ class AppStateIsaacSimViewer(AppState):
         # not supported
         assert not self._app_service.hitl_config.camera.first_person_mode
 
-        self.cursor_follow_robot = True
+        self.cursor_follow_robot = self._app_cfg.lock_pc_camera_to_robot
         self._cursor_pos: mn.Vector3 = mn.Vector3()
         self._xr_cursor_pos: mn.Vector3 = mn.Vector3()
         self._camera_helper.update(self._cursor_pos, 0.0)
@@ -1240,6 +1240,10 @@ class AppStateIsaacSimViewer(AppState):
 
         if gui_input.get_key_down(KeyCode.ONE):
             self.reset_episode_objects()
+
+        if gui_input.get_key_down(KeyCode.F):
+            self.cursor_follow_robot = not self.cursor_follow_robot
+            print(f"Set cursor_follow_robot = {self.cursor_follow_robot}")
 
     def handle_mouse_press(self) -> None:
         """

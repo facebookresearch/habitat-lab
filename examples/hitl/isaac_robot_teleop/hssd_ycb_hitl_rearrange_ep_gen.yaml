@@ -1,0 +1,85 @@
+---
+    dataset_path: "data/hssd-hab/hssd-hab-articulated.scene_dataset_config.json"
+    additional_object_paths:
+    - data/objects/ycb/configs/
+    scene_sets:
+      - name: "hitl"
+        included_substrings:
+          - "103997403_171030405"
+        excluded_substrings:
+          - "NONE"
+
+    object_sets:
+      - name: "ycb"
+        included_substrings:
+          - "002_master_chef_can"
+          - "003_cracker_box"
+          - "004_sugar_box"
+          - "005_tomato_soup_can"
+          - "007_tuna_fish_can"
+          - "008_pudding_box"
+          - "009_gelatin_box"
+          - "010_potted_meat_can"
+          - "024_bowl"
+        excluded_substrings: []
+    receptacle_sets:
+      - name: "all"
+        included_object_substrings:
+          - ""
+        excluded_object_substrings: []
+        included_receptacle_substrings:
+          - ""
+        excluded_receptacle_substrings: []
+
+    scene_sampler:
+      type: scene_balanced
+      params:
+        scene_sets:
+        - hitl
+
+    object_samplers:
+    - name: any
+      type: uniform
+      params:
+        object_sets:
+        - ycb
+        receptacle_sets:
+        - all
+        num_samples:
+        - 5
+        - 10
+        orientation_sampling: up
+        nav_to_min_distance: 1.5
+        constrain_to_largest_nav_island: False
+
+    object_target_samplers:
+    - name: any_targets
+      type: uniform
+      params:
+        object_samplers:
+        - any
+        receptacle_sets:
+        - all
+        num_samples:
+        - 2
+        - 2
+        orientation_sampling: up
+        nav_to_min_distance: 1.5
+        constrain_to_largest_nav_island: False
+
+    correct_unstable_results: True
+
+    regenerate_new_mesh: True
+    agent_radius: 0.35
+    agent_height: 1.3
+    agent_max_climb: 0.01
+
+    check_navigable: False
+    navmesh_offset: [[0.0, 0.0]]
+    max_collision_rate_for_navigable: 0.3
+    angle_threshold: 0.05
+    angular_velocity: 1.0
+    distance_threshold: 0.25
+    linear_velocity: 1.0
+
+    gpu_device_id: 0

@@ -1045,7 +1045,9 @@ if __name__ == "__main__":
         )
 
     # convert YCB dataset
-    # convert_objects_folder_to_usd("data/objects/ycb", "data/usd/objects/ycb/configs", "./")
+    convert_objects_folder_to_usd(
+        "data/objects/ycb", "data/usd/objects/ycb/configs", "./"
+    )
 
     # convert MURP
     if True:
