@@ -850,8 +850,10 @@ def add_habitat_visual_metadata_for_articulation(
     for link in urdf_root.findall("link"):
         link_name = link.get("name")
         visual = link.find("visual")
+        # TODO: a link can have multiple visual shapes, this only considers one
         if visual is not None:
             # todo: handle materials (color only, not texture)
+            origin = visual.find("origin")
             geometry = visual.find("geometry")
             if geometry is not None:
                 mesh = geometry.find("mesh")
@@ -875,6 +877,23 @@ def add_habitat_visual_metadata_for_articulation(
                         "assetPath": asset_path,
                         "assetScale": scale,
                     }
+
+                    # finally handle the optional origin offsets
+                    if origin is not None:
+                        # NOTE: we only handle this if we already found a mesh visual to apply it to
+                        rpy = origin.get("rpy")
+                        xyz = origin.get("xyz")
+                        if rpy is not None:
+                            rotation = tuple(map(float, rpy.split()))
+                            visual_metadata[safe_link_name][
+                                "assetRotation"
+                            ] = rotation
+                        if xyz is not None:
+                            translation = tuple(map(float, xyz.split()))
+                            visual_metadata[safe_link_name][
+                                "assetTranslation"
+                            ] = translation
+
                 else:
                     print(
                         f"Warning: No mesh found for visual in link {link_name}"
@@ -913,6 +932,38 @@ def add_habitat_visual_metadata_for_articulation(
                 "habitatVisual:assetScale", Sdf.ValueTypeNames.Float3
             )
             asset_scale_attr.Set(Gf.Vec3f(*metadata["assetScale"]))
+
+            # Add assetTranslation
+            if "assetTranslation" in metadata:
+                asset_translation_attr = prim.CreateAttribute(
+                    "habitatVisual:assetTranslation", Sdf.ValueTypeNames.Float3
+                )
+                asset_translation_attr.Set(
+                    Gf.Vec3f(*metadata["assetTranslation"])
+                )
+            # Add assetRotation
+            if "assetRotation" in metadata:
+                # NOTE: this is still rpy, not a quat yet
+                import magnum as mn
+
+                rpy = Gf.Vec3f(*metadata["assetRotation"])
+                roll = mn.Quaternion.rotation(
+                    mn.Rad(rpy[0]), mn.Vector3(1.0, 0, 0)
+                )
+                pitch = mn.Quaternion.rotation(
+                    mn.Rad(rpy[1]), mn.Vector3(0, 1.0, 0)
+                )
+                yaw = mn.Quaternion.rotation(
+                    mn.Rad(rpy[2]), mn.Vector3(0, 0, 1.0)
+                )
+                rot_quat = yaw * pitch * roll
+                # NOTE: metadata caches the USD space quat
+                asset_rotation_attr = prim.CreateAttribute(
+                    "habitatVisual:assetRotation", Sdf.ValueTypeNames.Float4
+                )
+                asset_rotation_attr.Set(
+                    Gf.Vec4f(*[rot_quat.scalar, *list(rot_quat.vector)])
+                )
         else:
             print(f"Warning: Prim not found for link: {link_name}")
 

@@ -63,7 +63,7 @@ class IsaacAppWrapper:
 
         # sloppy: Initialize our scene here, just a ground plane.
         # todo: initialize a proper scene with objects based on the episode. But don't do this in this class.
-        world.scene.add_default_ground_plane()
+        # world.scene.add_default_ground_plane()
         # fancy_cube =  world.scene.add(
         #     DynamicCuboid(
         #         prim_path="/World/random_cube",

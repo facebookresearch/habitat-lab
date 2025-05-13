@@ -1277,11 +1277,15 @@ class AppStateIsaacSimViewer(AppState):
 
     def init_mouse_raycaster(self):
         self._recent_mouse_ray_hit_info = None
+        self._mouse_points_record = []
 
     def update_mouse_raycaster(self, dt):
         self._recent_mouse_ray_hit_info = None
 
         mouse_ray = self._app_service.gui_input.mouse_ray
+
+        if self._app_service.gui_input.get_key(KeyCode.TWO):
+            self._mouse_points_record = []
 
         if not mouse_ray:
             return
@@ -1309,6 +1313,10 @@ class AppStateIsaacSimViewer(AppState):
         hit_normal_habitat = mn.Vector3(
             *isaac_prim_utils.usd_to_habitat_position(hit_normal_usd)
         )
+        if self._app_service.gui_input.get_mouse_button(MouseButton.LEFT):
+            self._mouse_points_record.append(
+                (hit_pos_habitat, hit_normal_habitat)
+            )
         # collision_name = hit_info['collision']
         body_name = hit_info["rigidBody"]
         body_ix = self.robot.get_rigid_prim_ix(body_name)
@@ -1327,6 +1335,11 @@ class AppStateIsaacSimViewer(AppState):
             16,
             hit_normal_habitat,
         )
+
+        for hit_point, hit_normal in self._mouse_points_record:
+            self._app_service.gui_drawer.draw_circle(
+                hit_point, 0.01, mn.Color3(0.1, 0.1, 0.1), 9, normal=hit_normal
+            )
 
         self._recent_mouse_ray_hit_info = hit_info
 

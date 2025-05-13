@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, List
 
+import magnum as mn
+
 from habitat.isaac_sim import isaac_prim_utils
 
 # todo: clean up how RenderInstanceHelper is exposed from habitat_sim extension
@@ -22,6 +24,9 @@ class RenderAsset:
     # todo: possible color override
     semantic_id: int
     scale: List[float]
+    # the following represent rigid offsets for this visual shape from the parent frame. E.g. <origin> element within a <visual> element
+    translation: List[float]
+    rotation: List[float]
 
 
 import numpy as np
@@ -63,6 +68,8 @@ class _InstanceGroup:
                 render_asset.filepath,
                 render_asset.semantic_id,
                 render_asset.scale,
+                render_asset.translation,
+                render_asset.rotation,
             )
 
     def flush_to_hab_sim(self):
@@ -197,6 +204,33 @@ class UsdVisualizer:
                 base_asset_scale[i] * instance_asset_scale[i] for i in range(3)
             ]
 
+            base_asset_translation_attr = prim.GetAttribute(
+                "habitatVisual:assetTranslation"
+            )
+            base_asset_translation = (
+                base_asset_translation_attr.Get()
+                if base_asset_translation_attr
+                and base_asset_translation_attr.HasAuthoredValue()
+                else [0.0, 0.0, 0.0]
+            )
+
+            base_asset_rotation_attr = prim.GetAttribute(
+                "habitatVisual:assetRotation"
+            )
+
+            base_asset_rotation = mn.Quaternion()
+            if (
+                base_asset_rotation_attr
+                and base_asset_rotation_attr.HasAuthoredValue()
+            ):
+                base_asset_usd_quat = base_asset_rotation_attr.Get()
+                # base_asset_rotation = isaac_prim_utils.usd_to_habitat_rotation(base_asset_usd_quat)
+                base_asset_rotation = (
+                    isaac_prim_utils.rotation_wxyz_to_magnum_quat(
+                        base_asset_usd_quat
+                    )
+                )
+
             asset_abs_path = asset_path
 
             # todo: consider doing this check later
@@ -213,6 +247,8 @@ class UsdVisualizer:
                 filepath=asset_abs_path,
                 semantic_id=semantic_id,
                 scale=final_scale,
+                translation=base_asset_translation,
+                rotation=base_asset_rotation,
             )
             group.set_dirty()
 
