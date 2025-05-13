@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import hydra
 import magnum as mn
 from hydra import compose
+from mock_robot_helper import MockRobotHelper
 from omegaconf import DictConfig
 
 import habitat.sims.habitat_simulator.sim_utilities as sutils
@@ -239,6 +240,11 @@ class AppStateRobotTeleopViewer(AppState):
             List[Tuple[mn.Vector3, mn.Vector3]]
         ] = None
 
+        if self._app_cfg.do_murp_mock_robot:
+            self._mock_robot_helper = MockRobotHelper(self._sim)
+        else:
+            self._mock_robot_helper = None
+
         # setup the simulator
         self.set_scene(self._current_scene_index)
 
@@ -254,7 +260,7 @@ class AppStateRobotTeleopViewer(AppState):
             self.xr_traj.load_json("test_xr_pose.json")
             self.sync_xr_local_state(self.xr_traj.get_pose(0))
 
-        self._sps_tracker = AverageRateTracker(2.0)
+        self._sps_tracker = AverageRateTracker(0.5)
         self._do_pause_physics = False
         self._app_service.users.activate_user(0)
 
@@ -425,6 +431,9 @@ class AppStateRobotTeleopViewer(AppState):
                 )
                 for hand_subset_key in ["hand_open", "grasp"]
             ]
+
+            if self._mock_robot_helper:
+                self._mock_robot_helper.set_hitl_robot(self.robot, robot_cfg)
         else:
             print("No robot configured.")
 
@@ -473,12 +482,19 @@ class AppStateRobotTeleopViewer(AppState):
         if self._hide_gui:
             return
 
+        base_xyz = self.robot.ao.translation
         help_text = (
             "Controls:\n"
             + " 'WASD' to translate laterally and 'ZX' to move up|down.\n"
             + " hold 'R' and move the mouse to rotate camera and mouse wheel to zoom.\n"
             + " '0' to change scene.\n"
+            + f"Pos: {base_xyz.x:.1f}, {base_xyz.z:.1f}\n"
         )
+
+        if self._sps_tracker.get_smoothed_rate():
+            help_text += (
+                f"{self._sps_tracker.get_smoothed_rate():.1f} steps/sec\n"
+            )
 
         # show some details about hits under the cursor
         cursor_cast_results_text = "\nCursor RayCast: "
@@ -802,18 +818,22 @@ class AppStateRobotTeleopViewer(AppState):
                 )
 
         if gui_input.get_key_down(KeyCode.Y):
-
             if self._app_cfg.ycb_objects.use_cursor:
                 # insert an object at the mouse raycast position. Ask for the index position of object.
-                idx = input(
-                    "Enter the index of the object to add 0 - " + str(len(self._app_cfg.ycb_objects.names) - 1 ) + " > ")
-                
-                assert idx.isnumeric(), "Index must be a number."
-                assert idx != "", "Index must be a number."
-                assert int(idx) >= 0, "Index must be a positive number."
-                assert int(idx) < len(self._app_cfg.ycb_objects.names), "Invalid index for object to add."
+                idx_str = input(
+                    "Enter the index of the object to add 0 - "
+                    + str(len(self._app_cfg.ycb_objects.names) - 1)
+                    + " > "
+                )
 
-                obj_shortname = self._app_cfg.ycb_objects.names[int(idx)]
+                assert idx_str.isnumeric(), "Index must be a number."
+                assert idx_str != "", "Index must be a number."
+                assert int(idx_str) >= 0, "Index must be a positive number."
+                assert int(idx_str) < len(
+                    self._app_cfg.ycb_objects.names
+                ), "Invalid index for object to add."
+
+                obj_shortname = self._app_cfg.ycb_objects.names[int(idx_str)]
                 obj_template_handle = list(
                     self._sim.get_object_template_manager()
                     .get_templates_by_handle_substring(obj_shortname)
@@ -835,12 +855,10 @@ class AppStateRobotTeleopViewer(AppState):
                 new_obj.friction_coefficient = 5
 
             else:
-
                 assert len(self._app_cfg.ycb_objects.names) == len(
                     self._app_cfg.ycb_objects.positions
                 ), "YCB object names and positions must be the same length."
 
-                
                 for idx in range(len(self._app_cfg.ycb_objects.names)):
                     obj_shortname = self._app_cfg.ycb_objects.names[idx]
                     obj_template_handle = list(
@@ -851,19 +869,18 @@ class AppStateRobotTeleopViewer(AppState):
 
                     new_obj = self.add_object_at(obj_template_handle)
                     obj_size_down = sutils.get_obj_size_along(
-                    self._sim, new_obj.object_id, mn.Vector3(0, -1, 0)
+                        self._sim, new_obj.object_id, mn.Vector3(0, -1, 0)
                     )
 
                     position = self._app_cfg.ycb_objects.positions[idx]
-                    new_obj.translation = mn.Vector3(position[0], position[1], position[2])
+                    new_obj.translation = mn.Vector3(
+                        position[0], position[1], position[2]
+                    )
                     # TO DO: ensure habitat gets these from the object itself instead of manual setting.
                     new_obj.mass = 0.01
                     new_obj.rolling_friction_coefficient = 5
                     new_obj.spinning_friction_coefficient = 5
                     new_obj.friction_coefficient = 5
-
-
-
 
         if gui_input.get_key_down(KeyCode.U):
             self.remove_object(self.mouse_cast_results.hits[0].object_id)
@@ -1266,15 +1283,15 @@ class AppStateRobotTeleopViewer(AppState):
         self.handle_xr_input(dt)
         self.move_robot_on_navmesh()
         self._update_cursor_pos()
+        if self._mock_robot_helper:
+            self._mock_robot_helper.update_pre_sim_step(dt)
 
         # step the simulator
         if self.robot is not None and self.robot.using_joint_motors:
             self._sim.step_physics(dt)
 
-        # update robot finger raycast sensors
-        if self.robot is not None:
-            for finger_raycast_sensor in self.robot.finger_raycast_sensors:
-                finger_raycast_sensor.update_sensor_raycasts()
+        if self._mock_robot_helper:
+            self._mock_robot_helper.update_post_sim_step(post_sim_update_dict)
 
         # update the camera position
         self._camera_helper.update(self._cursor_pos, dt)
@@ -1320,13 +1337,18 @@ class AppStateRobotTeleopViewer(AppState):
 
         # NOTE: do debug drawing here
         # draw lookat ring
-        self.draw_lookat()
-        self.debug_draw_quest()
-        self.robot.draw_debug(dblr)
-        if self.dof_editor is not None:
-            self.dof_editor.debug_draw(dblr, self._cam_transform.translation)
-        self.draw_navmesh_lines()
-        self._update_help_text()
+        if not self._hide_gui:
+            self.draw_lookat()
+            self.debug_draw_quest()
+            self.robot.draw_debug(dblr)
+            if self.dof_editor is not None:
+                self.dof_editor.debug_draw(
+                    dblr, self._cam_transform.translation
+                )
+            self.draw_navmesh_lines()
+            if self._mock_robot_helper:
+                self._mock_robot_helper.draw_debug(dblr)
+            self._update_help_text()
 
 
 @hydra.main(version_base=None, config_path="./", config_name="robot_teleop")

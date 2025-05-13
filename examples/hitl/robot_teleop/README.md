@@ -167,7 +167,7 @@ python examples/hitl/robot_teleop/robot_teleop.py --config-name robot_teleop_vr.
 ```
 
 ## Habitat Quest Viewer
-Please run the latest build of Quest-Habitat Unity build on your Quest headset after launching habitat. The Headset and Laptop need to be connected to the same network without VPN. 
+Please run the latest build of Quest-Habitat Unity build on your Quest headset after launching habitat. The Headset and Laptop need to be connected to the same network without VPN.
 
 ## User Interface
 
@@ -184,3 +184,31 @@ This section describes teleoperating the robot. All commands are associated with
 - `0` on keyboard to change scenes.
 - `Y` *( if `use_cursor` is set to `True` in `robot_teleop_vr.yaml` )* : Object is loaded at the position the cursor is pointing at. The user can select which YCB object to add using the terminal. List of possible options that may be added can be modified in the `robot_teleop_vr.yaml`
 - `Y` *( if `use_cursor` is set to `False` in `robot_teleop_vr.yaml` )* : Objects are loaded in the scene at the defined positions inside yaml.
+
+# Simulator Process
+
+The robot teleop app can be run as our "Simulator Process" for [deployment in sim](https://github.com/fairinternal/murp/blob/smoke_test/DEPLOY_IN_SIM.md). See also our [Workplace demo video](https://fb.workplace.com/groups/1643312812949607/permalink/1711217802825774/). If you're developing the Simulator Process, see also this `murp` mock API [example integration with a simulator](https://github.com/fairinternal/murp/blob/smoke_test/core/murp/murp/mock/README.md#example-integration-with-a-simulator).
+
+## Installing `murp`
+The Simulator Process requires the `murp` package. We've developed special [lightweight install instructions](https://github.com/fairinternal/murp/blob/smoke_test/DEPLOY_IN_SIM.md#how-should-i-install-ros-and-the-murp-package) for `murp` aimed at deployment in sim. We recommend creating a new conda/mamba env from scratch using the instructions linked above, then proceed here:
+```
+# activate the murp env you've already created
+mamba activate murp_env
+# install proper version of cmake (v4+ won't build habitat)
+mamba install cmake==3.31.6
+# we don't recommend the cmake Python package
+pip uninstall cmake
+# continue with installation instructions at top of this page: install habitat-sim, habitat-lab, etc.
+```
+
+## Usage and Tips
+Use the following flags to run robot_teleop.py as the Simulator Process. Choose any convenient window size:
+```
+python examples/hitl/robot_teleop/robot_teleop.py habitat_hitl.enable_sim_driver_renderer=True robot_teleop.do_murp_mock_robot=True habitat_hitl.window.width=960 habitat_hitl.window.height=540
+```
+
+See our recommended [workflow](https://github.com/fairinternal/murp/blob/smoke_test/DEPLOY_IN_SIM.md#workflow) for deployment in sim.
+
+Once the Simulator Process is running, you can verify that it's sending and receiving ROS messages:
+1. Run [test_mobile_tmr_robot.py](https://github.com/fairinternal/murp/blob/smoke_test/core/murp/examples/test_mobile_tmr_robot.py) to randomly drive the robot.
+2. Use [Foxglove](https://github.com/fairinternal/murp/blob/smoke_test/DEPLOY_IN_SIM.md#foxglove-for-ros-visualization) to verify that it's publishing messages, e.g. [camera topics](https://github.com/fairinternal/murp/blob/smoke_test/core/murp/murp/mock/mock_camera_suite_topics.py).
