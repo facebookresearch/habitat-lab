@@ -962,11 +962,11 @@ class AppStateIsaacSimViewer(AppState):
                 restitution=0.0,
             )
 
-        if gui_input.get_key_down(KeyCode.V):
+        if gui_input.get_key_down(KeyCode.M):
 
 
             self.add_rigid_object(
-                handle="data/objects/ycb/configs/003_cracker_box.object_config.json",
+                handle="data/objects/ycb/configs/006_mustard_bottle.object_config.json",
                 bottom_pos=mn.Vector3(-12.44, 0.909205, -1.72252),
                 static_friction= 50.0,
                 dynamic_friction= 50.0,
@@ -978,7 +978,7 @@ class AppStateIsaacSimViewer(AppState):
 
 
             self.add_rigid_object(
-                handle="data/objects/ycb/configs/011_banana.object_config.json",
+                handle="data/objects/ycb/configs/024_bowl.object_config.json",
                 bottom_pos=mn.Vector3(-7.98951, 0.766178, -3.38095),
                 static_friction= 50.0,
                 dynamic_friction= 50.0,
@@ -989,7 +989,7 @@ class AppStateIsaacSimViewer(AppState):
             )
 
             self.add_rigid_object(
-                handle="data/objects/ycb/configs/036_wood_block.object_config.json",
+                handle="data/objects/ycb/configs/025_mug.object_config.json",
                 bottom_pos = mn.Vector3(-9.12607, 0.766178, -3.29968),
                 static_friction= 50.0,
                 dynamic_friction= 50.0,
