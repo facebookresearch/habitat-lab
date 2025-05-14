@@ -45,11 +45,15 @@ isaac_robot_teleop:
   #relative paths to the directories containing navmeshes and usd scene files
   usd_scene_path: "../../../data/usd/scenes/"
   navmesh_path: "data/hssd-hab/navmeshes/"
-
   scene_name: "103997403_171030405"
+
+  #Fremont option
+  #scene_name: "fremont_dynamic_alternate_handles"
+  #navmesh_path: "data/Fremont-Knuckles/navmeshes/"
+
   # OR initialize by episode. These will take precedent when provided
-  episode_dataset: "data/datasets/hitl_teleop_episodes.json.gz"
-  episode_index: 0
+  #episode_dataset: "data/datasets/hitl_teleop_episodes.json.gz"
+  #episode_index: 3
 
   #physx configuration settings
   #applied to all rigid objects added to the scene (e.g. from Episodes)
