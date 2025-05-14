@@ -453,9 +453,9 @@ class NetworkManager:
                             message
                         )
                         break
-                    except Exception:
+                    except Exception as e:
                         print(
-                            f"Unable to get connection record from client message: {message}."
+                            f"Unable to get connection record from client message: '{e}'."
                         )
             except Exception:
                 raise (
