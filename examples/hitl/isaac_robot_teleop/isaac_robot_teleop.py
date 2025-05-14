@@ -64,7 +64,8 @@ def bind_physics_material_to_hierarchy(
     """
 
     from omni.isaac.core.materials.physics_material import PhysicsMaterial
-    from pxr import UsdShade
+    from omni.isaac.core.utils.prims import get_prim_at_path
+    from pxr import UsdShade, UsdPhysics
 
     # material_path = f"/PhysicsMaterials/{material_name}"
     # material_prim = stage.DefinePrim(material_path, "PhysicsMaterial")
@@ -87,6 +88,15 @@ def bind_physics_material_to_hierarchy(
         bindingStrength=UsdShade.Tokens.strongerThanDescendants,
         materialPurpose="physics",
     )
+
+    
+
+    material = UsdPhysics.MaterialAPI(root_prim)
+
+    # Set friction
+    material.CreateStaticFrictionAttr().Set(static_friction)
+    material.CreateDynamicFrictionAttr().Set(dynamic_friction)
+
 
 
 class AppStateIsaacSimViewer(AppState):
@@ -199,8 +209,8 @@ class AppStateIsaacSimViewer(AppState):
             stage=stage,
             root_prim=prim,
             material_name="my_material",
-            static_friction=1.0,
-            dynamic_friction=1.0,
+            static_friction=100.0,
+            dynamic_friction=100.0,
             restitution=0.0,
         )
 
@@ -307,7 +317,10 @@ class AppStateIsaacSimViewer(AppState):
             # NOTE: reset velocity after teleport to increase stability
             ro.clear_dynamics()
 
-    def add_rigid_object_on(self, handle: str, bottom_pos: mn.Vector3 = None):
+    def add_rigid_object(
+        self, handle: str, bottom_pos: mn.Vector3 = None, static_friction: float = 1.0, 
+        dynamic_friction: float = 1.0, restitution: float = 0.0, material_name: str = "test_material"
+    ) -> None:
         """
         Adds the specified rigid object to the scene and records it in self._rigid_objects.
         If specified, aligns the bottom most point of the object with bottom_pos.
@@ -325,8 +338,16 @@ class AppStateIsaacSimViewer(AppState):
             print(f"obj_height = {obj_height}")
 
             ro.translation = bottom_pos + mn.Vector3(0, obj_height, 0)
-
-        return ro
+            stage = self._isaac_wrapper.service.world.stage
+            prim = stage.GetPrimAtPath("/World/rigid_objects/obj_" + str(ro.object_id))
+            bind_physics_material_to_hierarchy(
+                stage=stage,
+                root_prim=prim,
+                material_name=material_name,
+                static_friction=static_friction,
+                dynamic_friction=dynamic_friction,
+                restitution=restitution,
+            )
 
     def highlight_added_objects(self):
         """
@@ -932,9 +953,48 @@ class AppStateIsaacSimViewer(AppState):
                     self._recent_mouse_ray_hit_info["position"]
                 )
             )
-            self.add_rigid_object_on(
-                handle="data/objects/ycb/configs/024_bowl.object_config.json",
+            
+            self.add_rigid_object(
+                handle="data/objects/ycb/configs/035_power_drill.object_config.json",
                 bottom_pos=hab_hit_pos,
+                static_friction= 50.0,
+                dynamic_friction= 50.0,
+                restitution=0.0,
+            )
+
+        if gui_input.get_key_down(KeyCode.V):
+
+
+            self.add_rigid_object(
+                handle="data/objects/ycb/configs/003_cracker_box.object_config.json",
+                bottom_pos=mn.Vector3(-12.44, 0.909205, -1.72252),
+                static_friction= 50.0,
+                dynamic_friction= 50.0,
+                restitution=0.0,
+
+                material_name="mustard_bottle",
+            )
+
+
+
+            self.add_rigid_object(
+                handle="data/objects/ycb/configs/011_banana.object_config.json",
+                bottom_pos=mn.Vector3(-7.98951, 0.766178, -3.38095),
+                static_friction= 50.0,
+                dynamic_friction= 50.0,
+                restitution=0.0,
+                material_name="bowl",
+                
+
+            )
+
+            self.add_rigid_object(
+                handle="data/objects/ycb/configs/036_wood_block.object_config.json",
+                bottom_pos = mn.Vector3(-9.12607, 0.766178, -3.29968),
+                static_friction= 50.0,
+                dynamic_friction= 50.0,
+                restitution=0.0,
+                material_name="mug",
             )
 
         if gui_input.get_key_down(KeyCode.N):
