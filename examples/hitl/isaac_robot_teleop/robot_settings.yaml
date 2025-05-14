@@ -17,6 +17,11 @@ ground_to_base_offset: 0.0
 #offset from the robot's origin of the XR "head" viewpoint in local space
 viewpoint_offset: [0.25,0,1.1]
 
+#link physical properties
+link_static_friction: 50
+link_dynamic_friction: 50
+link_restitution: 0
+
 #joint motor settings
 create_joint_motors: True
 max_joint_velocity: 200

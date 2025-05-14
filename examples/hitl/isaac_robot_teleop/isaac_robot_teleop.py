@@ -64,8 +64,7 @@ def bind_physics_material_to_hierarchy(
     """
 
     from omni.isaac.core.materials.physics_material import PhysicsMaterial
-    from omni.isaac.core.utils.prims import get_prim_at_path
-    from pxr import UsdShade, UsdPhysics
+    from pxr import UsdPhysics, UsdShade
 
     # material_path = f"/PhysicsMaterials/{material_name}"
     # material_prim = stage.DefinePrim(material_path, "PhysicsMaterial")
@@ -89,14 +88,11 @@ def bind_physics_material_to_hierarchy(
         materialPurpose="physics",
     )
 
-    
-
     material = UsdPhysics.MaterialAPI(root_prim)
 
     # Set friction
     material.CreateStaticFrictionAttr().Set(static_friction)
     material.CreateDynamicFrictionAttr().Set(dynamic_friction)
-
 
 
 class AppStateIsaacSimViewer(AppState):
@@ -208,10 +204,10 @@ class AppStateIsaacSimViewer(AppState):
         bind_physics_material_to_hierarchy(
             stage=stage,
             root_prim=prim,
-            material_name="my_material",
-            static_friction=100.0,
-            dynamic_friction=100.0,
-            restitution=0.0,
+            material_name="stage_physics_properties_material",
+            static_friction=self._app_cfg.stage_static_friction,
+            dynamic_friction=self._app_cfg.stage_dynamic_friction,
+            restitution=self._app_cfg.stage_restitution,
         )
 
         isaac_world.reset()
@@ -287,6 +283,16 @@ class AppStateIsaacSimViewer(AppState):
                     self._rigid_objects.append(ro)
                     self.episode_object_ids.append(ro.object_id)
                     added_object = True
+                    # set the friction parameters
+                    stage = self._isaac_wrapper.service.world.stage
+                    bind_physics_material_to_hierarchy(
+                        stage=stage,
+                        root_prim=ro._prim,
+                        material_name="obj_physics_properties_material",
+                        static_friction=self._app_cfg.object_static_friction,
+                        dynamic_friction=self._app_cfg.object_dynamic_friction,
+                        restitution=self._app_cfg.object_restitution,
+                    )
                     break
             if not added_object:
                 raise ValueError(
@@ -318,8 +324,13 @@ class AppStateIsaacSimViewer(AppState):
             ro.clear_dynamics()
 
     def add_rigid_object(
-        self, handle: str, bottom_pos: mn.Vector3 = None, static_friction: float = 1.0, 
-        dynamic_friction: float = 1.0, restitution: float = 0.0, material_name: str = "test_material"
+        self,
+        handle: str,
+        bottom_pos: mn.Vector3 = None,
+        static_friction: float = 1.0,
+        dynamic_friction: float = 1.0,
+        restitution: float = 0.0,
+        material_name: str = "test_material",
     ) -> None:
         """
         Adds the specified rigid object to the scene and records it in self._rigid_objects.
@@ -339,7 +350,9 @@ class AppStateIsaacSimViewer(AppState):
 
             ro.translation = bottom_pos + mn.Vector3(0, obj_height, 0)
             stage = self._isaac_wrapper.service.world.stage
-            prim = stage.GetPrimAtPath("/World/rigid_objects/obj_" + str(ro.object_id))
+            prim = stage.GetPrimAtPath(
+                "/World/rigid_objects/obj_" + str(ro.object_id)
+            )
             bind_physics_material_to_hierarchy(
                 stage=stage,
                 root_prim=prim,
@@ -407,6 +420,16 @@ class AppStateIsaacSimViewer(AppState):
             )
             for hand_subset_key in ["hand_open", "hand_closed"]
         ]
+        stage = self._isaac_wrapper.service.world.stage
+        robot_root_prim = stage.GetPrimAtPath(self.robot._robot_prim_path)
+        bind_physics_material_to_hierarchy(
+            stage=stage,
+            root_prim=robot_root_prim,
+            material_name="robot_physics_properties_material",
+            static_friction=self.robot.robot_cfg.link_static_friction,
+            dynamic_friction=self.robot.robot_cfg.link_dynamic_friction,
+            restitution=self.robot.robot_cfg.link_restitution,
+        )
 
     def draw_lookat(self):
         if self._hide_gui:
@@ -953,48 +976,13 @@ class AppStateIsaacSimViewer(AppState):
                     self._recent_mouse_ray_hit_info["position"]
                 )
             )
-            
+
             self.add_rigid_object(
                 handle="data/objects/ycb/configs/035_power_drill.object_config.json",
                 bottom_pos=hab_hit_pos,
-                static_friction= 50.0,
-                dynamic_friction= 50.0,
-                restitution=0.0,
-            )
-
-        if gui_input.get_key_down(KeyCode.M):
-
-
-            self.add_rigid_object(
-                handle="data/objects/ycb/configs/006_mustard_bottle.object_config.json",
-                bottom_pos=mn.Vector3(-12.44, 0.909205, -1.72252),
-                static_friction= 50.0,
-                dynamic_friction= 50.0,
-                restitution=0.0,
-
-                material_name="mustard_bottle",
-            )
-
-
-
-            self.add_rigid_object(
-                handle="data/objects/ycb/configs/024_bowl.object_config.json",
-                bottom_pos=mn.Vector3(-7.98951, 0.766178, -3.38095),
-                static_friction= 50.0,
-                dynamic_friction= 50.0,
-                restitution=0.0,
-                material_name="bowl",
-                
-
-            )
-
-            self.add_rigid_object(
-                handle="data/objects/ycb/configs/025_mug.object_config.json",
-                bottom_pos = mn.Vector3(-9.12607, 0.766178, -3.29968),
-                static_friction= 50.0,
-                dynamic_friction= 50.0,
-                restitution=0.0,
-                material_name="mug",
+                static_friction=self._app_cfg.object_static_friction,
+                dynamic_friction=self._app_cfg.object_dynamic_friction,
+                restitution=self._app_cfg.object_restitution,
             )
 
         if gui_input.get_key_down(KeyCode.N):

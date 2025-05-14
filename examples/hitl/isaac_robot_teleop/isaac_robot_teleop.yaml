@@ -47,6 +47,16 @@ isaac_robot_teleop:
   episode_dataset: "data/datasets/hitl_teleop_episodes.json.gz"
   episode_index: 0
 
+  #physx configuration settings
+  #applied to all rigid objects added to the scene (e.g. from Episodes)
+  object_static_friction: 50
+  object_dynamic_friction: 50
+  object_restitution: 0
+  #applied to the contents of the scene (architecture, furniture, etc...)
+  stage_static_friction: 100
+  stage_dynamic_friction: 100
+  stage_restitution: 0
+
 defaults:
   # Load default parameters for the HITL framework. See
   # habitat-hitl/habitat_hitl/config/hitl_defaults.yaml.
