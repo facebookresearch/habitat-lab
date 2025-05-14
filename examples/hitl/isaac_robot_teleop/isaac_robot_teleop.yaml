@@ -37,6 +37,10 @@ habitat_hitl:
 isaac_robot_teleop:
   camera_move_speed: 0.1
   lock_pc_camera_to_robot: True
+  #optionally force the initial state of the robot (will be snapped to namvmesh)
+  #NOTE: these values initialize in the kitchen for scene 103997403_171030405
+  initial_robot_position: [-11.4, 0, -3.2]
+  initial_robot_rotation: -1.7 # [-pi, pi]
 
   #relative paths to the directories containing navmeshes and usd scene files
   usd_scene_path: "../../../data/usd/scenes/"

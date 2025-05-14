@@ -909,7 +909,7 @@ class RobotAppWrapper:
         curr_angular_velocity = self._robot.get_angular_velocity()
 
         # Constants
-        max_angular_velocity = 3.0  # Maximum angular velocity (rad/s)
+        max_angular_velocity = 0.5  # Maximum angular velocity (rad/s)
 
         # wxyz to xyzw
         base_orientation_xyzw = np.array(
@@ -967,7 +967,7 @@ class RobotAppWrapper:
         # don't change rotation about z
         desired_angular_velocity[2] = curr_angular_velocity[2]
 
-        # self._robot.set_angular_velocity(desired_angular_velocity)
+        self._robot.set_angular_velocity(desired_angular_velocity)
 
     def fix_base_height_via_linear_vel_z(
         self, step_size, base_position, base_orientation

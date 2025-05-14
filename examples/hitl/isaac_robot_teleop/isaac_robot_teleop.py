@@ -231,10 +231,10 @@ class AppStateIsaacSimViewer(AppState):
         # setup the configured navmesh
         self._sim.pathfinder.load_nav_mesh(scene_navmesh_file)
         assert self._sim.pathfinder.is_loaded
-        # place the robot on the navmesh
-        self.robot.set_root_pose(
-            pos=self._sim.pathfinder.get_random_navigable_point()
-        )
+
+        # load or sample initial robot state
+        self.set_robot_base_initial_state()
+
         self._app_service.users.activate_user(0)
 
         self._frame_recorder = FrameRecorder(self)
@@ -431,6 +431,23 @@ class AppStateIsaacSimViewer(AppState):
             restitution=self.robot.robot_cfg.link_restitution,
         )
 
+    def set_robot_base_initial_state(self):
+        """
+        Either sets the configured initial state or samples a random point from the navmesh.
+        """
+        if hasattr(self._app_cfg, "initial_robot_position"):
+            # load initial base position if configured
+            initial_pos = mn.Vector3(*self._app_cfg.initial_robot_position)
+            self.robot.set_root_pose(pos=initial_pos)
+        else:
+            # place the robot on the navmesh
+            self.robot.set_root_pose(
+                pos=self._sim.pathfinder.get_random_navigable_point()
+            )
+
+        if hasattr(self._app_cfg, "initial_robot_rotation"):
+            self.robot.base_rot = self._app_cfg.initial_robot_rotation
+
     def draw_lookat(self):
         if self._hide_gui:
             return
@@ -469,7 +486,7 @@ class AppStateIsaacSimViewer(AppState):
         )
         if self._recent_mouse_ray_hit_info:
             status_str += self._recent_mouse_ray_hit_info["rigidBody"] + "\n"
-        status_str += f"base_rot: {self.robot.base_rot}\n"
+        status_str += f"base rot: {self.robot.base_rot} \n"
         status_str += f"time: {self._timer}\n"
         if self._frame_recorder.replaying:
             status_str += f"-REPLAYING FRAMES [{self._frame_recorder.frame_data[0]['t'], self._frame_recorder.frame_data[-1]['t']}]-\n"
@@ -671,11 +688,10 @@ class AppStateIsaacSimViewer(AppState):
             )
         if right.get_button_up(XRButton.ONE):
             pass
-        # if right.get_button_down(XRButton.TWO):
-        #     print("pressed two right")
-        #     self.replay_xr_traj = not self.replay_xr_traj
-        #     self.recording_xr_traj = False
-        #     print(f"XR Traj playback = {self.replay_xr_traj}")
+
+        if right.get_button_down(XRButton.TWO):
+            print("pressed two right, resetting episode objects")
+            self.reset_episode_objects()
         if right.get_button_up(XRButton.TWO):
             pass
         # NOTE: XRButton.START is reserved for Quest menu functionality
@@ -732,14 +748,9 @@ class AppStateIsaacSimViewer(AppState):
                             xr_pose_in_robot_frame.rot_right,
                         )
 
-                    last_solve_pose = cur_arm_pose
-                    iter_count = 0
-                    while iter_count < 5:
-                        new_arm_pose = self._ik.inverse_kinematics(
-                            to_ik_pose(xr_pose), last_solve_pose
-                        )
-                        last_solve_pose = new_arm_pose
-                        iter_count += 1
+                    new_arm_pose = self._ik.inverse_kinematics(
+                        to_ik_pose(xr_pose), cur_arm_pose
+                    )
 
                     debug_draw_axis(
                         self._app_service.gui_drawer,
@@ -748,7 +759,7 @@ class AppStateIsaacSimViewer(AppState):
                     )
                     # using configuration subset to avoid accidental overwriting with noise
                     self.robot.pos_subsets[arm_subset_key].set_motor_pos(
-                        last_solve_pose
+                        new_arm_pose
                     )
                     # self.robot.pos_subsets[arm_subset_key].set_pos(new_arm_pose)
 
