@@ -11,6 +11,7 @@ import magnum as mn
 import numpy as np
 
 from habitat.isaac_sim import isaac_prim_utils
+from scripts.xr_pose_adapter import XRPose
 
 if TYPE_CHECKING:
     from examples.hitl.isaac_robot_teleop.isaac_robot_teleop import (
@@ -152,6 +153,20 @@ class FrameRecorder:
             )
         return object_states
 
+    def get_xr_state(self):
+        """
+        Get the json rep of the global XRPose of connected xr user or an empty dict if no user is connected.
+        This pose includes the position and orientation of both hands (controllers) and the headset.
+        """
+        current_xr_pose = XRPose(
+            remote_client_state=self._app_state._app_service.remote_client_state
+        )
+        if current_xr_pose.valid:
+            return self._app_state.xr_pose_adapter.get_global_xr_pose(
+                current_xr_pose
+            ).to_json_dict()
+        return {}
+
     def record_state(
         self,
         elapsed_time: float,
@@ -165,6 +180,7 @@ class FrameRecorder:
             "users": [],  # TODO
             "object_states": self.get_object_states(),
             "robot_state": self.get_robot_state(),
+            "xr_state": self.get_xr_state(),
         }
         # TODO: user camera and cursor states
         self.frame_data.append(_frame_data)
