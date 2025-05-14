@@ -1,0 +1,58 @@
+# For more info about Hydra in Habitat, see habitat-lab/habitat/config/README.md
+# @package _global_
+
+habitat_hitl:
+  driver: "SimDriver"
+  disable_policies_and_stepping: True
+  window: ~
+  networking:
+    enable: True
+    max_client_count: 1
+    http_availability_server:
+      enable: True
+    # client_max_idle_duration: 180.0   # TODO: Set up AFK timers.
+    enable_connections_by_default: False
+    mock_connection_params_dict:
+      episodes: "0"
+      user_id: "placeholder_user"
+      experiment: "robot_teleop"
+  experimental:
+    headless:
+      do_headless: True
+  client_sync:
+    server_camera: False
+    server_input: True
+    skinning: True
+
+isaac_robot_teleop:
+  camera_move_speed: 0.1
+  lock_pc_camera_to_robot: True
+  #optionally force the initial state of the robot (will be snapped to namvmesh)
+  #NOTE: these values initialize in the kitchen for scene 103997403_171030405
+  initial_robot_position: [-11.4, 0, -3.2]
+  initial_robot_rotation: -1.7 # [-pi, pi]
+
+  #relative paths to the directories containing navmeshes and usd scene files
+  usd_scene_path: "../../../data/usd/scenes/"
+  navmesh_path: "data/hssd-hab/navmeshes/"
+
+  scene_name: "103997403_171030405"
+  # OR initialize by episode. These will take precedent when provided
+  episode_dataset: "data/datasets/hitl_teleop_episodes.json.gz"
+  episode_index: 0
+
+  #physx configuration settings
+  #applied to all rigid objects added to the scene (e.g. from Episodes)
+  object_static_friction: 50
+  object_dynamic_friction: 50
+  object_restitution: 0
+  #applied to the contents of the scene (architecture, furniture, etc...)
+  stage_static_friction: 100
+  stage_dynamic_friction: 100
+  stage_restitution: 0
+
+defaults:
+  # Load default parameters for the HITL framework. See
+  # habitat-hitl/habitat_hitl/config/hitl_defaults.yaml.
+  - hitl_defaults
+  - _self_
