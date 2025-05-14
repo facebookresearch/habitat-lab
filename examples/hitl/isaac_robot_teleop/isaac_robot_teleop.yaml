@@ -5,6 +5,12 @@ habitat_hitl:
   driver: "SimDriver"
   disable_policies_and_stepping: True
 
+
+  ######################
+  # Windowing setup:
+  # Choose to open a HitL display (default) or instead open the Isaac Sim viewer
+  # For Isaac Sim viewer uncomment the following block and comment the "window" block below
+
   # experimental:
   #   headless:
   #     do_headless: True
@@ -15,6 +21,7 @@ habitat_hitl:
     width: 1920
     height: 1080
     display_font_size: 24
+  ######################
 
   networking:
     enable: True
