@@ -6,11 +6,13 @@
 
 
 import os
-from typing import Dict, List, Optional
 from time import time
+from typing import Dict, List, Optional
+
 
 def timestamp() -> int:
     return int(time())
+
 
 from habitat_hitl.core.types import ConnectionRecord
 

@@ -16,6 +16,7 @@ from habitat_hitl.core.types import ConnectionRecord
 def timestamp() -> int:
     return int(time())
 
+
 @dataclass
 class SessionRecord:
     """
