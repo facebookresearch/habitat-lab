@@ -22,7 +22,7 @@ from habitat_hitl.core.user_mask import Mask
 
 START_BUTTON_ID = "start"
 START_SCREEN_TIMEOUT = 180.0
-SKIP_START_SCREEN = True   # TODO: Disabled for scaffolding the application.
+SKIP_START_SCREEN = True  # TODO: Disabled for scaffolding the application.
 
 
 class AppStateStartScreen(AppStateBase):

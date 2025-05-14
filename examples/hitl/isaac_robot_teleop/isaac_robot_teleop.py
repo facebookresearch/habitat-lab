@@ -11,16 +11,18 @@ from typing import TYPE_CHECKING, List, Optional
 import hydra
 import magnum as mn
 import numpy as np
-
+from app_data import AppData
 from app_state_base import AppStateBase
+from app_states import (
+    create_app_state_cancel_session,
+    create_app_state_load_episode,
+)
+from session import Session
 
 from habitat.datasets.rearrange.rearrange_dataset import (
     RearrangeDatasetV0,
     RearrangeEpisode,
 )
-
-from app_states import create_app_state_cancel_session, create_app_state_load_episode
-
 from habitat.isaac_sim import isaac_prim_utils
 from habitat.isaac_sim.isaac_app_wrapper import IsaacAppWrapper
 from habitat_hitl._internal.networking.average_rate_tracker import (
@@ -37,8 +39,6 @@ from habitat_hitl.core.key_mapping import KeyCode, MouseButton
 from habitat_hitl.core.text_drawer import TextOnScreenAlignment
 from habitat_hitl.core.xr_input import HAND_LEFT, HAND_RIGHT
 from habitat_hitl.environment.camera_helper import CameraHelper
-from app_data import AppData
-from session import Session
 from scripts.frame_recorder import FrameRecorder
 from scripts.ik import DifferentialInverseKinematics, to_ik_pose
 from scripts.utils import LERP, debug_draw_axis
@@ -105,7 +105,12 @@ def bind_physics_material_to_hierarchy(
 class AppStateIsaacSimViewer(AppStateBase):
     """ """
 
-    def __init__(self, app_service: AppService, app_data: Optional[AppData] = None, session: Optional[Session] = None):
+    def __init__(
+        self,
+        app_service: AppService,
+        app_data: Optional[AppData] = None,
+        session: Optional[Session] = None,
+    ):
         self._app_service = app_service
         self._sim = app_service.sim
 
@@ -1305,7 +1310,7 @@ class AppStateIsaacSimViewer(AppStateBase):
 
         # TODO: Add frame to frame recorder.
         if self._session is not None:
-            frame_data = {} # self._frame_recorder.update(self._timer)?
+            frame_data = {}  # self._frame_recorder.update(self._timer)?
             self._session.session_recorder.record_frame(frame_data)
 
     def _is_episode_finished(self) -> bool:

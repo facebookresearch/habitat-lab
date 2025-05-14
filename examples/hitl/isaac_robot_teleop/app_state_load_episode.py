@@ -105,7 +105,6 @@ class AppStateLoadEpisode(AppStateBase):
             print(f"ERROR: Invalid episode index {next_episode_index}. {e}")
             print("Loading episode index 0.")
             self._load_episode_index(0)
-            
 
         # Signal the clients that the scene has changed.
         client_message_manager = app_service.client_message_manager
@@ -115,7 +114,6 @@ class AppStateLoadEpisode(AppStateBase):
         # Save a keyframe. This propagates the new content to the clients, initiating client-side loading.
         # Beware that the client "loading" state won't immediately be visible to the server.
         app_service.sim.gfx_replay_manager.save_keyframe()
-
 
     def _load_episode_index(self, episode_index: int):
         # TODO: Implement

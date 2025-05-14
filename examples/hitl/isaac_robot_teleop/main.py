@@ -16,13 +16,12 @@ sys.setdlopenflags(sys.getdlopenflags() | ctypes.RTLD_GLOBAL)
 
 import hydra
 from state_machine import StateMachine
+
 from habitat_hitl.core.hitl_main import hitl_main
 from habitat_hitl.core.hydra_utils import register_hydra_plugins
 
 
-@hydra.main(
-    version_base=None, config_path="./config", config_name="headless"
-)
+@hydra.main(version_base=None, config_path="./config", config_name="headless")
 def main(config):
     hitl_main(
         config,
