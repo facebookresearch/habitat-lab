@@ -6,7 +6,7 @@
 
 import os
 import time
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import hydra
 import magnum as mn
@@ -29,7 +29,6 @@ from habitat_hitl._internal.networking.average_rate_tracker import (
     AverageRateTracker,
 )
 from habitat_hitl.app_states.app_service import AppService
-from habitat_hitl.app_states.app_state_abc import AppState
 from habitat_hitl.core.hitl_main import hitl_main
 from habitat_hitl.core.hydra_utils import (
     omegaconf_to_object,
@@ -111,6 +110,7 @@ class AppStateIsaacSimViewer(AppStateBase):
         app_data: Optional[AppData] = None,
         session: Optional[Session] = None,
     ):
+        super().__init__(app_service, app_data)
         self._app_service = app_service
         self._sim = app_service.sim
 
@@ -144,9 +144,11 @@ class AppStateIsaacSimViewer(AppStateBase):
         )
 
         # Either the HITL app is headless or Isaac is headless. They can't both spawn a window.
-        do_isaac_headless = (
-            not self._app_service.hitl_config.experimental.headless.do_headless
-        )
+        # do_isaac_headless = (
+        #    not self._app_service.hitl_config.experimental.headless.do_headless
+        # )
+        # TODO: this was toggled on headless, but should be used only when running locally
+        do_isaac_headless = True
 
         self._isaac_wrapper = IsaacAppWrapper(
             self._sim, headless=do_isaac_headless
@@ -1310,7 +1312,9 @@ class AppStateIsaacSimViewer(AppStateBase):
 
         # TODO: Add frame to frame recorder.
         if self._session is not None:
-            frame_data = {}  # self._frame_recorder.update(self._timer)?
+            frame_data: Dict[
+                str, Any
+            ] = {}  # self._frame_recorder.update(self._timer)?
             self._session.session_recorder.record_frame(frame_data)
 
     def _is_episode_finished(self) -> bool:
