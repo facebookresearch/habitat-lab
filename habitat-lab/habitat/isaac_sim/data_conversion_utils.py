@@ -223,6 +223,8 @@ def find_file(folder: str, filename: str) -> str:
         if filename in files:
             assert not result
             result = os.path.join(root, filename)
+    if result is None:
+        print(f"Could not find {filename} in {folder}")
     return os.path.abspath(result)
 
 
@@ -399,6 +401,9 @@ def convert_hab_scene(
     project_root_folder,
     enable_collision_for_stage=True,
     overwrite_usd: bool = False,
+    stage_folder_rel_path="../stages",
+    rigid_object_folder_rel_path="../objects",
+    ao_folder_rel_path="../urdf",
 ):
     """
     Top level function to convert a target .scene_instance.json into an Isaac compatible .usda.
@@ -417,13 +422,15 @@ def convert_hab_scene(
     # TODO: add configuration here instead of hard-coded structure
 
     scenes_folder = os.path.dirname(scene_filepath)
-    stages_folder = os.path.join(scenes_folder, "../stages")
+    stages_folder = os.path.join(scenes_folder, stage_folder_rel_path)
     assert os.path.exists(stages_folder) and os.path.isdir(stages_folder)
-    rigid_objects_root_folder = os.path.join(scenes_folder, "../objects")
+    rigid_objects_root_folder = os.path.join(
+        scenes_folder, rigid_object_folder_rel_path
+    )
     assert os.path.exists(rigid_objects_root_folder) and os.path.isdir(
         rigid_objects_root_folder
     )
-    ao_root_folder = os.path.join(scenes_folder, "../urdf")
+    ao_root_folder = os.path.join(scenes_folder, ao_folder_rel_path)
     assert os.path.exists(ao_root_folder) and os.path.isdir(ao_root_folder)
 
     print(f"Scene path: {scenes_folder}")
@@ -1043,11 +1050,21 @@ if __name__ == "__main__":
             enable_collision_for_stage=True,
             overwrite_usd=True,
         )
+        # Fremont scene
+        # convert_hab_scene(
+        #     "data/Fremont-Knuckles/configs/scenes/fremont_dynamic_alternate_handles.scene_instance.json",
+        #     project_root_folder="./",
+        #     enable_collision_for_stage=True,
+        #     overwrite_usd=True,
+        #     ao_folder_rel_path="../../urdf"
+        # )
 
     # convert YCB dataset
-    convert_objects_folder_to_usd(
-        "data/objects/ycb", "data/usd/objects/ycb/configs", "./"
-    )
+    # if True:
+    #     #TODO: this doesn't work as expected
+    #     convert_objects_folder_to_usd(
+    #         "data/objects/ycb", "data/usd/objects/ycb/configs", "./"
+    #     )
 
     # convert MURP
     if True:
