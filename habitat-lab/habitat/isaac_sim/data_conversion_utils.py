@@ -24,6 +24,72 @@ from omni.isaac.core.utils.extensions import enable_extension
 from pxr import Gf, PhysxSchema, Sdf, Usd, UsdGeom, UsdPhysics
 
 
+def move_usd_root_transforms_to_mesh(usd_filepath):
+    """
+    Moves any transforms embedded in the default prim of an object USD into the mesh component.
+    NOTE: This should be done when converting individual object files to USD in order to preserve the corrective transforms when the object is later instanced within a full scene.
+    """
+
+    # Open the USD file
+    stage = Usd.Stage.Open(usd_filepath)
+    if not stage:
+        raise ValueError(f"Could not open USD file: {usd_filepath}")
+
+    world_prim = stage.GetPrimAtPath("/World")
+    world = UsdGeom.Xformable(world_prim)
+
+    # Read original ops
+    xform_ops = world.GetOrderedXformOps()
+    translate = orient = scale = None
+    for op in xform_ops:
+        if op.GetOpName() == "xformOp:translate":
+            translate = op.Get()
+        elif op.GetOpName() == "xformOp:orient":
+            orient = Gf.Quatf(op.Get())
+        elif op.GetOpName() == "xformOp:scale":
+            scale = op.Get()
+
+    # Create InternalNode
+    internal = UsdGeom.Xform.Define(stage, "/World/InternalNode")
+    internal_xf = UsdGeom.Xformable(internal)
+
+    # Apply the same ops to InternalNode
+    if translate is not None:
+        internal_xf.AddTranslateOp().Set(translate)
+    if orient is not None:
+        internal_xf.AddOrientOp().Set(orient)
+    if scale is not None:
+        internal_xf.AddScaleOp().Set(scale)
+
+    internal_prim = stage.GetPrimAtPath("/World/InternalNode")
+    stage_obj = internal_prim.GetStage()
+    stage_layer = stage_obj.GetEditTarget().GetLayer()
+    # Move all children of /World into /World/InternalNode, except InternalNode itself
+    for child in list(world_prim.GetChildren()):
+        if child.GetName() != "InternalNode":
+            target_path = "/World/InternalNode/" + child.GetName()
+            # create the new Prim
+            stage_obj.DefinePrim(target_path)
+            source_path = child.GetPath()
+            # copy old prim onto new prim
+            Sdf.CopySpec(stage_layer, source_path, stage_layer, target_path)
+            # delete old prim
+            stage_obj.RemovePrim(child.GetPath())
+
+    # clear original ops
+    xform_ops = world.GetOrderedXformOps()
+    for op in xform_ops:
+        if op.GetOpName() == "xformOp:translate":
+            op.Set(Gf.Vec3d(0, 0, 0))
+        elif op.GetOpName() == "xformOp:orient":
+            op.Set(Gf.Quatd(1.0, 0, 0, 0))
+        elif op.GetOpName() == "xformOp:scale":
+            op.Set(Gf.Vec3d(1, 1, 1))
+
+    # Save the USDA
+    stage.GetRootLayer().Save()
+
+
 def add_habitat_visual_to_usd_root(
     usd_filepath, render_asset_filepath, render_asset_scale
 ):
@@ -314,11 +380,13 @@ def convert_object_to_usd(
         usd_stage.SetDefaultPrim(xform_prim.GetPrim())
         usd_stage.GetRootLayer().Save()
 
-    render_asset_filepath_from_urdf = object_config_json_data["render_asset"]
+    render_asset_filepath_from_config = object_config_json_data["render_asset"]
 
     render_asset_filepath_for_usd = os.path.relpath(
         os.path.abspath(
-            os.path.join(object_config_folder, render_asset_filepath_from_urdf)
+            os.path.join(
+                object_config_folder, render_asset_filepath_from_config
+            )
         ),
         start=project_root_folder,
     )
@@ -329,6 +397,8 @@ def convert_object_to_usd(
     add_habitat_visual_to_usd_root(
         out_usd_path, render_asset_filepath_for_usd, render_asset_scale
     )
+
+    move_usd_root_transforms_to_mesh(out_usd_path)
 
     print(f"Wrote {out_usd_path}")
 
@@ -1015,7 +1085,7 @@ def convert_urdf_test():
 
 
 def convert_objects_folder_to_usd(
-    objects_root_folder, out_usd_folder, project_root_folder
+    objects_root_folder, out_usd_folder, project_root_folder, overwrite=False
 ):
     filepaths = find_all_files(objects_root_folder, ".object_config.json")
     for object_config_filepath in filepaths:
@@ -1030,7 +1100,7 @@ def convert_objects_folder_to_usd(
         out_usd_path = os.path.join(out_usd_folder, f"{base_object_name}.usda")
 
         # todo: gather these up and do them later with multiprocessing
-        if not os.path.exists(out_usd_path):
+        if overwrite or not os.path.exists(out_usd_path):
             convert_object_to_usd(
                 object_config_filepath, out_usd_path, project_root_folder
             )
@@ -1060,11 +1130,13 @@ if __name__ == "__main__":
         # )
 
     # convert YCB dataset
-    # if True:
-    #     #TODO: this doesn't work as expected
-    #     convert_objects_folder_to_usd(
-    #         "data/objects/ycb", "data/usd/objects/ycb/configs", "./"
-    #     )
+    if True:
+        convert_objects_folder_to_usd(
+            "data/objects/ycb",
+            "data/usd/objects/ycb/configs",
+            "./",
+            overwrite=True,
+        )
 
     # convert MURP
     if True:
