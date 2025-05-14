@@ -85,6 +85,7 @@ This app requires HSSD scene dataset, YCB objects, and hab_murp robot models.
 #run from habitat-lab root directory
 python -m habitat_sim.utils.datasets_download --uids hssd-hab ycb
 ln -s scene_datasets/hssd-hab/ data/hssd-hab
+#NOTE: you will need to generate navmeshes from your scenes in advance and place them like: data/hssd-hab/navmeshes/<scene_name>.navmesh
 
 cd data
 #run from your 'habitat-lab/data' directory (reach out to request permissions if necessary)
