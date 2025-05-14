@@ -71,7 +71,7 @@
 
     regenerate_new_mesh: True
     agent_radius: 0.35
-    agent_height: 1.3
+    agent_height: 1.2
     agent_max_climb: 0.01
 
     check_navigable: False

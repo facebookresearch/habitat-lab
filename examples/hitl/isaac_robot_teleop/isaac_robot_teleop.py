@@ -189,6 +189,7 @@ class AppStateIsaacSimViewer(AppState):
         )
 
         self._rigid_objects: List["IsaacRigidObjectWrapper"] = []
+        self._ycb_ix = 0
         from habitat.isaac_sim.isaac_rigid_object_manager import (
             IsaacRigidObjectManager,
         )
@@ -988,13 +989,62 @@ class AppStateIsaacSimViewer(AppState):
                 )
             )
 
+            ycb_handles = [
+                "data/objects/ycb/configs/002_master_chef_can.object_config.json",
+                "data/objects/ycb/configs/003_cracker_box.object_config.json",
+                "data/objects/ycb/configs/004_sugar_box.object_config.json",
+                "data/objects/ycb/configs/005_tomato_soup_can.object_config.json",
+                "data/objects/ycb/configs/006_mustard_bottle.object_config.json",
+                "data/objects/ycb/configs/007_tuna_fish_can.object_config.json",
+                "data/objects/ycb/configs/008_pudding_box.object_config.json",
+                "data/objects/ycb/configs/009_gelatin_box.object_config.json",
+                "data/objects/ycb/configs/010_potted_meat_can.object_config.json",
+                "data/objects/ycb/configs/011_banana.object_config.json",
+                "data/objects/ycb/configs/012_strawberry.object_config.json",
+                "data/objects/ycb/configs/013_apple.object_config.json",
+                "data/objects/ycb/configs/014_lemon.object_config.json",
+                "data/objects/ycb/configs/015_peach.object_config.json",
+                "data/objects/ycb/configs/016_pear.object_config.json",
+                "data/objects/ycb/configs/017_orange.object_config.json",
+                "data/objects/ycb/configs/018_plum.object_config.json",
+                "data/objects/ycb/configs/019_pitcher_base.object_config.json",
+                "data/objects/ycb/configs/021_bleach_cleanser.object_config.json",
+                "data/objects/ycb/configs/024_bowl.object_config.json",
+                "data/objects/ycb/configs/025_mug.object_config.json",
+                "data/objects/ycb/configs/026_sponge.object_config.json",
+                "data/objects/ycb/configs/028_skillet_lid.object_config.json",
+                "data/objects/ycb/configs/029_plate.object_config.json",
+                "data/objects/ycb/configs/030_fork.object_config.json",
+                "data/objects/ycb/configs/031_spoon.object_config.json",
+                "data/objects/ycb/configs/032_knife.object_config.json",
+                "data/objects/ycb/configs/033_spatula.object_config.json",
+                "data/objects/ycb/configs/035_power_drill.object_config.json",
+                "data/objects/ycb/configs/036_wood_block.object_config.json",
+                "data/objects/ycb/configs/037_scissors.object_config.json",
+                "data/objects/ycb/configs/038_padlock.object_config.json",
+                "data/objects/ycb/configs/040_large_marker.object_config.json",
+                "data/objects/ycb/configs/042_adjustable_wrench.object_config.json",
+                "data/objects/ycb/configs/043_phillips_screwdriver.object_config.json",
+                "data/objects/ycb/configs/044_flat_screwdriver.object_config.json",
+                "data/objects/ycb/configs/048_hammer.object_config.json",
+                "data/objects/ycb/configs/050_medium_clamp.object_config.json",
+                "data/objects/ycb/configs/051_large_clamp.object_config.json",
+                "data/objects/ycb/configs/052_extra_large_clamp.object_config.json",
+                "data/objects/ycb/configs/053_mini_soccer_ball.object_config.json",
+                "data/objects/ycb/configs/054_softball.object_config.json",
+                "data/objects/ycb/configs/055_baseball.object_config.json",
+                "data/objects/ycb/configs/056_tennis_ball.object_config.json",
+                "data/objects/ycb/configs/057_racquetball.object_config.json",
+            ]
+
             self.add_rigid_object(
-                handle="data/objects/ycb/configs/035_power_drill.object_config.json",
+                handle=ycb_handles[self._ycb_ix],
                 bottom_pos=hab_hit_pos,
                 static_friction=self._app_cfg.object_static_friction,
                 dynamic_friction=self._app_cfg.object_dynamic_friction,
                 restitution=self._app_cfg.object_restitution,
             )
+            self._ycb_ix = (self._ycb_ix + 1) % len(ycb_handles)
 
         if gui_input.get_key_down(KeyCode.N):
             self.robot.set_root_pose(
