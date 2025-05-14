@@ -6,16 +6,21 @@
 
 import os
 import time
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Optional
 
 import hydra
 import magnum as mn
 import numpy as np
 
+from app_state_base import AppStateBase
+
 from habitat.datasets.rearrange.rearrange_dataset import (
     RearrangeDatasetV0,
     RearrangeEpisode,
 )
+
+from app_states import create_app_state_cancel_session, create_app_state_load_episode
+
 from habitat.isaac_sim import isaac_prim_utils
 from habitat.isaac_sim.isaac_app_wrapper import IsaacAppWrapper
 from habitat_hitl._internal.networking.average_rate_tracker import (
@@ -32,6 +37,8 @@ from habitat_hitl.core.key_mapping import KeyCode, MouseButton
 from habitat_hitl.core.text_drawer import TextOnScreenAlignment
 from habitat_hitl.core.xr_input import HAND_LEFT, HAND_RIGHT
 from habitat_hitl.environment.camera_helper import CameraHelper
+from app_data import AppData
+from session import Session
 from scripts.frame_recorder import FrameRecorder
 from scripts.ik import DifferentialInverseKinematics, to_ik_pose
 from scripts.utils import LERP, debug_draw_axis
@@ -95,12 +102,15 @@ def bind_physics_material_to_hierarchy(
     material.CreateDynamicFrictionAttr().Set(dynamic_friction)
 
 
-class AppStateIsaacSimViewer(AppState):
+class AppStateIsaacSimViewer(AppStateBase):
     """ """
 
-    def __init__(self, app_service: AppService):
+    def __init__(self, app_service: AppService, app_data: Optional[AppData] = None, session: Optional[Session] = None):
         self._app_service = app_service
         self._sim = app_service.sim
+
+        self._app_data = app_data
+        self._session = session
 
         self._app_cfg = omegaconf_to_object(
             app_service.config.isaac_robot_teleop
@@ -1293,9 +1303,73 @@ class AppStateIsaacSimViewer(AppState):
         self._timer = time.time() - self._start_time
         self._frame_recorder.update(self._timer)
 
+        # TODO: Add frame to frame recorder.
+        if self._session is not None:
+            frame_data = {} # self._frame_recorder.update(self._timer)?
+            self._session.session_recorder.record_frame(frame_data)
+
+    def _is_episode_finished(self) -> bool:
+        # TODO: Add episode termination condition.
+        return False
+
+    def get_next_state(self) -> Optional[AppStateBase]:
+        """When running from the state machine, this function determines whether the state must be changed."""
+        assert self._app_data is not None
+        assert self._session is not None
+        assert self.episode is not None
+
+        if self._cancel:
+            return create_app_state_cancel_session(
+                self._app_service,
+                self._app_data,
+                self._session,
+                error="User disconnected",
+            )
+        elif self._is_episode_finished():
+            return create_app_state_load_episode(
+                self._app_service, self._app_data, self._session
+            )
+        return None
+
+    def on_enter(self):
+        """When running from the state machine, this function is called after construction."""
+        assert self._app_data is not None
+        assert self._session is not None
+        assert self.episode is not None
+        super().on_enter()
+
+        episode = self.episode
+        self._session.session_recorder.start_episode(
+            episode_index=self._session.current_episode_index,
+            episode_id=episode.episode_id,
+            scene_id=episode.scene_id,
+            dataset=episode.scene_dataset_config,
+            episode_info=episode.info,
+        )
+
+    def on_exit(self):
+        """When running from the state machine, this function is called before destruction."""
+        super().on_exit()
+        assert self._app_data is not None
+        assert self._session is not None
+
+        episode_finished = self._is_episode_finished() and not self._cancel
+
+        self._session.session_recorder.end_episode(
+            episode_finished=episode_finished,
+            task_percent_complete=1.0,  # TODO: Get episode success.
+            metrics={},
+        )
+
+        # TODO: Define UI.
+        """
+        for user_data in self._user_data:
+            user_data.ui.reset()
+        """
+
 
 @hydra.main(
-    version_base=None, config_path="./", config_name="isaac_robot_teleop"
+    version_base=None, config_path="./config", config_name="isaac_robot_teleop"
 )
 def main(config):
     hitl_main(config, lambda app_service: AppStateIsaacSimViewer(app_service))
