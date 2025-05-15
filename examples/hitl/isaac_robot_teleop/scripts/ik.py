@@ -82,11 +82,11 @@ class DifferentialInverseKinematics:
         # max_qdd = [15, 7.5, 10, 12.5, 15, 20, 20]
 
         # Add constraints to limit the joint velocities
-        for _i in range(7):
-            prog.AddConstraint(qd[_i] <= max_qd[_i])
-            prog.AddConstraint(qd[_i] >= -max_qd[_i])
-            prog.AddConstraint(self.robot.q[_i] + qd[_i] * 0.03 <= max_q[_i])
-            prog.AddConstraint(self.robot.q[_i] + qd[_i] * 0.03 >= min_q[_i])
+        # for _i in range(7):
+        #     prog.AddConstraint(qd[_i] <= max_qd[_i])
+        #     prog.AddConstraint(qd[_i] >= -max_qd[_i])
+        #     prog.AddConstraint(self.robot.q[_i] + qd[_i] * 0.03 <= max_q[_i])
+        #     prog.AddConstraint(self.robot.q[_i] + qd[_i] * 0.03 >= min_q[_i])
 
         # Add a cost to minimize the squared joint velocities
         error = jacobian @ qd - v
@@ -102,15 +102,15 @@ class DifferentialInverseKinematics:
         prog.AddCost(
             error.dot(error)
             + 0.05 * qd.dot(qd)
-            + joint_centering.dot(joint_centering)
+            # + joint_centering.dot(joint_centering)
         )
 
-        alpha = prog.NewContinuousVariables(6, "alpha")
-        prog.AddCost(-sum(alpha))
-        for i in range(6):
-            prog.AddLinearConstraint(alpha[i] >= 0.01)
-            prog.AddLinearConstraint(alpha[i] <= 1)
-            prog.AddLinearConstraint(alpha[i] * v[i] == (jacobian @ qd)[i])
+        # alpha = prog.NewContinuousVariables(6, "alpha")
+        # prog.AddCost(-sum(alpha))
+        # for i in range(6):
+        #     prog.AddLinearConstraint(alpha[i] >= 0.01)
+        #     prog.AddLinearConstraint(alpha[i] <= 1)
+        #     prog.AddLinearConstraint(alpha[i] * v[i] == (jacobian @ qd)[i])
 
         result = Solve(prog)
         if result.is_success():
