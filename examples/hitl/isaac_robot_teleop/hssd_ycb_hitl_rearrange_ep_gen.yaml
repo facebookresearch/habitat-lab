@@ -30,7 +30,24 @@
         included_receptacle_substrings:
           - ""
         excluded_receptacle_substrings: []
-
+      - name: "kitchen_cabinet"
+        included_object_substrings:
+          - "d17e5570249b7ddb8e6bd201144d66f128db8a65"
+          - "bfd6cf98dd195c4c70cfa0510fd4eaed99efea6a"
+          - "ba726765d25fd53f9c3e2dab6d63802d3201e249"
+          - "51ed863b0c679695f7ce6f6843b5ce528ddc52d3"
+          - "70de3589ff75d49478cbd1f862193de576139ffaa"
+        excluded_object_substrings: []
+        included_receptacle_substrings:
+          - ""
+        excluded_receptacle_substrings: []
+      - name: "kitchen_table"
+        included_object_substrings:
+          - "9f43112d6f35621565da3c1232ea940d7d9c555e"
+        excluded_object_substrings: []
+        included_receptacle_substrings:
+          - ""
+        excluded_receptacle_substrings: []
     scene_sampler:
       type: scene_balanced
       params:
@@ -38,31 +55,29 @@
         - hitl
 
     object_samplers:
-    - name: any
+    - name: cabinet
       type: uniform
       params:
         object_sets:
         - ycb
         receptacle_sets:
-        - all
+        - kitchen_cabinet
         num_samples:
-        - 5
-        - 10
+        - 4
+        - 6
         orientation_sampling: up
         nav_to_min_distance: 1.5
         constrain_to_largest_nav_island: False
-
-    object_target_samplers:
-    - name: any_targets
+    - name: table
       type: uniform
       params:
-        object_samplers:
-        - any
+        object_sets:
+        - ycb
         receptacle_sets:
-        - all
+        - kitchen_table
         num_samples:
-        - 2
-        - 2
+        - 4
+        - 6
         orientation_sampling: up
         nav_to_min_distance: 1.5
         constrain_to_largest_nav_island: False
