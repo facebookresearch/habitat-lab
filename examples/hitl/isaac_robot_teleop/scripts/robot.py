@@ -698,7 +698,7 @@ class RobotAppWrapper:
         for ix, name in enumerate(self._body_prim_paths):
             print(f"{ix}: {name}")
         # load link subsets from the robot config file
-        self.link_subsets = {}
+        self.link_subsets: Dict[str, LinkSubset] = {}
         for (
             subset_cfg_name,
             subset_cfg_links,

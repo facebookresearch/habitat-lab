@@ -672,13 +672,16 @@ def get_all_scenedataset_receptacles(
     # TODO: we currently need to load every URDF to get at the configs. This should change once AO templates are better managed.
     aom = sim.get_articulated_object_manager()
     for urdf_handle, urdf_path in sim.metadata_mediator.urdf_paths.items():
-        ao = aom.add_articulated_object_from_urdf(urdf_path)
-        for item in ao.user_attributes.get_subconfig_keys():
-            if item.startswith("receptacle_"):
-                if urdf_handle not in receptacles["articulated"]:
-                    receptacles["articulated"][urdf_handle] = []
-                receptacles["articulated"][urdf_handle].append(item)
-        aom.remove_object_by_handle(ao.handle)
+        try:
+            ao = aom.add_articulated_object_from_urdf(urdf_path)
+            for item in ao.user_attributes.get_subconfig_keys():
+                if item.startswith("receptacle_"):
+                    if urdf_handle not in receptacles["articulated"]:
+                        receptacles["articulated"][urdf_handle] = []
+                    receptacles["articulated"][urdf_handle].append(item)
+            aom.remove_object_by_handle(ao.handle)
+        except Exception as e:
+            print(f"Failed to load URDF: '{urdf_path}' with exception {e}.")
 
     return receptacles
 
@@ -1251,7 +1254,7 @@ def get_navigable_receptacles(
 
         # get the global bounding box of the object
         receptacle_bb = None
-        if receptacle.parent_link >= 0:
+        if receptacle.parent_link is not None and receptacle.parent_link >= 0:
             link_node = receptacle_obj.get_link_scene_node(
                 receptacle.parent_link
             )

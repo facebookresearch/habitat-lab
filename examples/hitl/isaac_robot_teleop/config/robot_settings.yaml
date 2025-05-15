@@ -18,8 +18,8 @@ ground_to_base_offset: -0.1
 viewpoint_offset: [0.25,0,1.1]
 
 #link physical properties
-link_static_friction: 50
-link_dynamic_friction: 50
+link_static_friction: 10
+link_dynamic_friction: 10
 link_restitution: 0
 
 #joint motor settings
@@ -98,11 +98,11 @@ configuration_subsets:
 
 link_subsets:
   #link ixs for finger tips on each hand
-  left_thumb_tip: ["link_l15_0_digit2_sensor_base","link_l15_0_tip"]
-  right_thumb_tip: ["link_15_0_digit2_sensor_base","link_15_0_tip"]
+  left_thumb_tip: ["link_l15_0_tip"]
+  right_thumb_tip: ["link_15_0_tip"]
   #[index, middle, ring]
-  right_finger_tips: ["link_3_0_digit2_sensor_base","link_3_0_tip", "link_7_0_digit2_sensor_base","link_7_0_tip", "link_11_0_digit2_sensor_base","link_11_0_tip"]
-  left_finger_tips: ["link_l3_0_digit2_sensor_base","link_l3_0_tip", "link_l7_0_digit2_sensor_base", "link_l7_0_tip", "link_l11_0_digit2_sensor_base", "link_l11_0_tip"]
+  right_finger_tips: ["link_3_0_tip", "link_7_0_tip", "link_11_0_tip"]
+  left_finger_tips: ["link_l3_0_tip", "link_l7_0_tip", "link_l11_0_tip"]
   #arm base links (the fixed attachment point)
   left_arm_base: ["left_fr3_link0"]
   right_arm_base: ["right_fr3_link0"]

@@ -13,7 +13,7 @@ habitat_hitl:
     # client_max_idle_duration: 180.0   # TODO: Set up AFK timers.
     enable_connections_by_default: False
     mock_connection_params_dict:
-      episodes: "0"
+      episodes: "0,1,2,3"
       user_id: "placeholder_user"
       experiment: "robot_teleop"
   experimental:

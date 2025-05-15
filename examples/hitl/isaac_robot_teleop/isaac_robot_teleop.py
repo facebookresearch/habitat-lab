@@ -111,10 +111,7 @@ class AppStateIsaacSimViewer(AppStateBase):
         session: Optional[Session] = None,
     ):
         super().__init__(app_service, app_data)
-        self._app_service = app_service
         self._sim = app_service.sim
-
-        self._app_data = app_data
         self._session = session
 
         self._app_cfg = omegaconf_to_object(
@@ -166,33 +163,44 @@ class AppStateIsaacSimViewer(AppStateBase):
         usd_scenes_path = os.path.join(dir_path, self._app_cfg.usd_scene_path)
         navmeshes_path = self._app_cfg.navmesh_path
 
-        ######################
-        ## NO EPISODES LOGIC (defaults)
-        # load the asset from config
-        scene_usd_file = usd_scenes_path + self._app_cfg.scene_name + ".usda"
-        scene_navmesh_file = (
-            navmeshes_path + self._app_cfg.scene_name + ".navmesh"
-        )
-
-        ######################
-        ## YES EPISODES LOGIC (load the episode)
         self.episode_dataset: RearrangeDatasetV0 = None
         self.episode_index = 0
         self.episode: RearrangeEpisode = None
-        if hasattr(self._app_cfg, "episode_dataset"):
-            # NOTE: initializes self.episode_dataset
-            self.load_episode_dataset(self._app_cfg.episode_dataset)
-            if hasattr(self._app_cfg, "episode_index"):
-                self.episode_index = self._app_cfg.episode_index
-            self.episode = (
-                self.episode_dataset.episodes[  # type:ignore[attr-defined]
-                    self.episode_index
-                ]
-            )
+        scene_usd_file: str = None
+        scene_navmesh_file: str = None
 
-            scene_name = self.episode.scene_id.split("/")[-1].split(".")[0]
-            scene_usd_file = usd_scenes_path + scene_name + ".usda"
-            scene_navmesh_file = navmeshes_path + scene_name + ".navmesh"
+        if self._app_data:
+            # TODO: load from the data struct instead of config file
+            raise NotImplementedError("AppData load path not implemented yet.")
+
+        else:
+            # load from local yaml file
+            if hasattr(self._app_cfg, "episode_dataset"):
+                ######################
+                ## YES EPISODES LOGIC (load the episode)
+                # NOTE: initializes self.episode_dataset
+                self.load_episode_dataset(self._app_cfg.episode_dataset)
+                if hasattr(self._app_cfg, "episode_index"):
+                    self.episode_index = self._app_cfg.episode_index
+                self.episode = (
+                    self.episode_dataset.episodes[  # type:ignore[attr-defined]
+                        self.episode_index
+                    ]
+                )
+
+                scene_name = self.episode.scene_id.split("/")[-1].split(".")[0]
+                scene_usd_file = usd_scenes_path + scene_name + ".usda"
+                scene_navmesh_file = navmeshes_path + scene_name + ".navmesh"
+            else:
+                ######################
+                ## NO EPISODES LOGIC (defaults)
+                # load the asset from config
+                scene_usd_file = (
+                    usd_scenes_path + self._app_cfg.scene_name + ".usda"
+                )
+                scene_navmesh_file = (
+                    navmeshes_path + self._app_cfg.scene_name + ".navmesh"
+                )
 
         ######################
         ## instantiate isaac world
@@ -256,9 +264,8 @@ class AppStateIsaacSimViewer(AppStateBase):
 
         self._frame_recorder = FrameRecorder(self)
 
-        from scripts.robot import unit_test_robot
-
-        unit_test_robot(self.robot)
+        # from scripts.robot import unit_test_robot
+        # unit_test_robot(self.robot)
 
         # this is when the application starts after initialization
         self._start_time = time.time()
@@ -326,6 +333,10 @@ class AppStateIsaacSimViewer(AppStateBase):
             ro = self._isaac_rom.get_object_by_id(self.episode_object_ids[ix])
             ro_t = mn.Matrix4(
                 [[transform[j][i] for j in range(4)] for i in range(4)]
+            )
+
+            ro_t = mn.Matrix4.from_(
+                ro_t.rotation_normalized(), ro_t.translation
             )
             # NOTE: this transform corrects for isaac's different coordinate system
             isaac_correction = mn.Matrix4.from_(
@@ -431,12 +442,19 @@ class AppStateIsaacSimViewer(AppStateBase):
         # TODO: figure out how to initialize the robot in isolation instead of resetting the world. Doesn't work as expected.
         self._isaac_wrapper.service.world.reset()
         self.robot.post_init()
-        self.hand_grasp_poses = [
-            self.robot.pos_subsets["left_hand"].fetch_cached_pose(
-                pose_name=hand_subset_key
+
+        # collect the open/closed grasp poses
+        self.hand_grasp_poses = {}
+        for hand in ["left", "right"]:
+            hand_name = hand + "_hand"
+            open_pose = self.robot.pos_subsets[hand_name].fetch_cached_pose(
+                pose_name=hand_name + "_open"
             )
-            for hand_subset_key in ["hand_open", "hand_closed"]
-        ]
+            closed_pose = self.robot.pos_subsets[hand_name].fetch_cached_pose(
+                pose_name=hand_name + "_closed"
+            )
+            self.hand_grasp_poses[hand_name] = [open_pose, closed_pose]
+
         stage = self._isaac_wrapper.service.world.stage
         robot_root_prim = stage.GetPrimAtPath(self.robot._robot_prim_path)
         bind_physics_material_to_hierarchy(
@@ -717,6 +735,9 @@ class AppStateIsaacSimViewer(AppStateBase):
         # NOTE: PRIMARY_INDEX_TRIGGER mapped to grasping functionality
 
         # TODO: PRIMARY_THUMBSTICK (click?) unmapped currently and available
+        if left.get_button_down(XRButton.PRIMARY_THUMBSTICK):
+            # reset the robot state (e/g/ to unstick or restart)
+            self.set_robot_base_initial_state()
 
         # IK for each hand when trigger is pressed
         xr_pose = XRPose(
@@ -786,8 +807,8 @@ class AppStateIsaacSimViewer(AppStateBase):
                 (left, "left_hand"),
             ]:
                 cur_pose = LERP(
-                    self.hand_grasp_poses[0],
-                    self.hand_grasp_poses[1],
+                    self.hand_grasp_poses[hand_subset_key][0],
+                    self.hand_grasp_poses[hand_subset_key][1],
                     xrcontroller.get_index_trigger(),
                 )
 
@@ -1136,10 +1157,10 @@ class AppStateIsaacSimViewer(AppStateBase):
         hit_normal_habitat = mn.Vector3(
             *isaac_prim_utils.usd_to_habitat_position(hit_normal_usd)
         )
-        if self._app_service.gui_input.get_mouse_button(MouseButton.LEFT):
-            self._mouse_points_record.append(
-                (hit_pos_habitat, hit_normal_habitat)
-            )
+        # if self._app_service.gui_input.get_mouse_button(MouseButton.LEFT):
+        #     self._mouse_points_record.append(
+        #         (hit_pos_habitat, hit_normal_habitat)
+        #     )
         # collision_name = hit_info['collision']
         body_name = hit_info["rigidBody"]
         body_ix = self.robot.get_rigid_prim_ix(body_name)
@@ -1191,42 +1212,35 @@ class AppStateIsaacSimViewer(AppStateBase):
                 body_name, force_vec, hit_pos_usd
             )
 
-    def draw_robot_link_chain(
-        self, dblr, link_ixs: List[int], color: mn.Color3
-    ):
-        """
-        Draw a set of line segments connecting the passed links sequentially.
-        """
-        assert len(link_ixs) >= 2
-        link_positions, _ = self.robot.get_link_world_poses(link_ixs)
-        prev_pos = link_positions[0]
-        for link_position in link_positions[1:]:
-            dblr.draw_transformed_line(prev_pos, link_position, color)
-            prev_pos = link_position
-
     def debug_draw_hands(self):
         """
-        Draws colored lines for the hands to visualize state without meshes.
-        #NOTE: once the allegro meshes are rendering in headset client this won't be necessary.
+        Draw finger tips as circles.
+        NOTE: This is only necessary while finger tips are not rendering in the client.
         """
         dblr = self._app_service.gui_drawer
-        for ix, finger_subset_key in enumerate(
-            [
-                "left_thumb_tip",
-                "right_thumb_tip",
-                "left_finger_tips",
-                "right_finger_tips",
-            ]
-        ):
-            finger_link_subset = self.robot.link_subsets[finger_subset_key]
-            color = (
-                mn.Color3(0.6, 0.4, 0.6)
-                if (ix / 2) % 2 == 0
-                else mn.Color3(0.6, 0.6, 0.4)
+        for finger_subset_key in [
+            "left_thumb_tip",
+            "right_thumb_tip",
+            "left_finger_tips",
+            "right_finger_tips",
+        ]:
+            color = mn.Color3(0.6, 0.4, 0.6)
+            # this distance is applied to offset the render shape from the root of the parent link
+            finger_offset_dist = 0.043
+            link_pos, link_rots = self.robot.get_link_world_poses(
+                indices=self.robot.link_subsets[finger_subset_key].link_ixs
             )
-            self.draw_robot_link_chain(
-                dblr, finger_link_subset.link_ixs, color
-            )
+            for pos, rot in zip(link_pos, link_rots):
+                finger_normal = rot.transform_vector(mn.Vector3(0, 0, 1.0))
+                dblr.draw_circle(
+                    pos + finger_normal * finger_offset_dist,
+                    0.01,
+                    color,
+                    normal=finger_normal,
+                )
+                dblr.draw_transformed_line(
+                    pos, pos + finger_normal * finger_offset_dist, color
+                )
 
     def sim_update(self, dt, post_sim_update_dict):
         self._sps_tracker.increment()
