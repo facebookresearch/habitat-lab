@@ -6,6 +6,7 @@ import torch
 
 from pymomentum.solver import ErrorFunctionType
 import os
+import numpy as np
 
 class DifferentialInverseKinematics:
     def __init__(self):
@@ -23,7 +24,19 @@ class DifferentialInverseKinematics:
 
         _orientation = pose.UnitQuaternion().A
         orientation_cons_targets = [ [_orientation[1], _orientation[2], _orientation[3], _orientation[0]] ]
-        return solve_one_ik_problem(self.robot, position_cons_targets, orientation_cons_targets, q).detach().numpy()[0]
+        solution = solve_one_ik_problem(self.robot, position_cons_targets, orientation_cons_targets, q).detach().numpy()[0]
+
+        # restrict instantaneous joint velocities to be within the limits
+        max_difference = np.array([abs(q[i] - solution[i]) for i in range(len(q))])
+        max_velocity = np.array([2.62/30 , 2.62/30, 2.62/30, 2.62/30, 5.26/30, 4.18/30, 5.26/30])
+
+        exceeding_indices = np.where(max_difference > max_velocity)[0]
+
+        if len(exceeding_indices) > 0:
+            most_exceeding_index = exceeding_indices[np.argmax(max_difference[exceeding_indices] - max_velocity[exceeding_indices])]
+            solution = q + (solution - q) * (max_velocity[most_exceeding_index] / max_difference[most_exceeding_index])
+
+        return solution
         
 
 
