@@ -1,73 +1,79 @@
-import numpy as np
-import roboticstoolbox as rtb
-from pydrake.solvers import MathematicalProgram, Solve
+import pymomentum.geometry as pym_geometry
+import pymomentum.skel_state as pym_skel_state
+import pymomentum.solver as pym_solver
 
+import torch
+
+from pymomentum.solver import ErrorFunctionType
+import os
 
 class DifferentialInverseKinematics:
     def __init__(self):
-        self.robot = rtb.models.Panda()
 
-        # Change epsilon to change weightage of secondary task
-        # 0 to have no secondary tasks
-        self.epsilon = 0.1
+        self.robot = pym_geometry.Character.load_urdf(
+                os.getcwd() + "/data/hab_murp/fr3/fr3_no_gripper.urdf",
+            )
+
 
     def inverse_kinematics(self, pose, q):
-        if len(q) != 7:
-            raise ValueError("q must be of length 7")
 
-        self.robot.q = q
 
-        jacobian = self.robot.jacobe(self.robot.q)
+        #pymomentum uses centimeters for positions.
+        position_cons_targets = [ [pose.x*100, pose.y*100, pose.z*100] ]
 
-        v, _ = rtb.p_servo(self.robot.fkine(self.robot.q, end=self.robot.links[7]), pose, 5)
+        _orientation = pose.UnitQuaternion().A
+        orientation_cons_targets = [ [_orientation[1], _orientation[2], _orientation[3], _orientation[0]] ]
+        return solve_one_ik_problem(self.robot, position_cons_targets, orientation_cons_targets, q).detach().numpy()[0]
+        
 
-        # Create a MathematicalProgram
-        prog = MathematicalProgram()
 
-        # Create a joint velocity decision variable
-        qd = prog.NewContinuousVariables(7, "qd")
+def solve_one_ik_problem(character, _position_cons_targets, _orientation_cons_targets, initial_guess) -> torch.Tensor:
+    
+    n_joints = character.skeleton.size
+    n_params = character.parameter_transform.size
 
-        max_qd = [2.1750, 2.1750, 2.1750, 2.1750, 2.61, 2.61, 2.61]
-        max_q = [2.8973, 1.7628, 2.8973, -0.7315114, 2.8973, 3.7525, 2.8973]
-        min_q = [-2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973]
-        # max_qdd = [15, 7.5, 10, 12.5, 15, 20, 20]
+    batch_size = 1
 
-        # Add constraints to limit the joint velocities
-        for _i in range(7):
-            prog.AddConstraint(qd[_i] <= max_qd[_i])
-            prog.AddConstraint(qd[_i] >= -max_qd[_i])
-            prog.AddConstraint(self.robot.q[_i]+qd[_i]*0.03 <= max_q[_i])
-            prog.AddConstraint(self.robot.q[_i]+qd[_i]*0.03 >= min_q[_i])
-            
-            
+    # Ensure repeatability in the rng:
+    torch.manual_seed(0)
+    model_params_init = torch.zeros(batch_size, n_params, dtype=torch.float64)
+    model_params_init[0] = torch.tensor(initial_guess, dtype=torch.float64)
 
-        # Add a cost to minimize the squared joint velocities
-        error = jacobian @ qd - v
+    active_error_functions = [
+        ErrorFunctionType.Limit,
+        ErrorFunctionType.Position,
+        ErrorFunctionType.Orientation,
+        ErrorFunctionType.Collision,
+    ]
+    error_function_weights = torch.ones(
+        batch_size,
+        len(active_error_functions),
+        requires_grad=True,
+        dtype=torch.float64,
+    )
 
-        K = [10, 10, 10, 10, 10, 10, 10]
-        q0 = [(max_q[i] - min_q[i]) / 2 for i in range(7)]
+    pos_cons_targets = torch.tensor(
+        _position_cons_targets, dtype=torch.float64
+    )  
 
-        # Do joint centering in the null space
-        joint_centering = self.epsilon * (
-            (np.eye(7) - np.linalg.pinv(jacobian) @ jacobian)
-            @ (qd - K * (np.array(q0) - self.robot.q))
-        )
-        prog.AddCost(
-            error.dot(error)
-            + 0.05 * qd.dot(qd)
-            + joint_centering.dot(joint_centering)
-        )
+    pos_cons_parents = torch.arange(n_joints-1, n_joints)
 
-        alpha = prog.NewContinuousVariables(6, "alpha")
-        prog.AddCost(-sum(alpha))
-        for i in range(6):
-            prog.AddLinearConstraint(alpha[i] >= 0.01)
-            prog.AddLinearConstraint(alpha[i] <= 1)
-            prog.AddLinearConstraint(alpha[i] * v[i] == (jacobian @ qd)[i])
+    rot_cons_targets = torch.tensor(
+        _orientation_cons_targets, dtype=torch.float64)
 
-        result = Solve(prog)
-        if result.is_success():
-            return result.GetSolution(qd) / 30 + self.robot.q
-        else:
-            print("Inverse kinematics failed")
-            return self.robot.q
+
+
+    return pym_solver.solve_ik(
+        character=character,
+        active_parameters=character.parameter_transform.all_parameters,
+        model_parameters_init=model_params_init,
+        active_error_functions=active_error_functions,
+        error_function_weights=error_function_weights,
+        position_cons_parents= pos_cons_parents,
+        position_cons_targets=pos_cons_targets,
+        orientation_cons_targets=rot_cons_targets,
+        orientation_cons_parents=pos_cons_parents,
+        
+    )
+
+
