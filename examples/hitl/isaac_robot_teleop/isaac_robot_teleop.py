@@ -6,7 +6,7 @@
 
 import os
 import time
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 import hydra
 import magnum as mn
@@ -118,9 +118,6 @@ class AppStateIsaacSimViewer(AppStateBase):
             app_service.config.isaac_robot_teleop
         )
 
-        # todo: probably don't need video-recording stuff for this app
-        self._video_output_prefix = "video"
-
         self._camera_helper = CameraHelper(
             self._app_service.hitl_config, self._app_service.gui_input
         )
@@ -160,6 +157,8 @@ class AppStateIsaacSimViewer(AppStateBase):
             rendering_dt=self._isaac_physics_dt,
         )
 
+        self._frame_recorder = FrameRecorder(self)
+
         usd_scenes_path = os.path.join(dir_path, self._app_cfg.usd_scene_path)
         navmeshes_path = self._app_cfg.navmesh_path
 
@@ -169,9 +168,22 @@ class AppStateIsaacSimViewer(AppStateBase):
         scene_usd_file: str = None
         scene_navmesh_file: str = None
 
-        if self._app_data:
-            # TODO: load from the data struct instead of config file
-            raise NotImplementedError("AppData load path not implemented yet.")
+        if self._app_data and self._session:
+            assert hasattr(self._app_cfg, "episode_dataset")
+
+            # NOTE: recording is always active for session driven interactions
+            self._frame_recorder.recording = True
+
+            self.load_episode_dataset(self._app_cfg.episode_dataset)
+            self.episode_index = self._session.current_episode_index
+            self.episode = (
+                self.episode_dataset.episodes[  # type:ignore[attr-defined]
+                    self.episode_index
+                ]
+            )
+            scene_name = self.episode.scene_id.split("/")[-1].split(".")[0]
+            scene_usd_file = usd_scenes_path + scene_name + ".usda"
+            scene_navmesh_file = navmeshes_path + scene_name + ".navmesh"
 
         else:
             # load from local yaml file
@@ -226,7 +238,7 @@ class AppStateIsaacSimViewer(AppStateBase):
         stage = self._isaac_wrapper.service.world.stage
         prim = stage.GetPrimAtPath("/World")
 
-        # TODO: improve estimated dynamic properties instead of max friction for everything
+        # physics properties for the stage and furniture
         bind_physics_material_to_hierarchy(
             stage=stage,
             root_prim=prim,
@@ -262,8 +274,6 @@ class AppStateIsaacSimViewer(AppStateBase):
         self.set_robot_base_initial_state()
 
         self._app_service.users.activate_user(0)
-
-        self._frame_recorder = FrameRecorder(self)
 
         # from scripts.robot import unit_test_robot
         # unit_test_robot(self.robot)
@@ -395,6 +405,7 @@ class AppStateIsaacSimViewer(AppStateBase):
         """
         Uses debug drawing to highlight rigid objects with a circle.
         """
+        # TODO: should use the UI API highlight interfaces for better VR client highlighting
         dblr = self._app_service.gui_drawer
         for ro in self._rigid_objects:
             dblr.draw_circle(
@@ -716,8 +727,8 @@ class AppStateIsaacSimViewer(AppStateBase):
             pass
 
         # RIGHT CONTROLLER BUTTONS
-        # TODO: trajectory recording?
-        if right.get_button_down(XRButton.ONE):
+        # NOTE: recording toggle disabled when joining from session. Recording is required.
+        if right.get_button_down(XRButton.ONE) and not self._session:
             self._frame_recorder.recording = not self._frame_recorder.recording
             print(
                 f"pressed one right, recording = {self._frame_recorder.recording}"
@@ -1137,7 +1148,7 @@ class AppStateIsaacSimViewer(AppStateBase):
 
     def handle_mouse_press(self) -> None:
         """
-        TODO: add mouse controls
+        Mouse control UI for local server window.
         NOTE: RIGHT click reserved for robot control
         """
 
@@ -1324,11 +1335,11 @@ class AppStateIsaacSimViewer(AppStateBase):
         self._timer = time.time() - self._start_time
         self._frame_recorder.update(self._timer)
 
-        # TODO: Add frame to frame recorder.
+        # record state trajectory frames in the session object for cloud serialization
         if self._session is not None:
-            frame_data: Dict[
-                str, Any
-            ] = {}  # self._frame_recorder.update(self._timer)?
+            assert self._frame_recorder.recording == True
+            # most recent frame was recorded in update() above
+            frame_data = self._frame_recorder.frame_data[-1]
             self._session.session_recorder.record_frame(frame_data)
 
     def _is_episode_finished(self) -> bool:
