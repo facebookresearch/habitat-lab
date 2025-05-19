@@ -5,6 +5,7 @@ habitat_hitl:
   driver: "SimDriver"
   disable_policies_and_stepping: True
   window: ~
+  use_gpu: True
   networking:
     enable: True
     max_client_count: 1
