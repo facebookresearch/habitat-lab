@@ -64,19 +64,13 @@ pip install -e habitat-baselines
 ln -s ../habitat-sim/data data/
 ```
 
-Install additional dependencies for IK/quest integration
-```
-pip install spatialmath-python
-pip install drake
-pip install roboticstoolbox-python
-```
-
 ## Additional Installations To Support Pymomentum
 
 ```
 conda install -c conda-forge torchvision
 conda install -c conda-forge libstdcxx-ng --update-deps
 conda install numpy=1.26.4
+pip install spatialmath-python
 ```
 
 ## Get the data
