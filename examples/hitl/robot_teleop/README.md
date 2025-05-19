@@ -4,6 +4,13 @@ TL;DR A HITL app that loads robots from URDF and simulates them in a Habitat Sim
 
 # Build Steps
 
+## Install Pymomentum
+```
+conda install -c conda-forge momentum-cpp
+conda install -c conda-forge pymomentum # Windows is not supported yet
+conda install -c conda-forge momentum
+```
+
 ## Install habitat-sim
 
 Install the habitat-sim from source using the following steps:
@@ -12,7 +19,6 @@ Install the habitat-sim from source using the following steps:
 #start from your project root directory
 git clone https://github.com/facebookresearch/habitat-sim.git
 cd habitat-sim
-git checkout 35cf4c7c5e095053eed373f6c28d4194c4620e49
 
 #we use python 3.10+ to support momentum IK
 conda create -n habitat_teleop python=3.10
@@ -65,24 +71,12 @@ pip install drake
 pip install roboticstoolbox-python
 ```
 
-## (optional) Install pymomentum for Inverse Kinematics
-https://github.com/facebookincubator/momentum
+## Additional Installations To Support Pymomentum
 
-*NOTE: build seems incompatible with habitat-baselines on main. *
-
-> Momentum provides foundational algorithms for human kinematic motion and numerical optimization solvers to apply human motion in various applications.
-
-Directly installing momentum may install pytorch CPU version and import may crash. You should first install the correct cuda torch version for your system manually before installing pymomentum:
 ```
-pip3 install torch torchvision torchaudio
-pip install pytorch
-```
-
-Installing pymomentum from conda-forge :
-```
-mamba install -c conda-forge pymomentum=0.1.33
-#need to downgrade numpy for Habitat compatibility.
-mamba install numpy=1.26.4
+conda install -c conda-forge torchvision
+conda install -c conda-forge libstdcxx-ng --update-deps
+conda install numpy=1.26.4
 ```
 
 ## Get the data
@@ -163,6 +157,7 @@ The application has two options for placing the robot base.
 To perform teleoperation using Quest3, first run the following command on your system running habitat.
 
 ```bash
+export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$LD_LIBRARY_PATH
 python examples/hitl/robot_teleop/robot_teleop.py --config-name robot_teleop_vr.yaml
 ```
 
