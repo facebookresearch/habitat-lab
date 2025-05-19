@@ -109,3 +109,6 @@ data
 
 # Data processing output
 _data_processing_output/
+
+# NVIDIA output
+nv_shadercache/
