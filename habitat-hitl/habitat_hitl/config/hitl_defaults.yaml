@@ -67,6 +67,9 @@ habitat_hitl:
   # Width in pixels. Note that actual width depends on device/OpenGL, and large widths (10+) aren't usually supported.
   debug_line_width: 3
 
+  # If false, the GPU is disabled.
+  use_gpu: True
+
   # Episodes filter in the form '0:10 12 14:20:2', where single integer number (`12` in this case) represents an episode id, colon separated integers (`0:10' and `14:20:2`) represent start:stop:step ids range.
   episodes_filter: ~
 

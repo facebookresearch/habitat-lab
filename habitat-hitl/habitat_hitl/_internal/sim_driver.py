@@ -48,6 +48,8 @@ class SimDriver(AppDriver):
         hab_cfg = habitat_sim.utils.settings.make_cfg(cfg_settings)
         # required for HITL apps
         hab_cfg.sim_cfg.enable_gfx_replay_save = True
+        if config.habitat_hitl.use_gpu == False:
+            hab_cfg.sim_cfg.gpu_device_id = -1
         sim = habitat_sim.Simulator(hab_cfg)
 
         # Initialize driver.
