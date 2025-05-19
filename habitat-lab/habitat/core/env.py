@@ -19,7 +19,14 @@ from typing import (
 )
 
 import gym
-import numba
+
+try:
+    import numba
+
+    NUMBA_IMPORTED = True
+except Exception as e:
+    print(f"Numba is disabled. {e}")
+    NUMBA_IMPORTED = False
 import numpy as np
 from gym import spaces
 
@@ -322,11 +329,19 @@ class Env:
 
         return observations
 
-    @staticmethod
-    @numba.njit
-    def _seed_numba(seed: int):
-        random.seed(seed)
-        np.random.seed(seed)
+    if NUMBA_IMPORTED:
+
+        @staticmethod
+        @numba.njit
+        def _seed_numba(seed: int):
+            random.seed(seed)
+            np.random.seed(seed)
+
+    else:
+
+        @staticmethod
+        def _seed_numba(seed: int):
+            np.random.seed(seed)
 
     def seed(self, seed: int) -> None:
         random.seed(seed)
@@ -479,6 +494,8 @@ class RLEnv(gym.Env):
         return observations, reward, done, info
 
     def seed(self, seed: Optional[int] = None) -> None:
+        if seed is None:
+            seed = 0
         self._env.seed(seed)
 
     def render(self, mode: str = "rgb") -> np.ndarray:
