@@ -22,6 +22,7 @@ from habitat.core.logging import logger
 from habitat.datasets.rearrange.navmesh_utils import is_accessible
 from habitat.sims.habitat_simulator.debug_visualizer import dblr_draw_bb
 from habitat.utils.geometry_utils import random_triangle_point
+from habitat_sim.scene import SemanticRegion
 
 # global module singleton for mesh importing instantiated upon first import
 _manager = mn.trade.ImporterManager()
@@ -83,6 +84,17 @@ class Receptacle(ABC):
         Default is empty Range3D.
         """
         return mn.Range3D()
+
+    def find_regions(self, sim: habitat_sim.Simulator) -> List[SemanticRegion]:
+        """
+        Compute and return the receptacle's semantic regions in its current simulation state.
+        """
+
+        parent_obj = sutils.get_obj_from_handle(sim, self.parent_object_handle)
+        regions = sutils.get_object_regions(sim, parent_obj)
+        reg_objects = [sim.semantic_scene.regions[rix] for rix, _ in regions]
+
+        return reg_objects
 
     @abstractmethod
     def sample_uniform_local(

@@ -1112,8 +1112,16 @@ if __name__ == "__main__":
     # convert_urdf_test()
 
     # convert a scene
+    scenes = []
+    scenes = [
+        "103997403_171030405",
+        "103997445_171030492",
+        "102817140",
+        "106879044_174887172",
+    ]
     if True:
         # NOTE: HitL client app expects data/hssd-hab/ pathing
+<<<<<<< HEAD
         convert_hab_scene(
             "data/hssd-hab/scenes-articulated/103997403_171030405.scene_instance.json",
             project_root_folder="./",
@@ -1128,6 +1136,17 @@ if __name__ == "__main__":
         #     overwrite_usd=True,
         #     ao_folder_rel_path="../../urdf"
         # )
+=======
+        for scene_name in scenes:
+            convert_hab_scene(
+                "data/hssd-hab/scenes-articulated/"
+                + scene_name
+                + ".scene_instance.json",
+                project_root_folder="./",
+                enable_collision_for_stage=True,
+                overwrite_usd=True,
+            )
+>>>>>>> 48832b854 (add support for generating episodes in 4 scenes with all objects and robot in a single random region per episode)
 
     # convert YCB dataset
     if True:

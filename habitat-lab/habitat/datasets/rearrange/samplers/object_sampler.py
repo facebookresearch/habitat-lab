@@ -26,6 +26,7 @@ from habitat.datasets.rearrange.samplers.receptacle import (
     find_receptacles,
 )
 from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
+from habitat_sim.scene import SemanticRegion
 
 
 class ObjectSampler:
@@ -44,6 +45,7 @@ class ObjectSampler:
         recep_set_sample_probs: Optional[Dict[str, float]] = None,
         translation_up_offset: float = 0.08,
         constrain_to_largest_nav_island: bool = False,
+        single_region: bool = False,
     ) -> None:
         """
         :param object_set: The set objects from which placements will be sampled.
@@ -55,12 +57,21 @@ class ObjectSampler:
         :param recep_set_sample_probs: Optionally provide a non-uniform weighting for receptacle sampling.
         :param translation_up_offset: Optionally offset sample points to improve likelyhood of successful placement on inflated collision shapes.
         :param check_if_in_largest_island_id: Optionally check if the snapped point is in the largest island id
+        :param single_region: Optionally pick a random region from the configured receptacle set and restrict all generation to that region.
         """
         self.object_set = object_set
         self._allowed_recep_set_names = allowed_recep_set_names
         self._recep_set_sample_probs = recep_set_sample_probs
         self._translation_up_offset = translation_up_offset
         self._constrain_to_largest_nav_island = constrain_to_largest_nav_island
+
+        self._single_region = single_region
+        # NOTE: if this is set, all generation is restricted to that region
+        self.selected_region_index: int = None
+        self.selected_region: SemanticRegion = None
+        # NOTE: a static map of region indices to Receptacles in the region
+        self.rec_regions: Dict[int, List[Receptacle]] = {}
+        self.max_region_samples: int = 100  # maximum attempts to find a receptacle within the restricted region before giving up and aborting
 
         self.receptacle_instances: Optional[
             List[Receptacle]
@@ -95,6 +106,46 @@ class ObjectSampler:
         # number of objects in the range should be reset each time
         self.set_num_samples()
         self.largest_island_id = -1
+        self.selected_region_index = None
+        self.selected_region = None
+        self.rec_regions = {}
+
+    def select_region(
+        self, sim: habitat_sim.Simulator, recep_tracker: ReceptacleTracker
+    ):
+        """
+        Selects a single region from the set of regions containing valid receptacles.
+        """
+
+        assert (
+            len(sim.semantic_scene.regions) > 0
+        ), "Must provide scenes with regions when using this option."
+
+        # this initializes the valid instances
+        _ = self.sample_receptacle(sim, recep_tracker)
+
+        # find all regions for parent objects of valid receptacle candidates
+        self.rec_regions = {}
+        for rec in self.receptacle_candidates:
+            parent_obj = sutils.get_obj_from_handle(
+                sim, rec.parent_object_handle
+            )
+            parent_regions = sutils.get_object_regions(sim, parent_obj)
+            for r, _ in parent_regions:
+                if r not in self.rec_regions:
+                    self.rec_regions[r] = []
+                self.rec_regions[r].append(rec)
+
+        # now select the one region to use
+        self.selected_region_index = list(self.rec_regions.keys())[
+            random.randrange(0, len(self.rec_regions.keys()))
+        ]
+        self.selected_region = sim.semantic_scene.regions[
+            self.selected_region_index
+        ]
+        logger.info(
+            f"Selected single region: '{self.selected_region.id}' (from {len(sim.semantic_scene.regions)} options) containing {len(self.rec_regions[self.selected_region_index])} receptacles from possible set of {len(self.receptacle_candidates)}."
+        )
 
     def sample_receptacle(
         self,
@@ -360,7 +411,7 @@ class ObjectSampler:
         recep_tracker: ReceptacleTracker,
         snap_down: bool = False,
         dbv: Optional[DebugVisualizer] = None,
-        fixed_target_receptacle=None,
+        fixed_target_receptacle: Optional[Receptacle] = None,
         fixed_obj_handle: Optional[str] = None,
     ) -> Optional[habitat_sim.physics.ManagedRigidObject]:
         """
@@ -376,6 +427,10 @@ class ObjectSampler:
         :return: The newly instanced rigid object or None if sampling failed.
         """
 
+        # if first sample and restricting to region, choose the region here
+        if self._single_region and not self.selected_region:
+            self.select_region(sim, recep_tracker)
+
         # draw a new pairing
         if fixed_obj_handle is None:
             object_handle = self.sample_object()
@@ -384,8 +439,27 @@ class ObjectSampler:
 
         if fixed_target_receptacle is not None:
             target_receptacle = fixed_target_receptacle
+            if self._single_region:
+                assert self.selected_region in target_receptacle.find_regions(
+                    sim
+                )
         else:
             target_receptacle = self.sample_receptacle(sim, recep_tracker)
+            if self._single_region:
+                attempted_matches = 0
+                while (
+                    target_receptacle
+                    not in self.rec_regions[self.selected_region_index]
+                    and attempted_matches < self.max_region_samples
+                ):
+                    target_receptacle = self.sample_receptacle(
+                        sim, recep_tracker
+                    )
+                    attempted_matches += 1
+                assert (
+                    attempted_matches < self.max_region_samples
+                ), "No receptacle instances found matching this sampler's region restriction requirements."
+
         logger.info(
             f"Sampling '{object_handle}' from '{target_receptacle.unique_name}'"
         )

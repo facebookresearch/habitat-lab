@@ -5,7 +5,9 @@
 # LICENSE file in the root directory of this source tree.
 
 import os
+import random
 import time
+from collections import defaultdict
 from typing import TYPE_CHECKING, List, Optional
 
 import hydra
@@ -167,6 +169,7 @@ class AppStateIsaacSimViewer(AppStateBase):
         self.episode: RearrangeEpisode = None
         scene_usd_file: str = None
         scene_navmesh_file: str = None
+        scene_name = ""
 
         if self._app_data and self._session:
             assert hasattr(self._app_cfg, "episode_dataset")
@@ -257,6 +260,11 @@ class AppStateIsaacSimViewer(AppStateBase):
         # load episode contents
         if self.episode is not None:
             self.load_episode_contents()
+        self.load_semantic_scene(
+            "data/hssd-hab/semantics/scenes/"
+            + scene_name
+            + ".semantic_config.json"
+        )
 
         self._hide_gui = False
         self._is_recording = False
@@ -282,6 +290,12 @@ class AppStateIsaacSimViewer(AppStateBase):
         self._start_time = time.time()
         # this tracks the relative time from start_time
         self._timer = 0.0
+
+    def load_semantic_scene(self, scene_descriptor: str) -> None:
+        """
+        Side-loads the semantic metadata from a JSON file to import region logic.
+        """
+        self._sim.load_semantic_scene_descriptor(scene_descriptor)
 
     def load_episode_dataset(self, dataset_file: str):
         """
@@ -486,6 +500,47 @@ class AppStateIsaacSimViewer(AppStateBase):
             # load initial base position if configured
             initial_pos = mn.Vector3(*self._app_cfg.initial_robot_position)
             self.robot.set_root_pose(pos=initial_pos)
+        elif self.episode is not None and len(self._rigid_objects) > 0:
+            # place robot in a region containing most objects
+            obj_region_counts: defaultdict = defaultdict(int)
+            max_region: int = None
+            for obj in self._rigid_objects:
+                possible_regions = (
+                    self._sim.semantic_scene.get_regions_for_point(
+                        obj.translation
+                    )
+                )
+                for rix in possible_regions:
+                    obj_region_counts[rix] += 1
+                    if (
+                        max_region is None
+                        or obj_region_counts[max_region]
+                        < obj_region_counts[rix]
+                    ):
+                        max_region = rix
+            assert max_region is not None
+
+            # we have a region, now sample a navmesh point
+            nav_point = self._sim.pathfinder.get_random_navigable_point()
+            nav_samples = 0
+            max_nav_samples = 900
+            # TODO: we use navmeshes closest obstacle as a proxy for collision detection. We should implement that for Isaac or pre-sample valid poses from Habitat-Bullet and cache them.
+            while nav_samples < max_nav_samples and (
+                max_region
+                not in self._sim.semantic_scene.get_regions_for_point(
+                    nav_point
+                )
+                or self._sim.pathfinder.distance_to_closest_obstacle(nav_point)
+                < 0.6
+            ):
+                nav_point = self._sim.pathfinder.get_random_navigable_point()
+                nav_samples += 1
+            assert nav_samples < max_nav_samples
+            self.robot.set_root_pose(pos=nav_point)
+            print(
+                f"self._sim.pathfinder.distance_to_closest_obstacle(nav_point) = {self._sim.pathfinder.distance_to_closest_obstacle(nav_point)}"
+            )
+
         else:
             # place the robot on the navmesh
             self.robot.set_root_pose(
@@ -494,6 +549,11 @@ class AppStateIsaacSimViewer(AppStateBase):
 
         if hasattr(self._app_cfg, "initial_robot_rotation"):
             self.robot.base_rot = self._app_cfg.initial_robot_rotation
+        else:
+            self.robot.base_rot = random.random() * mn.math.pi * 2 - mn.math.pi
+            print(
+                f"Setting random robot initial rotation = {self.robot.base_rot}"
+            )
 
     def draw_lookat(self):
         if self._hide_gui:
@@ -1099,6 +1159,9 @@ class AppStateIsaacSimViewer(AppStateBase):
             self.robot.set_root_pose(
                 pos=self._sim.pathfinder.get_random_navigable_point()
             )
+
+        if gui_input.get_key_down(KeyCode.M):
+            self.set_robot_base_initial_state()
 
         # cache a pose
         if gui_input.get_key_down(KeyCode.T):

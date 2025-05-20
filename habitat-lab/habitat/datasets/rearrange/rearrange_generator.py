@@ -248,6 +248,9 @@ class RearrangeEpisodeGenerator:
                     constrain_to_largest_nav_island=obj_sampler_info[
                         "params"
                     ].get("constrain_to_largest_nav_island", False),
+                    single_region=obj_sampler_info["params"].get(
+                        "single_region", False
+                    ),
                 )
             else:
                 logger.info(
@@ -460,15 +463,15 @@ class RearrangeEpisodeGenerator:
         if verbose:
             pbar = tqdm(total=num_episodes)
         while len(generated_episodes) < num_episodes:
-            try:
-                self._scene_sampler.set_cur_episode(len(generated_episodes))
-                new_episode = self.generate_single_episode()
-            except Exception as e:
-                new_episode = None
-                logger.error(f"Generation failed with exception: {e}")
-                import traceback
+            # try:
+            self._scene_sampler.set_cur_episode(len(generated_episodes))
+            new_episode = self.generate_single_episode()
+            # except Exception as e:
+            #     new_episode = None
+            #     logger.error(f"Generation failed with exception: {e}")
+            #     import traceback
 
-                traceback.print_exc()
+            # traceback.print_exc()
             if new_episode is None:
                 failed_episodes += 1
                 continue
