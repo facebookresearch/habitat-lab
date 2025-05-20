@@ -39,8 +39,8 @@ isaac_robot_teleop:
   lock_pc_camera_to_robot: True
   #optionally force the initial state of the robot (will be snapped to namvmesh)
   #NOTE: these values initialize in the kitchen for scene 103997403_171030405
-  initial_robot_position: [-11.4, 0, -3.2]
-  initial_robot_rotation: -1.7 # [-pi, pi]
+  #initial_robot_position: [-11.4, 0, -3.2]
+  #initial_robot_rotation: -1.7 # [-pi, pi]
 
   #relative paths to the directories containing navmeshes and usd scene files
   usd_scene_path: "../../../data/usd/scenes/"
@@ -52,8 +52,9 @@ isaac_robot_teleop:
   #navmesh_path: "data/Fremont-Knuckles/navmeshes/"
 
   # OR initialize by episode. These will take precedent when provided
-  episode_dataset: "data/datasets/hitl_teleop_episodes.json.gz"
-  episode_index: 2
+  #episode_dataset: "data/datasets/hitl_teleop_episodes.json.gz"
+  episode_dataset: "data/datasets/hitl_teleop_episodes_single_region.json.gz"
+  episode_index: 1
 
   #physx configuration settings
   #applied to all rigid objects added to the scene (e.g. from Episodes)

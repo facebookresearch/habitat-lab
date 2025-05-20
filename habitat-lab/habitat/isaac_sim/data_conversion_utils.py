@@ -1035,14 +1035,24 @@ if __name__ == "__main__":
     # convert_urdf_test()
 
     # convert a scene
+    scenes = []
+    scenes = [
+        "103997403_171030405",
+        "103997445_171030492",
+        "102817140",
+        "106879044_174887172",
+    ]
     if True:
         # NOTE: HitL client app expects data/hssd-hab/ pathing
-        convert_hab_scene(
-            "data/hssd-hab/scenes-articulated/103997403_171030405.scene_instance.json",
-            project_root_folder="./",
-            enable_collision_for_stage=True,
-            overwrite_usd=True,
-        )
+        for scene_name in scenes:
+            convert_hab_scene(
+                "data/hssd-hab/scenes-articulated/"
+                + scene_name
+                + ".scene_instance.json",
+                project_root_folder="./",
+                enable_collision_for_stage=True,
+                overwrite_usd=True,
+            )
 
     # convert YCB dataset
     convert_objects_folder_to_usd(
