@@ -28,6 +28,10 @@ class AppStateReset(AppStateBase):
         # Kick all users.
         self._kick_all_users()
 
+        # Reset Isaac.
+        isaac_wrapper = self._app_data.isaac_wrapper
+        isaac_wrapper.recreate_world()
+
     def get_next_state(self) -> Optional[AppStateBase]:
         # Wait for users to be kicked.
         if len(self._app_data.connected_users) == 0:

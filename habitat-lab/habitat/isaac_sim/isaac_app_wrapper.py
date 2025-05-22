@@ -80,8 +80,14 @@ class IsaacAppWrapper:
             self._simulation_app, world, usd_visualizer
         )
 
+    def recreate_world(self):
+        service = self._service
+        service.world.clear()
+        service.world.clear_instance()
+        service._world = World()
+
     @property
-    def service(self):
+    def service(self) -> IsaacService:
         return self._service
 
     # must call this before rendering in habitat-sim!

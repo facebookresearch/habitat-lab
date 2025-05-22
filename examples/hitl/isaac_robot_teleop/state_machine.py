@@ -9,6 +9,7 @@ from app_data import AppData
 from app_state_base import AppStateBase
 from app_states import create_app_state_reset
 
+from habitat.isaac_sim.isaac_app_wrapper import IsaacAppWrapper
 from habitat_hitl.app_states.app_service import AppService
 from habitat_hitl.app_states.app_state_abc import AppState
 from habitat_hitl.core.types import ConnectionRecord, DisconnectionRecord
@@ -25,8 +26,13 @@ class StateMachine(AppState):
         app_service: AppService,
     ):
         self._app_service = app_service
+        isaac_wrapper = IsaacAppWrapper(
+            app_service.sim,
+            headless=True,
+        )
         self._app_data = AppData(
-            app_service.hitl_config.networking.max_client_count
+            max_user_count=app_service.hitl_config.networking.max_client_count,
+            isaac_wrapper=isaac_wrapper,
         )
         self._app_state: AppStateBase = create_app_state_reset(
             app_service, self._app_data

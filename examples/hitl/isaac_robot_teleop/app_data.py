@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from habitat.isaac_sim.isaac_app_wrapper import IsaacAppWrapper
 from habitat_hitl.core.types import ConnectionRecord
 
 
@@ -12,6 +13,7 @@ class AppData:
     Application data shared by all states.
     """
 
-    def __init__(self, max_user_count: int):
+    def __init__(self, max_user_count: int, isaac_wrapper: IsaacAppWrapper):
         self.max_user_count = max_user_count
         self.connected_users: dict[int, ConnectionRecord] = {}
+        self.isaac_wrapper = isaac_wrapper

@@ -138,17 +138,13 @@ class AppStateIsaacSimViewer(AppStateBase):
         self._ik: DifferentialInverseKinematics = (
             DifferentialInverseKinematics()
         )
-
-        # Either the HITL app is headless or Isaac is headless. They can't both spawn a window.
-        # do_isaac_headless = (
-        #    not self._app_service.hitl_config.experimental.headless.do_headless
-        # )
-        # TODO: this was toggled on headless, but should be used only when running locally
-        do_isaac_headless = True
-
-        self._isaac_wrapper = IsaacAppWrapper(
-            self._sim, headless=do_isaac_headless
-        )
+        if app_data is None:
+            self._isaac_wrapper = IsaacAppWrapper(
+                self._sim,
+                headless=True,
+            )
+        else:
+            self._isaac_wrapper = app_data.isaac_wrapper
         isaac_world = self._isaac_wrapper.service.world
         self._usd_visualizer = self._isaac_wrapper.service.usd_visualizer
 
