@@ -127,6 +127,7 @@ class AppStateIsaacSimViewer(AppStateBase):
         assert not self._app_service.hitl_config.camera.first_person_mode
 
         self.cursor_follow_robot = self._app_cfg.lock_pc_camera_to_robot
+        self._draw_debug_shapes = self._app_cfg.draw_debug_shapes
         self._cursor_pos: mn.Vector3 = mn.Vector3()
         self._xr_cursor_pos: mn.Vector3 = mn.Vector3()
         self._camera_helper.update(self._cursor_pos, 0.0)
@@ -1328,16 +1329,18 @@ class AppStateIsaacSimViewer(AppStateBase):
         self._cam_transform = self._camera_helper.get_cam_transform()
         post_sim_update_dict["cam_transform"] = self._cam_transform
 
-        # draw lookat ring
-        self.draw_lookat()
-        self.debug_draw_quest()
-        # draw the robot frame
-        self.robot.draw_debug(self._app_service.gui_drawer)
-        self.debug_draw_hands()
-        if self.dof_editor is not None:
-            self.dof_editor.debug_draw(
-                self._app_service.gui_drawer, self._cam_transform.translation
-            )
+        if self._draw_debug_shapes:
+            # draw lookat ring
+            self.draw_lookat()
+            self.debug_draw_quest()
+            # draw the robot frame
+            self.robot.draw_debug(self._app_service.gui_drawer)
+            self.debug_draw_hands()
+        
+            if self.dof_editor is not None:
+                self.dof_editor.debug_draw(
+                    self._app_service.gui_drawer, self._cam_transform.translation
+                )
         self.highlight_added_objects()
 
         self._update_help_text()

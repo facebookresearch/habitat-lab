@@ -35,6 +35,7 @@ habitat_hitl:
       skinning: True
 
 isaac_robot_teleop:
+  draw_debug_shapes: True
   camera_move_speed: 0.1
   lock_pc_camera_to_robot: True
   #optionally force the initial state of the robot (will be snapped to namvmesh)

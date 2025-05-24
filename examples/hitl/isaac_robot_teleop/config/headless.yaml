@@ -22,6 +22,7 @@ habitat_hitl:
     skinning: True
 
 isaac_robot_teleop:
+  draw_debug_shapes: False
   camera_move_speed: 0.1
   lock_pc_camera_to_robot: True
   usd_scene_path: "../../../data/usd/scenes/"
