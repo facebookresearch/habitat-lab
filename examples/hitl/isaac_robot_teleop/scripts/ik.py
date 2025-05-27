@@ -4,14 +4,19 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from ros_pymomentum.srv import InverseKinematics
+from geometry_msgs.msg import Pose
+from sensor_msgs.msg import JointState
+import rclpy
+from rclpy.node import Node
+import numpy as np
+
 from typing import Optional
 
-import magnum as mn
-import numpy as np
-import roboticstoolbox as rtb
-from pydrake.solvers import MathematicalProgram, Solve
-from spatialmath import SE3, Quaternion
 
+import roboticstoolbox as rtb
+from spatialmath import SE3, Quaternion
+import magnum as mn
 
 def to_ik_pose(
     legacy_tuple: Optional[tuple[mn.Vector3, mn.Quaternion]]
@@ -44,77 +49,48 @@ def to_ik_pose(
     return pose
 
 
-class DifferentialInverseKinematics:
+rclpy.init(args=None)
+
+class DifferentialInverseKinematics(Node):
+
     def __init__(self):
+        super().__init__('inverse_kinematics_client')
+        self.cli = self.create_client(InverseKinematics, 'pymomentum_ik')
+        while not self.cli.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('service not available, waiting again...')
+        self.req = InverseKinematics.Request()
+        print("IK client initialized")
         self.robot = rtb.models.Panda()
 
-        # Change epsilon to change weightage of secondary task
-        # 0 to have no secondary tasks
-        self.epsilon = 0.1
 
     def get_ee_T(self):
         """
         Get the end effector transform in robot base space as a Matrix4.
         """
-        return mn.Matrix4(self.robot.fkine(self.robot.q).A)
+        return mn.Matrix4(self.robot.fkine(self.robot.q, end=self.robot.links[7]).A)
 
-    def inverse_kinematics(self, pose, q):
-        if len(q) != 7:
-            raise ValueError("q must be of length 7")
+    def inverse_kinematics(self, pose, current_joint_positions):
 
-        self.robot.q = q
+        _pose = Pose()
+        _pose.position.x = pose.x
+        _pose.position.y = pose.y
+        _pose.position.z = pose.z
+        _pose.orientation.x = pose.UnitQuaternion().A[1]
+        _pose.orientation.y = pose.UnitQuaternion().A[2]
+        _pose.orientation.z = pose.UnitQuaternion().A[3]
+        _pose.orientation.w = pose.UnitQuaternion().A[0]
 
-        jacobian = self.robot.jacobe(self.robot.q)
+        _current_joint_positions = JointState()
+        _current_joint_positions.position = current_joint_positions
 
-        v, _ = rtb.p_servo(
-            self.robot.fkine(self.robot.q, end=self.robot.links[7]), pose, 5
-        )
 
-        # Create a MathematicalProgram
-        prog = MathematicalProgram()
+        self.req.end_effector_pose = _pose
+        self.req.current_joint_positions = _current_joint_positions
+        self.future = self.cli.call_async(self.req)
+        rclpy.spin_until_future_complete(self, self.future)
+        response = self.future.result()
 
-        # Create a joint velocity decision variable
-        qd = prog.NewContinuousVariables(7, "qd")
+        self.robot.q = np.array(response.desired_joint_positions.position)
+        return self.robot.q
 
-        max_qd = [2.1750, 2.1750, 2.1750, 2.1750, 2.61, 2.61, 2.61]
-        max_q = [2.8973, 1.7628, 2.8973, -0.7315114, 2.8973, 3.7525, 2.8973]
-        min_q = [-2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973]
-        # max_qdd = [15, 7.5, 10, 12.5, 15, 20, 20]
-
-        # Add constraints to limit the joint velocities
-        # for _i in range(7):
-        #     prog.AddConstraint(qd[_i] <= max_qd[_i])
-        #     prog.AddConstraint(qd[_i] >= -max_qd[_i])
-        #     prog.AddConstraint(self.robot.q[_i] + qd[_i] * 0.03 <= max_q[_i])
-        #     prog.AddConstraint(self.robot.q[_i] + qd[_i] * 0.03 >= min_q[_i])
-
-        # Add a cost to minimize the squared joint velocities
-        error = jacobian @ qd - v
-
-        K = [10, 10, 10, 10, 10, 10, 10]
-        q0 = [(max_q[i] - min_q[i]) / 2 for i in range(7)]
-
-        # Do joint centering in the null space
-        joint_centering = self.epsilon * (
-            (np.eye(7) - np.linalg.pinv(jacobian) @ jacobian)
-            @ (qd - K * (np.array(q0) - self.robot.q))
-        )
-        prog.AddCost(
-            error.dot(error)
-            + 0.05 * qd.dot(qd)
-            # + joint_centering.dot(joint_centering)
-        )
-
-        # alpha = prog.NewContinuousVariables(6, "alpha")
-        # prog.AddCost(-sum(alpha))
-        # for i in range(6):
-        #     prog.AddLinearConstraint(alpha[i] >= 0.01)
-        #     prog.AddLinearConstraint(alpha[i] <= 1)
-        #     prog.AddLinearConstraint(alpha[i] * v[i] == (jacobian @ qd)[i])
-
-        result = Solve(prog)
-        if result.is_success():
-            return result.GetSolution(qd) / 30 + self.robot.q
-        else:
-            print("Inverse kinematics failed")
-            return self.robot.q
+    
