@@ -4,9 +4,16 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import os
-from typing import TYPE_CHECKING, List
+import torch # hack: must import early, before habitat or isaac
+# make sure we restore these flags after import (habitat_sim needs RTLD_GLOBAL but that breaks Isaac)
+import sys
+original_flags = sys.getdlopenflags()
+import magnum
+import habitat_sim
+sys.setdlopenflags(original_flags)
 
+import numpy as np
+import argparse
 import hydra
 import magnum as mn
 
@@ -46,9 +53,13 @@ def bind_physics_material_to_hierarchy(
     static_friction,
     dynamic_friction,
     restitution,
-):
-    from omni.isaac.core.materials.physics_material import PhysicsMaterial
-    from pxr import UsdShade
+):  
+    from pxr import UsdShade, UsdPhysics
+    # Isaac 4.5.0 mostly still supports our outdated 4.2.0-style imports but this one fails
+    try:
+        from omni.isaac.core.materials.physics_material import PhysicsMaterial
+    except ImportError:
+        from isaacsim.core.api.materials.physics_material import PhysicsMaterial
 
     # material_path = f"/PhysicsMaterials/{material_name}"
     # material_prim = stage.DefinePrim(material_path, "PhysicsMaterial")
@@ -101,10 +112,12 @@ class AppStateIsaacSimViewer(AppState):
         self._cursor_pos = mn.Vector3(-3.6, 0.8, -7.22)
         self._camera_helper.update(self._cursor_pos, 0.0)
 
-        # Either the HITL app is headless or Isaac is headless. They can't both spawn a window.
-        do_isaac_headless = (
-            not self._app_service.hitl_config.experimental.headless.do_headless
-        )
+        # self._app_service.reconfigure_sim("data/fpss/hssd-hab-siro.scene_dataset_config.json", "102817140.scene_instance.json")
+
+        # self._spot = SpotWrapper(self._sim)
+
+        # always do headless Isaac. Consider setting to True locally for debugging with Isaac GUI.
+        do_isaac_headless = True
 
         self._isaac_wrapper = IsaacAppWrapper(
             self._sim, headless=do_isaac_headless

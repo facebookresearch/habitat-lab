@@ -75,8 +75,8 @@ class _InstanceGroup:
     def flush_to_hab_sim(self):
         if len(self._prim_path_to_render_asset) == 0:
             return
-
-        positions, orientations = self._xform_prim_view.get_world_poses()
+        # pass usd=False to instead use Fabric; which is much faster
+        positions, orientations = self._xform_prim_view.get_world_poses(usd=False)
 
         positions, orientations = isaac_prim_utils.isaac_to_habitat(
             positions, orientations

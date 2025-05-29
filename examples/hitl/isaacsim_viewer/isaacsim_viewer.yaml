@@ -46,6 +46,8 @@ habitat_hitl:
   #   headless:
   #     do_headless: True
   # window: ~
+  
+  target_sps: 500  # temp
 
   window:
     title: "IsaacSim Viewer"
