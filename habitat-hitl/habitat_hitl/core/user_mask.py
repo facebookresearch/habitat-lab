@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from enum import IntFlag
 from math import log2
-from typing import Any, Final, Generator, List
+from typing import Any, Generator, List
 
 
 class Mask(IntFlag):
@@ -20,9 +20,9 @@ class Mask(IntFlag):
     user_1_and_3 = Mask.from_index(1) | Mask.from_index(3)
     """
 
-    NONE: Final[int] = 0
-    ALL: Final[int] = ~0
-    MAX_VALUE: Final[int] = 32
+    NONE = 0
+    ALL = ~0
+    MAX_VALUE = 32
 
     @staticmethod
     def from_index(index: int) -> Mask:
