@@ -8,10 +8,13 @@ from __future__ import annotations
 
 # Must call this before importing Habitat or Magnum.
 # fmt: off
-import ctypes
+import torch # hack: must import early, before habitat or isaac
+# make sure we restore these flags after import (habitat_sim needs RTLD_GLOBAL but that breaks Isaac)
 import sys
-
-sys.setdlopenflags(sys.getdlopenflags() | ctypes.RTLD_GLOBAL)
+original_flags = sys.getdlopenflags()
+import magnum
+import habitat_sim
+sys.setdlopenflags(original_flags)
 # fmt: on
 
 import hydra
