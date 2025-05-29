@@ -6,16 +6,20 @@
 
 import os
 import random
+import sys
 import time
 from collections import defaultdict
 from typing import TYPE_CHECKING, List, Optional
 
-import torch # hack: must import early, before habitat or isaac
 # make sure we restore these flags after import (habitat_sim needs RTLD_GLOBAL but that breaks Isaac)
-import sys
+# hack: must import torch early, before habitat or isaac
+import torch  # noqa: F401
+
 original_flags = sys.getdlopenflags()
 import magnum
-import habitat_sim
+
+import habitat_sim  # noqa: F401
+
 sys.setdlopenflags(original_flags)
 
 import hydra
@@ -85,7 +89,9 @@ def bind_physics_material_to_hierarchy(
     try:
         from omni.isaac.core.materials.physics_material import PhysicsMaterial
     except ImportError:
-        from isaacsim.core.api.materials.physics_material import PhysicsMaterial
+        from isaacsim.core.api.materials.physics_material import (
+            PhysicsMaterial,
+        )
 
     # material_path = f"/PhysicsMaterials/{material_name}"
     # material_prim = stage.DefinePrim(material_path, "PhysicsMaterial")
@@ -1349,10 +1355,11 @@ class AppStateIsaacSimViewer(AppStateBase):
             # draw the robot frame
             self.robot.draw_debug(self._app_service.gui_drawer)
             self.debug_draw_hands()
-        
+
             if self.dof_editor is not None:
                 self.dof_editor.debug_draw(
-                    self._app_service.gui_drawer, self._cam_transform.translation
+                    self._app_service.gui_drawer,
+                    self._cam_transform.translation,
                 )
         self.highlight_added_objects()
 
