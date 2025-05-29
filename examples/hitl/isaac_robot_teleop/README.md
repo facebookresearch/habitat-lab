@@ -15,8 +15,9 @@ conda activate habitat-isaac
 
 ### Ubuntu 22.04
 ```
-# install Isaac Sim
-pip install isaacsim==4.2.0.2 isaacsim-extscache-physics==4.2.0.2 isaacsim-extscache-kit==4.2.0.2 isaacsim-extscache-kit-sdk==4.2.0.2 --extra-index-url https://pypi.nvidia.com
+# install Isaac Sim 4.5
+pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cu121
+pip install 'isaacsim[all,extscache]==4.5.0' --extra-index-url https://pypi.nvidia.com
 
 # verify install and accept EULA
 python -c "import isaacsim; print(isaacsim)"

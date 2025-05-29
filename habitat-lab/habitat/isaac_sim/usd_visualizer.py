@@ -5,6 +5,7 @@
 from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, List
+import time
 
 import magnum as mn
 
@@ -75,6 +76,7 @@ class _InstanceGroup:
     def flush_to_hab_sim(self):
         if len(self._prim_path_to_render_asset) == 0:
             return
+        start_time = time.time()
         # pass usd=False to instead use Fabric; which is much faster
         positions, orientations = self._xform_prim_view.get_world_poses(usd=False)
 
@@ -85,6 +87,8 @@ class _InstanceGroup:
         self._render_instance_helper.set_world_poses(
             np.ascontiguousarray(positions), np.ascontiguousarray(orientations)
         )
+        flush_time = time.time()-start_time
+        print(f"Tform flush time: {flush_time} for shape {positions.shape}")
 
 
 class _InstanceGroupType(Enum):

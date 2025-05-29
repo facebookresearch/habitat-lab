@@ -134,8 +134,8 @@ class IsaacRigidObjectWrapper:
         """
         clears velocities for post-teleport stability
         """
-        self._rigid_prim.set_angular_velocity(np.ndarray([0, 0, 0]))
-        self._rigid_prim.set_linear_velocity(np.ndarray([0, 0, 0]))
+        self._rigid_prim.set_angular_velocity(np.array([0.0, 0.0, 0.0]))
+        self._rigid_prim.set_linear_velocity(np.array([0.0, 0.0, 0.0]))
 
 
 class IsaacRigidObjectManager:
