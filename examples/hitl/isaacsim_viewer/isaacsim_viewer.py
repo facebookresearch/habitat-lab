@@ -4,6 +4,14 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import torch # hack: must import early, before habitat or isaac
+# make sure we restore these flags after import (habitat_sim needs RTLD_GLOBAL but that breaks Isaac)
+import sys
+original_flags = sys.getdlopenflags()
+import magnum
+import habitat_sim
+sys.setdlopenflags(original_flags)
+
 import numpy as np
 import argparse
 import hydra
@@ -40,7 +48,11 @@ import habitat_sim  # unfortunately we can't import this earlier
 def bind_physics_material_to_hierarchy(stage, root_prim, material_name, static_friction, dynamic_friction, restitution):
     
     from pxr import UsdShade, UsdPhysics
-    from omni.isaac.core.materials.physics_material import PhysicsMaterial
+    # Isaac 4.5.0 mostly still supports our outdated 4.2.0-style imports but this one fails
+    try:
+        from omni.isaac.core.materials.physics_material import PhysicsMaterial
+    except ImportError:
+        from isaacsim.core.api.materials.physics_material import PhysicsMaterial
 
     # material_path = f"/PhysicsMaterials/{material_name}"
     # material_prim = stage.DefinePrim(material_path, "PhysicsMaterial")
@@ -466,8 +478,8 @@ class AppStateIsaacSimViewer(AppState):
 
         # self._spot = SpotWrapper(self._sim)
 
-        # Either the HITL app is headless or Isaac is headless. They can't both spawn a window.
-        do_isaac_headless = not self._app_service.hitl_config.experimental.headless.do_headless
+        # always do headless Isaac. Consider setting to True locally for debugging with Isaac GUI.
+        do_isaac_headless = True
 
         # self._isaac_wrapper = isaacsim_wrapper.IsaacSimWrapper(headless=do_isaac_headless)
         self._isaac_wrapper = IsaacAppWrapper(self._sim, headless=do_isaac_headless)

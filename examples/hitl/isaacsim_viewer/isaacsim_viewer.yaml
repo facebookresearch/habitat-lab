@@ -47,6 +47,8 @@ habitat_hitl:
   #     do_headless: True
   # window: ~
   
+  target_sps: 500  # temp
+
   window:
     title: "IsaacSim Viewer"
     width: 1920
