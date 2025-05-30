@@ -66,7 +66,7 @@ class IsaacAppWrapper:
 
         usd_visualizer = None
         if hab_sim:
-            usd_visualizer = UsdVisualizer(world.stage, hab_sim)
+            usd_visualizer = UsdVisualizer(world, hab_sim)
         self._service = IsaacService(self._simulation_app, world, usd_visualizer)        
 
     @property

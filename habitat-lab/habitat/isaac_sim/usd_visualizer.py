@@ -28,11 +28,13 @@ import numpy as np
 
 
 class _InstanceGroup:
-    def __init__(self, hab_sim):
+    def __init__(self, hab_sim, isaac_world, is_rigid=False):
         self._prim_path_to_render_asset = {}
         self._xform_prim_view = None
         isaac_identity_rotation_wxyz = [1.0, 0.0, 0.0, 0.0]
         self._render_instance_helper = RenderInstanceHelper(hab_sim, isaac_identity_rotation_wxyz)
+        self._is_rigid = is_rigid
+        self._world = isaac_world
 
     def set_dirty(self): # todo: add underscore and rename to explain what is dirty
         self._xform_prim_view = None
@@ -47,9 +49,16 @@ class _InstanceGroup:
         # todo: handle case of no prims (empty scene)
         prim_paths = list(self._prim_path_to_render_asset.keys())
 
-        # lazy import
-        from omni.isaac.core.prims.xform_prim_view import XFormPrimView
-        self._xform_prim_view = XFormPrimView(prim_paths)
+        if self._is_rigid:
+            # lazy import
+            from omni.isaac.core.prims.rigid_prim_view import RigidPrimView
+            self._xform_prim_view = RigidPrimView(prim_paths)
+            physics_sim_view = self._world.physics_sim_view
+            assert physics_sim_view
+            self._xform_prim_view.initialize(physics_sim_view)
+        else:
+            from omni.isaac.core.prims.xform_prim_view import XFormPrimView
+            self._xform_prim_view = XFormPrimView(prim_paths)
 
         self._render_instance_helper.clear_all_instances()
         for prim_path in prim_paths:
@@ -76,14 +85,15 @@ class _InstanceGroupType(Enum):
 
 class UsdVisualizer:
 
-    def __init__(self, isaac_stage, hab_sim):
+    def __init__(self, isaac_world, hab_sim):
 
-        self._stage = isaac_stage
+        self._stage = isaac_world.stage
+        self._world = isaac_world
         self._were_prims_removed = False
 
         self._instance_groups = {}
         for group_type in _InstanceGroupType:
-            self._instance_groups[group_type] = _InstanceGroup(hab_sim)
+            self._instance_groups[group_type] = _InstanceGroup(hab_sim, self._world, is_rigid=group_type==_InstanceGroupType.DYNAMIC)
         
         pass
 
