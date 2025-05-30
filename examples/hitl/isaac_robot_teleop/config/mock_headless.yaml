@@ -30,8 +30,8 @@ isaac_robot_teleop:
   lock_pc_camera_to_robot: True
   #optionally force the initial state of the robot (will be snapped to namvmesh)
   #NOTE: these values initialize in the kitchen for scene 103997403_171030405
-  initial_robot_position: [-11.4, 0, -3.2]
-  initial_robot_rotation: -1.7 # [-pi, pi]
+  #initial_robot_position: [-11.4, 0, -3.2]
+  #initial_robot_rotation: -1.7 # [-pi, pi]
 
   #relative paths to the directories containing navmeshes and usd scene files
   usd_scene_path: "../../../data/usd/scenes/"
@@ -39,17 +39,17 @@ isaac_robot_teleop:
 
   scene_name: "103997403_171030405"
   # OR initialize by episode. These will take precedent when provided
-  episode_dataset: "data/datasets/hitl_teleop_episodes.json.gz"
+  episode_dataset: "data/datasets/hitl_teleop_episodes_single_region.json.gz"
   episode_index: 0
 
   #physx configuration settings
   #applied to all rigid objects added to the scene (e.g. from Episodes)
-  object_static_friction: 50
-  object_dynamic_friction: 50
+  object_static_friction: 20
+  object_dynamic_friction: 20
   object_restitution: 0
   #applied to the contents of the scene (architecture, furniture, etc...)
-  stage_static_friction: 100
-  stage_dynamic_friction: 100
+  stage_static_friction: 10
+  stage_dynamic_friction: 10
   stage_restitution: 0
 
 defaults:

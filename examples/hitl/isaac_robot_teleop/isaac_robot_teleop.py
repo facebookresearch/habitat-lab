@@ -150,6 +150,7 @@ class AppStateIsaacSimViewer(AppStateBase):
         self._cursor_pos: mn.Vector3 = mn.Vector3()
         self._xr_cursor_pos: mn.Vector3 = mn.Vector3()
         self._camera_helper.update(self._cursor_pos, 0.0)
+        self._first_xr_update = True
         self.xr_pose_adapter = XRPoseAdapter()
         self.xr_origin_offset = mn.Vector3(0, 0, 0)
         self.xr_origin_rotation = mn.Quaternion()
@@ -176,6 +177,9 @@ class AppStateIsaacSimViewer(AppStateBase):
         )
 
         self._frame_recorder = FrameRecorder(self)
+
+        # this variable is triggered by the user to indicate finished task
+        self.task_finished_signaled = False
 
         usd_scenes_path = os.path.join(dir_path, self._app_cfg.usd_scene_path)
         navmeshes_path = self._app_cfg.navmesh_path
@@ -767,6 +771,10 @@ class AppStateIsaacSimViewer(AppStateBase):
     def handle_xr_input(self, dt: float):
         if self._app_service.remote_client_state is None:
             return
+        elif self._first_xr_update:
+            # when the XR user first join, do a sync automatically
+            self._first_xr_update = False
+            self.sync_xr_local_state()
 
         xr_input = self._app_service.remote_client_state.get_xr_input(0)
         left = xr_input.left_controller
@@ -797,7 +805,7 @@ class AppStateIsaacSimViewer(AppStateBase):
 
         if left.get_button_down(XRButton.START):
             print("pressed START left")
-            # NOTE: reserved by QuestReader for now...
+            self.task_finished_signaled = True
         if left.get_button_up(XRButton.START):
             pass
 
@@ -1375,8 +1383,7 @@ class AppStateIsaacSimViewer(AppStateBase):
             self._session.session_recorder.record_frame(frame_data)
 
     def _is_episode_finished(self) -> bool:
-        # TODO: Add episode termination condition.
-        return False
+        return self.task_finished_signaled
 
     def get_next_state(self) -> Optional[AppStateBase]:
         """When running from the state machine, this function determines whether the state must be changed."""
