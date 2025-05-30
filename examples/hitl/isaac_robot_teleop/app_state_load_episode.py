@@ -16,7 +16,9 @@ from app_states import (
 from session import Session
 
 from habitat_hitl.app_states.app_service import AppService
-from habitat_hitl.core.client_message_manager import MAIN_VIEWPORT
+from habitat_hitl.core.client_message_manager import (  # noqa: F401
+    MAIN_VIEWPORT,
+)
 from habitat_hitl.core.user_mask import Mask
 
 
@@ -65,20 +67,19 @@ class AppStateLoadEpisode(AppStateBase):
         if self._frame_number == 1:
             self._increment_episode()
         # Once the scene loaded, show a top-down view.
-        elif self._frame_number > 1:
+        elif self._frame_number > 20:
             # Wait for clients to signal that content finished loading on their end.
             # HACK: The server isn't immediately aware that clients are loading. For now, we simply skip some frames.
             # TODO: Use the keyframe ID from 'ClientMessageManager.set_server_keyframe_id()' to find the when the loading state is up-to-date.
-            if self._frame_number > 20:
-                any_client_loading = False
-                for user_index in range(self._app_data.max_user_count):
-                    if self._app_service.remote_client_state._client_loading[
-                        user_index
-                    ]:
-                        any_client_loading = True
-                        break
-                if not any_client_loading:
-                    self._loading = False
+            any_client_loading = False
+            for user_index in range(self._app_data.max_user_count):
+                if self._app_service.remote_client_state._client_loading[
+                    user_index
+                ]:
+                    any_client_loading = True
+                    break
+            if not any_client_loading:
+                self._loading = False
 
         self._frame_number += 1
 
@@ -109,6 +110,9 @@ class AppStateLoadEpisode(AppStateBase):
         # Signal the clients that the scene has changed.
         client_message_manager = app_service.client_message_manager
         if client_message_manager:
+            # Reset Isaac internals
+            isaac_wrapper = self._app_data.isaac_wrapper
+            isaac_wrapper.recreate_world()
             client_message_manager.signal_scene_change(Mask.ALL)
 
         # Save a keyframe. This propagates the new content to the clients, initiating client-side loading.
