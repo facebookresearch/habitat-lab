@@ -75,12 +75,14 @@ class IsaacAppWrapper:
 
         usd_visualizer = None
         if hab_sim:
-            usd_visualizer = UsdVisualizer(world.stage, hab_sim)
+            usd_visualizer = UsdVisualizer(world, hab_sim)
         self._service = IsaacService(
             self._simulation_app, world, usd_visualizer
         )
 
     def recreate_world(self):
+        from omni.isaac.core import World
+
         service = self._service
         service.world.clear()
         service.world.clear_instance()

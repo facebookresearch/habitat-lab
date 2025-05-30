@@ -682,7 +682,7 @@ class RobotAppWrapper:
         # ]
 
         # beware this poses the object
-        self._xform_prim_view = self._create_xform_prim_view()
+        self._create_rigid_prim_view()
 
         # cache of states updated each step to reduce transform queries
         self._body_prim_states: Tuple[
@@ -1027,7 +1027,7 @@ class RobotAppWrapper:
         """
 
         try:
-            return self._xform_prim_view.prim_paths.index(prim_path)
+            return self._rigid_prim_view.prim_paths.index(prim_path)
         except ValueError:
             # not in the list
             return None
@@ -1094,7 +1094,7 @@ class RobotAppWrapper:
             )
         return joint_names_to_dof_ix
 
-    def _create_xform_prim_view(self):
+    def _create_rigid_prim_view(self):
         """
         Construct a rigid prim view over the rigid body elements of the robot.
         """
@@ -1126,15 +1126,18 @@ class RobotAppWrapper:
 
         self._body_prim_paths = prim_paths
 
-        from omni.isaac.core.prims.xform_prim_view import XFormPrimView
+        from omni.isaac.core.prims.rigid_prim_view import RigidPrimView
 
-        return XFormPrimView(prim_paths)
+        self._rigid_prim_view = RigidPrimView(prim_paths)
+        physics_sim_view = self._isaac_service.world.physics_sim_view
+        assert physics_sim_view
+        self._rigid_prim_view.initialize(physics_sim_view)
 
     def update_body_prim_states(self) -> None:
         """
         Pulls the world transforms of all links and converts them into habitat conventions.
         """
-        body_prim_states = self._xform_prim_view.get_world_poses()
+        body_prim_states = self._rigid_prim_view.get_world_poses(usd=False)
         rotations = []
         positions = []
         for ix in range(len(body_prim_states[0])):
@@ -1194,7 +1197,7 @@ class RobotAppWrapper:
 
         tform = mn.Matrix4.from_(body_rot.to_matrix(), body_pos)
 
-        prim_path = self._xform_prim_view.prim_paths[link_ix]
+        prim_path = self._rigid_prim_view.prim_paths[link_ix]
         parent_joint = self.get_joint_for_rigid_prim(prim_path)
         if parent_joint is not None:
             # this link has a parent joint so draw the joint circle
