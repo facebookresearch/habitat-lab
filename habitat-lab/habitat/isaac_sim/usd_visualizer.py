@@ -116,6 +116,16 @@ class UsdVisualizer:
                 is_rigid=group_type == _InstanceGroupType.DYNAMIC,
             )
 
+    def clear_render_instances(self):
+        """
+        Clears all instances from habitat-sim to prepare for a new scene.
+        """
+        print("CLEARED ALL RENDER GROUPS")
+        for _group_type, group in self._instance_groups.items():
+            group._render_instance_helper.clear_all_instances()
+        self._instance_groups = {}
+        # NOTE: at this point the UsdVisualizer object is not initialized and should be reconstructed with the new world object
+
     # def _get_isaac_identity_rotation_quaternion(self):
 
     #     from pxr import UsdGeom, Sdf

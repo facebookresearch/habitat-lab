@@ -113,6 +113,8 @@ class AppStateLoadEpisode(AppStateBase):
             # Reset Isaac internals
             isaac_wrapper = self._app_data.isaac_wrapper
             isaac_wrapper.recreate_world()
+            # reset Habitat internals to clear stale replay render content
+            self._app_service.reconfigure_sim("default", "NONE")
             client_message_manager.signal_scene_change(Mask.ALL)
 
         # Save a keyframe. This propagates the new content to the clients, initiating client-side loading.

@@ -30,6 +30,7 @@ def do_isaacsim_imports():
 class IsaacAppWrapper:
     def __init__(self, hab_sim, headless=True):
         self._headless = headless
+        self._hab_sim = hab_sim
 
         try:
             from isaacsim import SimulationApp
@@ -87,6 +88,11 @@ class IsaacAppWrapper:
         service.world.clear()
         service.world.clear_instance()
         service._world = World()
+        if service.usd_visualizer is not None:
+            service.usd_visualizer.clear_render_instances()
+            service._usd_visualizer = UsdVisualizer(
+                service._world, self._hab_sim
+            )
 
     @property
     def service(self) -> IsaacService:
