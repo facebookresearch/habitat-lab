@@ -35,7 +35,7 @@ linear_damping: 5
 #base velocity controller settings
 max_linear_speed: 1.0 #m/s
 max_angular_speed: 1.0 #rad/sec
-track_waypoints: True
+track_waypoints: False
 
 
 configuration_subsets:

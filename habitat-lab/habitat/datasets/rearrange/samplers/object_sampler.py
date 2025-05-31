@@ -132,9 +132,30 @@ class ObjectSampler:
             )
             parent_regions = sutils.get_object_regions(sim, parent_obj)
             for r, _ in parent_regions:
-                if r not in self.rec_regions:
-                    self.rec_regions[r] = []
-                self.rec_regions[r].append(rec)
+                # NOTE hack - test the region for navigability via distance to object heuristic
+                floor_point_attempts = 2
+                while floor_point_attempts > 0:
+                    region_floor_point = sutils.get_floor_point_in_region(
+                        sim, r, max_center_samples=0
+                    )
+                    if region_floor_point is None:
+                        # early exit if we can't find a point in the region at all
+                        floor_point_attempts = 0
+                    elif (
+                        sim.pathfinder.distance_to_closest_obstacle(
+                            region_floor_point
+                        )
+                        > 0.3
+                    ):
+                        break
+                    # else:
+                    #    print(sim.pathfinder.distance_to_closest_obstacle(region_floor_point))
+                    floor_point_attempts -= 1
+                if floor_point_attempts > 0:
+                    if r not in self.rec_regions:
+                        self.rec_regions[r] = []
+                    self.rec_regions[r].append(rec)
+                    # print(f"Found good region {r}")
 
         # now select the one region to use
         self.selected_region_index = list(self.rec_regions.keys())[

@@ -547,10 +547,10 @@ class AppStateIsaacSimViewer(AppStateBase):
             while nav_samples < max_nav_samples and (
                 max_region
                 not in self._sim.semantic_scene.get_regions_for_point(
-                    nav_point
+                    nav_point + mn.Vector3(0, 0.1, 0)
                 )
                 or self._sim.pathfinder.distance_to_closest_obstacle(nav_point)
-                < 0.6
+                < 0.25
             ):
                 nav_point = self._sim.pathfinder.get_random_navigable_point()
                 nav_samples += 1

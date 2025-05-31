@@ -5,13 +5,36 @@
     scene_sets:
       - name: "hitl"
         included_substrings:
-          - "103997403_171030405"
-          - "103997445_171030492"
-          - "102817140"
-          - "102817161" #test
-          - "106879044_174887172"
-          - "108294915_176710620" #test
-          - "108736677_177263328" #test
+          - "104862660_172226844"
+          #- "103997424_171030444" #doesn't load, isaac stalls
+          - "103997970_171031287" #ok
+          #- "103997919_171031233" #no scene loads in isaac (empty void)
+          - "104862669_172226853" #ok
+          - "102344193" #ok
+          - "108294897_176710602" # ok
+          - "104862501_172226556" #ok but large
+          - "108736722_177263382" #ok
+          #- "102817053" #AO in kitchen is rotated
+          - "107734254_176000121" #ok
+          #- "108736824_177263559" #ok
+          #- "102344115" #very tight studio space
+          #- "108294465_176709960" #tight small scene
+          - "103997643_171030747" #ok
+          - "108294558_176710095" #ok living area tight rooms
+          #- "108736872_177263607" #ok large
+          - "108294939_176710668" #ok
+          #- "105515337_173104347" #too tight for murp
+          - "104862621_172226772" #ok
+          #- "108736779_177263484" #commericial space and large
+          - "106879080_174887211" #ok
+          - "106366104_174226332" #ok
+          - "104862681_172226874" #ok
+          - "103997895_171031182" #seems ok, but couldn't sample in region
+          - "104348133_171513054" #ok
+          #- "104348394_171513453" #too tight for murp
+          - "106878945_174887058" #ok
+          - "108736635_177263256" #ok
+          - "108736884_177263634" #ok large
         excluded_substrings:
           - "NONE"
 
@@ -53,8 +76,8 @@
         #NOTE: specifies that all spawned objects should be in the same region
         single_region: True
         num_samples:
-        - 4
         - 6
+        - 10
         orientation_sampling: up
         nav_to_min_distance: 1.5
         constrain_to_largest_nav_island: False

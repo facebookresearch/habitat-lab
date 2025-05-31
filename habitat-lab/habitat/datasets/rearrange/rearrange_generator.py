@@ -463,13 +463,12 @@ class RearrangeEpisodeGenerator:
         if verbose:
             pbar = tqdm(total=num_episodes)
         while len(generated_episodes) < num_episodes:
-            # try:
-            self._scene_sampler.set_cur_episode(len(generated_episodes))
-            new_episode = self.generate_single_episode()
-            # except Exception as e:
-            #     new_episode = None
-            #     logger.error(f"Generation failed with exception: {e}")
-            #     import traceback
+            try:
+                self._scene_sampler.set_cur_episode(len(generated_episodes))
+                new_episode = self.generate_single_episode()
+            except Exception as e:
+                new_episode = None
+                logger.error(f"Generation failed with exception: {e}")
 
             # traceback.print_exc()
             if new_episode is None:
