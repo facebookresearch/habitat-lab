@@ -812,10 +812,12 @@ class AppStateIsaacSimViewer(AppStateBase):
         # RIGHT CONTROLLER BUTTONS
         # NOTE: recording toggle disabled when joining from session. Recording is required.
         if right.get_button_down(XRButton.ONE) and not self._session:
-            self._frame_recorder.recording = not self._frame_recorder.recording
-            print(
-                f"pressed one right, recording = {self._frame_recorder.recording}"
-            )
+            # self._frame_recorder.recording = not self._frame_recorder.recording
+            # print(
+            #    f"pressed one right, recording = {self._frame_recorder.recording}"
+            # )
+            # TODO: hook this up to pass/fail
+            pass
         if right.get_button_up(XRButton.ONE):
             pass
 
