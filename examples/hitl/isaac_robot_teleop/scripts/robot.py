@@ -1003,8 +1003,8 @@ class RobotAppWrapper:
 
         # draw an axis frame at the origin
         root_pos, root_rot = self.get_root_pose()
-        tform = mn.Matrix4.from_(root_rot.to_matrix(), root_pos)
-        debug_draw_axis(dblr, tform)
+        # tform = mn.Matrix4.from_(root_rot.to_matrix(), root_pos)
+        # debug_draw_axis(dblr, tform)
 
         # draw the navmesh circle
         dblr.draw_circle(

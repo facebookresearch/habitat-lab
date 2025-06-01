@@ -1362,7 +1362,7 @@ class AppStateIsaacSimViewer(AppStateBase):
             self.debug_draw_quest()
             # draw the robot frame
             self.robot.draw_debug(self._app_service.gui_drawer)
-            self.debug_draw_hands()
+            # self.debug_draw_hands()
 
             if self.dof_editor is not None:
                 self.dof_editor.debug_draw(
