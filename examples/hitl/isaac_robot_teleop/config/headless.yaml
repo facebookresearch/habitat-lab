@@ -28,7 +28,7 @@ isaac_robot_teleop:
   usd_scene_path: "../../../data/usd/scenes/"
   navmesh_path: "data/hssd-hab/navmeshes/"
   scene_name: "103997403_171030405"
-  episode_dataset: "data/episodes/hitl_teleop_episodes_single_region.json.gz"
+  episode_dataset: "data/episodes/hitl_teleop_episodes_220.json.gz"
   episode_index: 1
 
   #physx configuration settings
