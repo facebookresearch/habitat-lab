@@ -6,6 +6,8 @@
 
 from typing import List, Optional
 
+from habitat_hitl.core.ui_elements import HorizontalAlignment
+
 from app_data import AppData
 from app_state_base import AppStateBase
 from app_states import (
@@ -22,7 +24,9 @@ from habitat_hitl.core.user_mask import Mask
 
 START_BUTTON_ID = "start"
 START_SCREEN_TIMEOUT = 180.0
-SKIP_START_SCREEN = True  # TODO: Disabled for scaffolding the application.
+SKIP_START_SCREEN = True    # TODO: Start screen appears before episode loads.
+FONT_SIZE_LARGE = 32
+FONT_SIZE_SMALL = 24
 
 
 class AppStateStartScreen(AppStateBase):
@@ -75,29 +79,46 @@ class AppStateStartScreen(AppStateBase):
         remaining_time_int = int(remaining_time)
         title = f"New Session (Expires in: {remaining_time_int}s)"
 
-        # Show dialogue box with "Start" button.
         for user_index in range(self._app_data.max_user_count):
-            button_pressed = (
-                self._app_service.remote_client_state.ui_button_pressed(
-                    user_index, START_BUTTON_ID
+            with self._app_service.ui_manager.update_canvas(
+                "center", Mask.from_index(user_index)
+            ) as ctx:
+                ctx.canvas_properties(
+                    padding=12, background_color=[0.3, 0.3, 0.3, 0.7]
                 )
-            )
-            self._has_user_pressed_start_button[user_index] |= button_pressed
 
-            if not self._has_user_pressed_start_button[user_index]:
-                self._app_service.client_message_manager.show_modal_dialogue_box(
-                    title,
-                    "Press 'Start' to begin the experiment.",
-                    [UIButton(START_BUTTON_ID, "Start", True)],
-                    destination_mask=Mask.from_index(user_index),
+                ctx.label(
+                    text=title,
+                    font_size=FONT_SIZE_LARGE,
+                    horizontal_alignment=HorizontalAlignment.CENTER,
                 )
-            else:
-                self._app_service.client_message_manager.show_modal_dialogue_box(
-                    title,
-                    "Waiting for other participants...",
-                    [UIButton(START_BUTTON_ID, "Start", False)],
-                    destination_mask=Mask.from_index(user_index),
+
+                ctx.separator()
+
+                ctx.label(
+                    text=f"Press start to being the experiment.\n\n",
+                    font_size=FONT_SIZE_SMALL,
+                    horizontal_alignment=HorizontalAlignment.CENTER,
                 )
+
+                if (
+                    len(self._app_data.connected_users) > 1
+                    and self._has_user_pressed_start_button[user_index]
+                ):
+                    button_text = "Waiting for other user..."
+                else:
+                    button_text = "OK"
+
+                ctx.button(
+                    uid=START_BUTTON_ID,
+                    text=button_text,
+                    enabled=not self._has_user_pressed_start_button[user_index],
+                )
+            self._has_user_pressed_start_button[
+                user_index
+            ] |= self._app_service.remote_client_state.ui_button_pressed(
+                user_index, START_BUTTON_ID
+            )
 
         # Server-only: Press numeric keys to start episode on behalf of users.
         if self._is_server_gui_enabled():
