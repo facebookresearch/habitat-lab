@@ -13,6 +13,8 @@ from typing import TYPE_CHECKING, List, Optional
 
 # make sure we restore these flags after import (habitat_sim needs RTLD_GLOBAL but that breaks Isaac)
 # hack: must import torch early, before habitat or isaac
+from habitat_hitl.core.ui_elements import HorizontalAlignment
+from habitat_hitl.core.user_mask import Mask
 import torch  # noqa: F401
 
 original_flags = sys.getdlopenflags()
@@ -178,8 +180,12 @@ class AppStateIsaacSimViewer(AppStateBase):
 
         self._frame_recorder = FrameRecorder(self)
 
-        # this variable is triggered by the user to indicate finished task
-        self.task_finished_signaled = False
+        # This variable is triggered by the user to indicate finished task
+        self._task_finished_signaled = False
+        # This value indicates that the task is really finished.
+        self._task_finished = False
+        # This value is set by the user after signaling that the task is finished.
+        self._task_success = 0.0
 
         usd_scenes_path = os.path.join(dir_path, self._app_cfg.usd_scene_path)
         navmeshes_path = self._app_cfg.navmesh_path
@@ -805,7 +811,7 @@ class AppStateIsaacSimViewer(AppStateBase):
 
         if left.get_button_down(XRButton.START):
             print("pressed START left")
-            self.task_finished_signaled = True
+            self._task_finished_signaled = True
         if left.get_button_up(XRButton.START):
             pass
 
@@ -1373,6 +1379,58 @@ class AppStateIsaacSimViewer(AppStateBase):
                 )
         self.highlight_added_objects()
 
+        if self._task_finished_signaled:
+            if self._session is None:
+                # Skip the dialogue if outside of the state machine.
+                self._task_finished = True
+                self._task_success = 1.0
+            else:
+                with self._app_service.ui_manager.update_canvas(
+                    "center", destination_mask=Mask.ALL
+                ) as ctx:
+                    FONT_SIZE_LARGE = 32
+                    FONT_SIZE_SMALL = 24
+                    BTN_ID_SUCCESS = "btn_success"
+                    BTN_ID_FAILURE = "btn_failure"
+                    BTN_ID_CANCEL = "btn_cancel"
+                    ctx.canvas_properties(
+                        padding=12, background_color=[0.3, 0.3, 0.3, 0.7]
+                    )
+                    ctx.label(
+                        text="Finish Task?",
+                        font_size=FONT_SIZE_LARGE,
+                        horizontal_alignment=HorizontalAlignment.CENTER,
+                    )
+                    ctx.separator()
+                    ctx.button(
+                        uid=BTN_ID_SUCCESS,
+                        text="Success",
+                        enabled=not self._task_finished,
+                    )
+                    ctx.button(
+                        uid=BTN_ID_FAILURE,
+                        text="Failure",
+                        enabled=not self._task_finished,
+                    )
+                    ctx.separator()
+                    ctx.spacer()
+                    ctx.button(
+                        uid=BTN_ID_CANCEL,
+                        text="Cancel",
+                        enabled=not self._task_finished,
+                    )
+                if self._app_service.remote_client_state.ui_button_pressed(0, BTN_ID_SUCCESS):
+                    self._task_finished = True
+                    self._task_success = 1.0
+                    self._app_service.ui_manager.clear_all_canvases(Mask.ALL)
+                elif self._app_service.remote_client_state.ui_button_pressed(0, BTN_ID_FAILURE):
+                    self._task_finished = True
+                    self._task_success = 0.0
+                    self._app_service.ui_manager.clear_all_canvases(Mask.ALL)
+                elif self._app_service.remote_client_state.ui_button_pressed(0, BTN_ID_CANCEL):
+                    self._task_finished_signaled = False
+                    self._app_service.ui_manager.clear_all_canvases(Mask.ALL)
+
         self._update_help_text()
         self._timer = time.time() - self._start_time
         self._frame_recorder.update(self._timer)
@@ -1385,7 +1443,7 @@ class AppStateIsaacSimViewer(AppStateBase):
             self._session.session_recorder.record_frame(frame_data)
 
     def _is_episode_finished(self) -> bool:
-        return self.task_finished_signaled
+        return self._task_finished
 
     def get_next_state(self) -> Optional[AppStateBase]:
         """When running from the state machine, this function determines whether the state must be changed."""
@@ -1432,7 +1490,7 @@ class AppStateIsaacSimViewer(AppStateBase):
 
         self._session.session_recorder.end_episode(
             episode_finished=episode_finished,
-            task_percent_complete=1.0,  # TODO: Get episode success.
+            task_percent_complete=self._task_success,
             metrics={},
         )
 

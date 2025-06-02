@@ -24,7 +24,7 @@ from habitat_hitl.core.user_mask import Mask
 
 START_BUTTON_ID = "start"
 START_SCREEN_TIMEOUT = 180.0
-SKIP_START_SCREEN = True    # TODO: Start screen appears before episode loads.
+SKIP_START_SCREEN = False    # TODO: Start screen appears before episode loads.
 FONT_SIZE_LARGE = 32
 FONT_SIZE_SMALL = 24
 
@@ -46,6 +46,7 @@ class AppStateStartScreen(AppStateBase):
         self._elapsed_time: float = 0.0
         self._timeout = False
         self._save_keyframes = True
+        self._frames_to_wait = 2    # TODO: Hack for propagating UI changes.
 
     def get_next_state(self) -> Optional[AppStateBase]:
         if self._cancel:
@@ -55,13 +56,14 @@ class AppStateStartScreen(AppStateBase):
             )
 
         # If all users pressed the "Start" button, begin the session.
-        ready_to_start = True
-        for user_ready in self._has_user_pressed_start_button:
-            ready_to_start &= user_ready
-        if ready_to_start or SKIP_START_SCREEN:
-            return create_app_state_rearrange(
-                self._app_service, self._app_data, self._session
-            )
+        if self._frames_to_wait <= 0:
+            ready_to_start = True
+            for user_ready in self._has_user_pressed_start_button:
+                ready_to_start &= user_ready
+            if ready_to_start or SKIP_START_SCREEN:            
+                return create_app_state_rearrange(
+                    self._app_service, self._app_data, self._session
+                )
 
         return None
 
@@ -77,7 +79,7 @@ class AppStateStartScreen(AppStateBase):
             self._timeout = True
             return
         remaining_time_int = int(remaining_time)
-        title = f"New Session (Expires in: {remaining_time_int}s)"
+        title = f"New Session"
 
         for user_index in range(self._app_data.max_user_count):
             with self._app_service.ui_manager.update_canvas(
@@ -94,9 +96,10 @@ class AppStateStartScreen(AppStateBase):
                 )
 
                 ctx.separator()
+                ctx.spacer()
 
                 ctx.label(
-                    text=f"Press start to being the experiment.\n\n",
+                    text=f"Press start to begin the experiment.\n\n",
                     font_size=FONT_SIZE_SMALL,
                     horizontal_alignment=HorizontalAlignment.CENTER,
                 )
@@ -107,7 +110,7 @@ class AppStateStartScreen(AppStateBase):
                 ):
                     button_text = "Waiting for other user..."
                 else:
-                    button_text = "OK"
+                    button_text = "Start"
 
                 ctx.button(
                     uid=START_BUTTON_ID,
@@ -119,6 +122,13 @@ class AppStateStartScreen(AppStateBase):
             ] |= self._app_service.remote_client_state.ui_button_pressed(
                 user_index, START_BUTTON_ID
             )
+
+            ready_to_start = True
+            for user_ready in self._has_user_pressed_start_button:
+                ready_to_start &= user_ready
+            if ready_to_start or SKIP_START_SCREEN:
+                self._app_service.ui_manager.clear_all_canvases(Mask.ALL)
+                self._frames_to_wait -= 1
 
         # Server-only: Press numeric keys to start episode on behalf of users.
         if self._is_server_gui_enabled():
