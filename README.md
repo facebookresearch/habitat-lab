@@ -144,7 +144,7 @@ If you use the Habitat platform in your research, please cite the [Habitat 1.0](
    - Here are all the downloads merged into one command:
       ```bash
       python -m habitat_sim.utils.datasets_download \
-      --uids replica_cad_dataset replica_cad_baked_lighting rearrange_dataset_v2 ycb hab_fetch \
+      --uids habitat_test_scenes habitat_test_pointnav_dataset replica_cad_dataset replica_cad_baked_lighting rearrange_dataset_v2 ycb hab_fetch \
       --data-path data/
       ```
 
