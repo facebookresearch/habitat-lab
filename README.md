@@ -129,7 +129,7 @@ If you use the Habitat platform in your research, please cite the [Habitat 1.0](
       ```bash
       python -m habitat_sim.utils.datasets_download --uids habitat_test_pointnav_dataset --data-path data/
       ```
-  - Download ReplicaCAD meshes and baked-lighting textures:
+   - Download ReplicaCAD meshes and baked-lighting textures:
       ```bash
       python -m habitat_sim.utils.datasets_download --uids replica_cad_dataset replica_cad_baked_lighting --data-path data/
       ```
