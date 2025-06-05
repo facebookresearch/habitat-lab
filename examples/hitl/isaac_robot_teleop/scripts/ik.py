@@ -56,7 +56,7 @@ class DifferentialInverseKinematics:
         """
         Get the end effector transform in robot base space as a Matrix4.
         """
-        return mn.Matrix4(self.robot.fkine(self.robot.q).A)
+        return mn.Matrix4(self.robot.fkine(self.robot.q,end=self.robot.links[8]).A)
 
     def inverse_kinematics(self, pose, q):
         if len(q) != 7:
@@ -67,7 +67,7 @@ class DifferentialInverseKinematics:
         jacobian = self.robot.jacobe(self.robot.q)
 
         v, _ = rtb.p_servo(
-            self.robot.fkine(self.robot.q, end=self.robot.links[7]), pose, 5
+            self.robot.fkine(self.robot.q, end=self.robot.links[8]), pose, 5
         )
 
         # Create a MathematicalProgram
@@ -77,8 +77,10 @@ class DifferentialInverseKinematics:
         qd = prog.NewContinuousVariables(7, "qd")
 
         max_qd = [2.1750, 2.1750, 2.1750, 2.1750, 2.61, 2.61, 2.61]
-        max_q = [2.8973, 1.7628, 2.8973, -0.7315114, 2.8973, 3.7525, 2.8973]
-        min_q = [-2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973]
+        
+        max_q = [2.7437, 1.7837, 2.9007, -0.1518, 2.8065, 4.5169, 3.0159]
+        min_q = [-2.7437, -1.7837, -2.9007, -2.9, -2.8065, 0.5445, -3.0159]
+
         # max_qdd = [15, 7.5, 10, 12.5, 15, 20, 20]
 
         # Add constraints to limit the joint velocities
