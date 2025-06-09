@@ -624,7 +624,7 @@ class RobotAppWrapper:
             Robot(prim_path=self._robot_prim_path, name=self._name)
         )
         self._robot_controller = self._robot.get_articulation_controller()
-        self._view_name = self._name + "_view"
+        self.approximate_arm_length = self.robot_cfg.approximate_arm_length
 
         # control waypoints for the platform
         # NOTE: should be set from navmesh

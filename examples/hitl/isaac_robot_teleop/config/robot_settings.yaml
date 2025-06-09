@@ -37,6 +37,9 @@ max_linear_speed: 1.0 #m/s
 max_angular_speed: 1.0 #rad/sec
 track_waypoints: False
 
+#Approximating of the length of the arm for use in UI warnings for IK
+approximate_arm_length: 0.85
+
 
 configuration_subsets:
   #define the hand and arm joint indices
@@ -106,6 +109,9 @@ link_subsets:
   #arm base links (the fixed attachment point)
   left_arm_base: ["left_fr3_link0"]
   right_arm_base: ["right_fr3_link0"]
+  #arm_pivot_links (the "shoulder" of the robot from which maximum linear reach can be computed)
+  left_arm_pivot: ["left_fr3_link2"]
+  right_arm_pivot: ["right_fr3_link2"]
 
 
 

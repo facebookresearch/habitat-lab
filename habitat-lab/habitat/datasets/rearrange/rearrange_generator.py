@@ -815,6 +815,7 @@ class RearrangeEpisodeGenerator:
             file_handle = creation_attrib.handle.split(
                 creation_attrib.file_directory
             )[-1].split("/")[-1]
+            # TODO: can we check for non orthonormal rotations here? How did that get through?
             sampled_rigid_object_states.append(
                 (
                     file_handle,

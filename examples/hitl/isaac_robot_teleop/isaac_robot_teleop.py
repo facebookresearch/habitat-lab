@@ -11,11 +11,12 @@ import time
 from collections import defaultdict
 from typing import TYPE_CHECKING, List, Optional
 
+import torch  # noqa: F401
+
 # make sure we restore these flags after import (habitat_sim needs RTLD_GLOBAL but that breaks Isaac)
 # hack: must import torch early, before habitat or isaac
 from habitat_hitl.core.ui_elements import HorizontalAlignment
 from habitat_hitl.core.user_mask import Mask
-import torch  # noqa: F401
 
 original_flags = sys.getdlopenflags()
 import magnum
@@ -186,6 +187,8 @@ class AppStateIsaacSimViewer(AppStateBase):
         self._task_finished = False
         # This value is set by the user after signaling that the task is finished.
         self._task_success = 0.0
+        # This value is set on enter and when True, the language prompt is displayed on a splash screen.
+        self._view_task_prompt = True
 
         usd_scenes_path = os.path.join(dir_path, self._app_cfg.usd_scene_path)
         navmeshes_path = self._app_cfg.navmesh_path
@@ -344,12 +347,30 @@ class AppStateIsaacSimViewer(AppStateBase):
 
         # NOTE: assume added objects come from configured "additional_obj_config_paths"
         self.episode_object_ids = []
-        for obj_config_name, _ in self.episode.rigid_objs:
+        # cache any skipped object indices for more skipping later
+        self.culled_object_ixs = []
+        for ix, (obj_config_name, transform) in enumerate(
+            self.episode.rigid_objs
+        ):
             added_object = False
+            try:
+                ro_t = mn.Matrix4(
+                    [[transform[j][i] for j in range(4)] for i in range(4)]
+                )
+                ro_t = mn.Matrix4.from_(
+                    ro_t.rotation_normalized(), ro_t.translation
+                )
+            except ValueError as e:
+                print(
+                    f"Failed to add object '{obj_config_name}' with error: {e}"
+                )
+                self.culled_object_ixs.append(ix)
+                continue
             for config_dir in self.episode.additional_obj_config_paths:
                 candidate_object_path = os.path.join(
                     config_dir, obj_config_name
                 )
+
                 if os.path.exists(candidate_object_path):
                     ro = self._isaac_rom.add_object_by_template_handle(
                         candidate_object_path
@@ -379,27 +400,35 @@ class AppStateIsaacSimViewer(AppStateBase):
         """
         Places episode added objects back in their initial configurations.
         """
+        obj_index = 0
         for ix, (_, transform) in enumerate(self.episode.rigid_objs):
-            ro = self._isaac_rom.get_object_by_id(self.episode_object_ids[ix])
-            ro_t = mn.Matrix4(
-                [[transform[j][i] for j in range(4)] for i in range(4)]
-            )
+            if ix not in self.culled_object_ixs:
+                ro = self._isaac_rom.get_object_by_id(
+                    self.episode_object_ids[obj_index]
+                )
+                obj_index += 1
+                ro_t = mn.Matrix4(
+                    [[transform[j][i] for j in range(4)] for i in range(4)]
+                )
 
-            ro_t = mn.Matrix4.from_(
-                ro_t.rotation_normalized(), ro_t.translation
-            )
-            # NOTE: this transform corrects for isaac's different coordinate system
-            isaac_correction = mn.Matrix4.from_(
-                mn.Quaternion.rotation(
-                    -mn.Deg(90), mn.Vector3.x_axis()
-                ).to_matrix(),
-                mn.Vector3(),
-            )
-            ro_t = ro_t @ isaac_correction
+                ro_t = mn.Matrix4.from_(
+                    ro_t.rotation_normalized(), ro_t.translation
+                )
+                # NOTE: this transform corrects for isaac's different coordinate system
+                isaac_correction = mn.Matrix4.from_(
+                    mn.Quaternion.rotation(
+                        -mn.Deg(90), mn.Vector3.x_axis()
+                    ).to_matrix(),
+                    mn.Vector3(),
+                )
+                ro_t = ro_t @ isaac_correction
 
-            ro.transformation = ro_t
-            # NOTE: reset velocity after teleport to increase stability
-            ro.clear_dynamics()
+                ro.transformation = ro_t
+                # NOTE: reset velocity after teleport to increase stability
+                ro.clear_dynamics()
+            else:
+                # NOTE: this one had a bad transform and was skipped
+                pass
 
     def add_rigid_object(
         self,
@@ -446,6 +475,18 @@ class AppStateIsaacSimViewer(AppStateBase):
         """
         # TODO: should use the UI API highlight interfaces for better VR client highlighting
         dblr = self._app_service.gui_drawer
+
+        # NOTE: This code crashes and disconnects the client. Is something wrong in the Unity app?
+        # ro_ids = [ro.object_id for ro in self._rigid_objects]
+        # self._app_service._gui_drawer._client_message_manager.draw_object_outline(
+        #    priority=1,
+        #    color=mn.Color4(0.8, 0.8, 0.1, 0.8), #yellow
+        #    line_width=8.0,
+        #    object_ids=ro_ids,
+        #    destination_mask=Mask.ALL,
+        # )
+
+        # TODO: replace circles with client highlights
         for ro in self._rigid_objects:
             dblr.draw_circle(
                 ro.translation,
@@ -548,7 +589,7 @@ class AppStateIsaacSimViewer(AppStateBase):
             # we have a region, now sample a navmesh point
             nav_point = self._sim.pathfinder.get_random_navigable_point()
             nav_samples = 0
-            max_nav_samples = 900
+            max_nav_samples = 1500
             # TODO: we use navmeshes closest obstacle as a proxy for collision detection. We should implement that for Isaac or pre-sample valid poses from Habitat-Bullet and cache them.
             while nav_samples < max_nav_samples and (
                 max_region
@@ -560,8 +601,10 @@ class AppStateIsaacSimViewer(AppStateBase):
             ):
                 nav_point = self._sim.pathfinder.get_random_navigable_point()
                 nav_samples += 1
-            assert nav_samples < max_nav_samples
-            self.robot.set_root_pose(pos=nav_point)
+            if nav_samples < max_nav_samples:
+                self.robot.set_root_pose(pos=nav_point)
+            else:
+                print("Failed to find new nav point, max samples exceeded.")
             print(
                 f"self._sim.pathfinder.distance_to_closest_obstacle(nav_point) = {self._sim.pathfinder.distance_to_closest_obstacle(nav_point)}"
             )
@@ -771,7 +814,7 @@ class AppStateIsaacSimViewer(AppStateBase):
         )
         if current_xr_pose.valid:
             self.xr_pose_adapter.get_global_xr_pose(current_xr_pose).draw_pose(
-                dblr
+                dblr, head=False
             )
 
     def handle_xr_input(self, dt: float):
@@ -850,9 +893,14 @@ class AppStateIsaacSimViewer(AppStateBase):
             global_xr_pose = self.xr_pose_adapter.get_global_xr_pose(xr_pose)
 
             # combine both hands' logic to reduce boilerplate code
-            for xrcontroller, base_link_key, arm_subset_key in [
-                (right, "right_arm_base", "right_arm"),
-                (left, "left_arm_base", "left_arm"),
+            for (
+                xrcontroller,
+                base_link_key,
+                pivot_link_key,
+                arm_subset_key,
+            ) in [
+                (right, "right_arm_base", "right_arm_pivot", "right_arm"),
+                (left, "left_arm_base", "left_arm_pivot", "left_arm"),
             ]:
                 if xrcontroller.get_hand_trigger() > 0:
                     arm_base_link = self.robot.link_subsets[
@@ -883,11 +931,13 @@ class AppStateIsaacSimViewer(AppStateBase):
                         xr_pose_in_robot_frame.pos_left,
                         xr_pose_in_robot_frame.rot_left,
                     )
+                    ee_pos_global = global_xr_pose.pos_left
                     if "right" in base_link_key:
                         xr_pose = (
                             xr_pose_in_robot_frame.pos_right,
                             xr_pose_in_robot_frame.rot_right,
                         )
+                        ee_pos_global = global_xr_pose.pos_right
 
                     new_arm_pose = self._ik.inverse_kinematics(
                         to_ik_pose(xr_pose), cur_arm_pose
@@ -898,6 +948,32 @@ class AppStateIsaacSimViewer(AppStateBase):
                         arm_base_transform.__matmul__(self._ik.get_ee_T()),
                         scale=0.75,
                     )
+
+                    # draw the warning lines for arm length
+                    arm_pivot_link = self.robot.link_subsets[
+                        pivot_link_key
+                    ].link_ixs[0]
+                    arm_pivot_pos = self.robot.get_link_world_poses(
+                        indices=[arm_pivot_link]
+                    )[0][0]
+                    target_dist_from_base = (
+                        arm_pivot_pos - ee_pos_global
+                    ).length()
+                    if (
+                        target_dist_from_base
+                        > self.robot.approximate_arm_length
+                    ):
+                        self._app_service.gui_drawer.draw_transformed_line(
+                            arm_pivot_pos, ee_pos_global, mn.Color4(1, 0, 0, 1)
+                        )
+                    elif (
+                        target_dist_from_base
+                        > self.robot.approximate_arm_length * 0.9
+                    ):
+                        self._app_service.gui_drawer.draw_transformed_line(
+                            arm_pivot_pos, ee_pos_global, mn.Color4(1, 1, 0, 1)
+                        )
+
                     # using configuration subset to avoid accidental overwriting with noise
                     self.robot.pos_subsets[arm_subset_key].set_motor_pos(
                         new_arm_pose
@@ -1379,6 +1455,42 @@ class AppStateIsaacSimViewer(AppStateBase):
                 )
         self.highlight_added_objects()
 
+        if self._view_task_prompt:
+            if self.episode is not None:
+                with self._app_service.ui_manager.update_canvas(
+                    "center", destination_mask=Mask.ALL
+                ) as ctx:
+                    FONT_SIZE_LARGE = 32
+                    FONT_SIZE_SMALL = 24
+                    BTN_ID_DONE = "btn_done"
+                    ctx.canvas_properties(
+                        padding=12, background_color=[0.3, 0.3, 0.3, 0.7]
+                    )
+                    ctx.label(
+                        text="Task Prompt",
+                        font_size=FONT_SIZE_LARGE,
+                        horizontal_alignment=HorizontalAlignment.CENTER,
+                    )
+                    ctx.separator()
+                    ctx.label(
+                        text=self.episode.language_instruction,
+                        font_size=FONT_SIZE_SMALL,
+                        horizontal_alignment=HorizontalAlignment.CENTER,
+                    )
+                    ctx.separator()
+                    ctx.button(
+                        uid=BTN_ID_DONE,
+                        text="Done",
+                        enabled=self._view_task_prompt,
+                    )
+                if self._app_service.remote_client_state.ui_button_pressed(
+                    0, BTN_ID_DONE
+                ):
+                    self._view_task_prompt = False
+                    self._app_service.ui_manager.clear_all_canvases(Mask.ALL)
+            else:
+                self._view_task_prompt = False
+
         if self._task_finished_signaled:
             if self._session is None:
                 # Skip the dialogue if outside of the state machine.
@@ -1419,15 +1531,21 @@ class AppStateIsaacSimViewer(AppStateBase):
                         text="Cancel",
                         enabled=not self._task_finished,
                     )
-                if self._app_service.remote_client_state.ui_button_pressed(0, BTN_ID_SUCCESS):
+                if self._app_service.remote_client_state.ui_button_pressed(
+                    0, BTN_ID_SUCCESS
+                ):
                     self._task_finished = True
                     self._task_success = 1.0
                     self._app_service.ui_manager.clear_all_canvases(Mask.ALL)
-                elif self._app_service.remote_client_state.ui_button_pressed(0, BTN_ID_FAILURE):
+                elif self._app_service.remote_client_state.ui_button_pressed(
+                    0, BTN_ID_FAILURE
+                ):
                     self._task_finished = True
                     self._task_success = 0.0
                     self._app_service.ui_manager.clear_all_canvases(Mask.ALL)
-                elif self._app_service.remote_client_state.ui_button_pressed(0, BTN_ID_CANCEL):
+                elif self._app_service.remote_client_state.ui_button_pressed(
+                    0, BTN_ID_CANCEL
+                ):
                     self._task_finished_signaled = False
                     self._app_service.ui_manager.clear_all_canvases(Mask.ALL)
 

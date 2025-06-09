@@ -138,7 +138,12 @@ class XRPose:
         }
         return json_dict
 
-    def draw_pose(self, dblr: DebugLineRender, transform: mn.Matrix4 = None):
+    def draw_pose(
+        self,
+        dblr: DebugLineRender,
+        transform: mn.Matrix4 = None,
+        head: bool = True,
+    ):
         """
         Draws the XRPose as axis frames for the head and hands.
         Applies the provided local to global transformation from the default XR coordinate space.
@@ -146,10 +151,11 @@ class XRPose:
         if transform is not None:
             dblr.push_transform(transform)
 
-        head_transform = mn.Matrix4.from_(
-            (self.rot_head).to_matrix(), self.pos_head
-        )
-        debug_draw_axis(dblr, head_transform, scale=0.5)
+        if head:
+            head_transform = mn.Matrix4.from_(
+                (self.rot_head).to_matrix(), self.pos_head
+            )
+            debug_draw_axis(dblr, head_transform, scale=0.5)
 
         left_control_t = mn.Matrix4.from_(
             (self.rot_left).to_matrix(), self.pos_left

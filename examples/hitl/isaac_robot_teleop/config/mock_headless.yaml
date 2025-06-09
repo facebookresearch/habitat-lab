@@ -13,7 +13,8 @@ habitat_hitl:
     # client_max_idle_duration: 180.0   # TODO: Set up AFK timers.
     enable_connections_by_default: False
     mock_connection_params_dict:
-      episodes: "0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21"
+      #episodes: "0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21"
+      episodes: "110, 121, 132, 143, 154, 165, 176, 187, 198, 209"
       user_id: "placeholder_user"
       experiment: "robot_teleop"
   experimental:
@@ -39,7 +40,7 @@ isaac_robot_teleop:
 
   scene_name: "103997403_171030405"
   # OR initialize by episode. These will take precedent when provided
-  episode_dataset: "data/datasets/hitl_teleop_episodes.json.gz"
+  episode_dataset: "data/datasets/hitl_teleop_episodes_220.json.gz"
   #episode_index: 2
 
   #physx configuration settings
