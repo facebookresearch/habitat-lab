@@ -71,7 +71,6 @@ def shortest_path_navigation(args):
         if args.verbose:
             print("Environment creation successful")
         
-        prev_scene = None
         for episode in range(len(env.episodes)):
             observations, info = env.reset(return_info=True)
             current_scene = env.habitat_env.current_episode.scene_id
@@ -177,7 +176,12 @@ def shortest_path_navigation(args):
                         batch = batch * 255
 
                     with torch.no_grad():
-                        if args.eval_model.startswith(('one_scene_decoder', 'dist_decoder',
+                        if args.eval_model.startswith(('dist_decoder_conf')):
+                            goal = batch[-1:].repeat(len(batch), 1, 1, 1)
+                            pred_distances, conf = model(batch, goal)
+                            pred_distances = pred_distances.cpu().numpy()
+                            conf = conf.cpu().numpy()
+                        elif args.eval_model.startswith(('one_scene_decoder', 'dist_decoder',
                                                     'one_scene_quasi', 'quasi')):
                             goal = batch[-1:].repeat(len(batch), 1, 1, 1)
                             pred_distances = model(batch, goal).cpu().numpy().squeeze()
