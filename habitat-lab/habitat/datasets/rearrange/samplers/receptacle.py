@@ -1032,6 +1032,7 @@ class ReceptacleSet:
     included_receptacle_substrings: List[str]
     excluded_receptacle_substrings: List[str]
     is_on_top_of_sampler: bool = False
+    include_within: bool = True
     comment: str = ""
 
 

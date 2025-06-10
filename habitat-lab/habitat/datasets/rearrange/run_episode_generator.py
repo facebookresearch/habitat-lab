@@ -95,6 +95,8 @@ class RearrangeEpisodeGeneratorConfig:
                 "excluded_object_substrings": [],
                 "included_receptacle_substrings": [""],
                 "excluded_receptacle_substrings": [],
+                # NOTE: for PARTNR compatability. If False, cull all "within" set receptacles for exposed surfaces only
+                "include_within": True,
                 # NOTE: The "comment" key is intended for notes and descriptions and not consumed by the generator.
                 "comment": "The empty substrings act like wildcards, selecting all receptacles for all objects.",
             },

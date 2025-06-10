@@ -192,6 +192,10 @@ class RearrangeEpisodeGenerator:
             self._receptacle_sets[receptacle_set["name"]] = ReceptacleSet(
                 **receptacle_set
             )
+            if "include_within" in receptacle_set:
+                self._receptacle_sets[
+                    receptacle_set["name"]
+                ].include_within = receptacle_set["include_within"]
 
     def _get_obj_samplers(self) -> None:
         """

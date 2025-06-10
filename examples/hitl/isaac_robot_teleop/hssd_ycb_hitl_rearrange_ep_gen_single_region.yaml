@@ -52,7 +52,8 @@
           - "024_bowl"
         excluded_substrings: []
     receptacle_sets:
-      - name: "all"
+      - name: "all_exposed"
+        include_within: False
         included_object_substrings:
           - ""
         excluded_object_substrings: []
@@ -72,7 +73,7 @@
         object_sets:
         - ycb
         receptacle_sets:
-        - all
+        - all_exposed
         #NOTE: specifies that all spawned objects should be in the same region
         single_region: True
         num_samples:

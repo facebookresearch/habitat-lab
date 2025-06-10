@@ -189,6 +189,8 @@ class AppStateIsaacSimViewer(AppStateBase):
         self._task_success = 0.0
         # This value is set on enter and when True, the language prompt is displayed on a splash screen.
         self._view_task_prompt = True
+        # NOTE: this will be filled from the episode or contrived to fit the scenario
+        self.task_prompt = ""
 
         usd_scenes_path = os.path.join(dir_path, self._app_cfg.usd_scene_path)
         navmeshes_path = self._app_cfg.navmesh_path
@@ -325,6 +327,22 @@ class AppStateIsaacSimViewer(AppStateBase):
         """
         self._sim.load_semantic_scene_descriptor(scene_descriptor)
 
+    def generate_contrived_prompt(self):
+        """
+        This function should create some reasonable task prompts for the episode.
+        NOTE: This is a placeholder while episodes are without explicit language instructions.
+        NOTE: This could have a semantic element where individual objects are queried and related at runtime to maximize episode re-use.
+        """
+        return random.choice(
+            [
+                "Pick any object and place it upright on another surface.",
+                "Stack any two objects.",
+                "Pick any object and place it back upside down.",
+                "Pick any object with one hand \nthen transfer it to the other hand \nwithout setting it down.",
+                "Pick any object twice with different grasps, \nplacing it back on a surface between picks.",
+            ]
+        )
+
     def load_episode_dataset(self, dataset_file: str):
         """
         Load a RearrangeDataset and setup local variables.
@@ -393,6 +411,13 @@ class AppStateIsaacSimViewer(AppStateBase):
                 raise ValueError(
                     f"Object {obj_config_name} not found in paths {self.episode.additional_obj_config_paths}."
                 )
+
+        if self.episode.language_instruction != "":
+            # load the episode's language prompt if not empty
+            self.task_prompt = self.episode.language_instruction
+        else:
+            self.task_prompt = self.generate_contrived_prompt()
+
         # NOTE: this is where the states are set
         self.reset_episode_objects()
 
@@ -562,6 +587,11 @@ class AppStateIsaacSimViewer(AppStateBase):
         """
         Either sets the configured initial state or samples a random point from the navmesh.
         """
+        self.robot.set_cached_pose(
+            pose_name=self.robot.robot_cfg.initial_pose,
+            set_positions=True,
+            set_motor_targets=True,
+        )
         if hasattr(self._app_cfg, "initial_robot_position"):
             # load initial base position if configured
             initial_pos = mn.Vector3(*self._app_cfg.initial_robot_position)
@@ -860,13 +890,14 @@ class AppStateIsaacSimViewer(AppStateBase):
 
         # RIGHT CONTROLLER BUTTONS
         # NOTE: recording toggle disabled when joining from session. Recording is required.
-        if right.get_button_down(XRButton.ONE) and not self._session:
+        if right.get_button_down(XRButton.ONE):
             # self._frame_recorder.recording = not self._frame_recorder.recording
             # print(
             #    f"pressed one right, recording = {self._frame_recorder.recording}"
             # )
             # TODO: hook this up to pass/fail
-            pass
+            self._view_task_prompt = True
+
         if right.get_button_up(XRButton.ONE):
             pass
 
@@ -1473,7 +1504,7 @@ class AppStateIsaacSimViewer(AppStateBase):
                     )
                     ctx.separator()
                     ctx.label(
-                        text=self.episode.language_instruction,
+                        text=self.task_prompt,
                         font_size=FONT_SIZE_SMALL,
                         horizontal_alignment=HorizontalAlignment.CENTER,
                     )
@@ -1559,6 +1590,17 @@ class AppStateIsaacSimViewer(AppStateBase):
             # most recent frame was recorded in update() above
             frame_data = self._frame_recorder.frame_data[-1]
             self._session.session_recorder.record_frame(frame_data)
+            # Record the task prompt within the episode data
+            if (
+                self._session.session_recorder.episode_records[-1].episode_info
+                is None
+            ):
+                self._session.session_recorder.episode_records[
+                    -1
+                ].episode_info = {}
+            self._session.session_recorder.episode_records[-1].episode_info[
+                "task_prompt"
+            ] = self.task_prompt
 
     def _is_episode_finished(self) -> bool:
         return self._task_finished

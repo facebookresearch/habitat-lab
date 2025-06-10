@@ -24,6 +24,8 @@ from habitat.datasets.rearrange.samplers.receptacle import (
     Receptacle,
     ReceptacleTracker,
     find_receptacles,
+    get_recs_from_filter_file,
+    get_scene_rec_filter_filepath,
 )
 from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
 from habitat_sim.scene import SemanticRegion
@@ -186,7 +188,22 @@ class ObjectSampler:
         :return: The sampled Receptacle. AssertionError if no valid Receptacle candidates are found.
         """
         if self.receptacle_instances is None:
+            # here we are filtering out the unwanted receptacles
+            rec_filter_filepath = get_scene_rec_filter_filepath(
+                sim.metadata_mediator, sim.curr_scene_name
+            )
+            active_rec_unames = get_recs_from_filter_file(
+                rec_filter_filepath, filter_types=["active"]
+            )
+            self.within_recs = get_recs_from_filter_file(
+                rec_filter_filepath, filter_types=["within_set"]
+            )
             self.receptacle_instances = find_receptacles(sim)
+            self.receptacle_instances = [
+                r
+                for r in self.receptacle_instances
+                if r.unique_name in active_rec_unames
+            ]
 
         match_recep_sets = [
             recep_tracker.recep_sets[k] for k in self._allowed_recep_set_names
@@ -214,20 +231,29 @@ class ObjectSampler:
                 found_match = False
                 for receptacle_set in match_recep_sets:
                     culled = False
-                    # first try to cull by exclusion
-                    for ex_object_substr in (
-                        receptacle_set.excluded_object_substrings
-                        and receptacle.parent_object_handle
+                    if (
+                        not receptacle_set.include_within
+                        and receptacle.unique_name in self.within_recs
                     ):
-                        if ex_object_substr in receptacle.parent_object_handle:
-                            culled = True
-                            break
-                    for (
-                        ex_receptacle_substr
-                    ) in receptacle_set.excluded_receptacle_substrings:
-                        if ex_receptacle_substr in receptacle.unique_name:
-                            culled = True
-                            break
+                        culled = True
+                    else:
+                        # first try to cull by exclusion
+                        for ex_object_substr in (
+                            receptacle_set.excluded_object_substrings
+                            and receptacle.parent_object_handle
+                        ):
+                            if (
+                                ex_object_substr
+                                in receptacle.parent_object_handle
+                            ):
+                                culled = True
+                                break
+                        for (
+                            ex_receptacle_substr
+                        ) in receptacle_set.excluded_receptacle_substrings:
+                            if ex_receptacle_substr in receptacle.unique_name:
+                                culled = True
+                                break
                     if culled:
                         break
 
