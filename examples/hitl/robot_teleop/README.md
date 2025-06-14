@@ -1,8 +1,10 @@
 # Robot Tele-op HITL application
 
-TL;DR A HITL app that loads robots from URDF and simulates them in a Habitat Simulator instance with basic UI teleoperation and hot-reloading for quick morphology iteration.
+TL;DR A HITL app that loads robots from URDF and simulates them in a Habitat Simulator instance with basic UI teleoperation and hot-reloading for quick morphology iteration. In addition to data-collection and general debugging use cases, the app can also be run as the [Simulator Process](#simulator-process) for deployment in sim.
 
 # Build Steps
+
+Note: to run the robot teleop app as a [Simulator Process](#simulator-process), you must also [install the `murp` package](#installing-murp).
 
 ## Install habitat-sim
 
@@ -187,18 +189,19 @@ This section describes teleoperating the robot. All commands are associated with
 
 # Simulator Process
 
-The robot teleop app can be run as our "Simulator Process" for [deployment in sim](https://github.com/fairinternal/murp/blob/smoke_test/DEPLOY_IN_SIM.md). See also our [Workplace demo video](https://fb.workplace.com/groups/1643312812949607/permalink/1711217802825774/). If you're developing the Simulator Process, see also this `murp` mock API [example integration with a simulator](https://github.com/fairinternal/murp/blob/smoke_test/core/murp/murp/mock/README.md#example-integration-with-a-simulator).
+The robot teleop app can be run as our "Simulator Process" for [deployment in sim](https://github.com/fairinternal/murp/blob/smoke_test/DEPLOY_IN_SIM.md). If you haven't already, browse the rest of this readme to learn about the robot teleop app including [build steps](#build-steps). See also our [Workplace demo video](https://fb.workplace.com/groups/1643312812949607/permalink/1711217802825774/). If you're developing the Simulator Process, see also this `murp` mock API [example integration with a simulator](https://github.com/fairinternal/murp/blob/smoke_test/core/murp/murp/mock/README.md#example-integration-with-a-simulator).
 
 ## Installing `murp`
-The Simulator Process requires the `murp` package. We've developed special [lightweight install instructions](https://github.com/fairinternal/murp/blob/smoke_test/DEPLOY_IN_SIM.md#how-should-i-install-ros-and-the-murp-package) for `murp` aimed at deployment in sim. We recommend creating a new conda/mamba env from scratch using the instructions linked above, then proceed here:
+When running the robot teleop app as the Simulator Process, we require an additional dependency, the `murp` package, which isn't mentioned in the earlier [build steps](#build-steps). We've developed special [lightweight install instructions](https://github.com/fairinternal/murp/blob/smoke_test/DEPLOY_IN_SIM.md#how-should-i-install-ros-and-the-murp-package) for `murp` aimed at deployment in sim. We recommend creating a new conda/mamba env from scratch for `murp`, then proceed as follows:
 ```
-# activate the murp env you've already created
+# create murp_env as described at https://github.com/fairinternal/murp/blob/smoke_test/DEPLOY_IN_SIM.md
+# activate murp env
 mamba activate murp_env
 # install proper version of cmake (v4+ won't build habitat)
 mamba install cmake==3.31.6
 # we don't recommend the cmake Python package
 pip uninstall cmake
-# continue with installation instructions at top of this page: install habitat-sim, habitat-lab, etc.
+# continue with Build Steps for the robot teleop app at top of this page
 ```
 
 ## Usage and Tips
