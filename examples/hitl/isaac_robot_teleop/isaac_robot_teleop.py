@@ -125,6 +125,36 @@ def bind_physics_material_to_hierarchy(
     material.CreateDynamicFrictionAttr().Set(dynamic_friction)
 
 
+def make_static_kinematic(stage, root_path):
+    def recurse(prim):
+        from pxr import PhysxSchema, UsdPhysics
+
+        # Remove articulation APIs if present
+        if prim.HasAPI(UsdPhysics.ArticulationRootAPI):
+            prim.RemoveAPI(UsdPhysics.ArticulationRootAPI)
+        if prim.HasAPI(PhysxSchema.PhysxArticulationAPI):
+            prim.RemoveAPI(PhysxSchema.PhysxArticulationAPI)
+
+        # Remove physics joint prims
+        if prim.GetTypeName().startswith("Physics"):
+            stage.RemovePrim(prim.GetPath())
+            return
+
+        # Set kinematic enabled for rigid bodies
+        if prim.HasAPI(UsdPhysics.RigidBodyAPI):
+            UsdPhysics.RigidBodyAPI(prim).CreateKinematicEnabledAttr(True)
+
+        # Optionally remove MassAPI
+        if prim.HasAPI(UsdPhysics.MassAPI):
+            prim.RemoveAPI(UsdPhysics.MassAPI)
+
+        for child in prim.GetChildren():
+            recurse(child)
+
+    root_prim = stage.GetPrimAtPath(root_path)
+    recurse(root_prim)
+
+
 class AppStateIsaacSimViewer(AppStateBase):
     """ """
 
@@ -255,6 +285,10 @@ class AppStateIsaacSimViewer(AppStateBase):
         add_reference_to_stage(
             usd_path=scene_usd_file, prim_path="/World/test_scene"
         )
+        make_static_kinematic(
+            self._isaac_wrapper.service.world.stage, "/World/test_scene"
+        )
+
         self._usd_visualizer.on_add_reference_to_stage(
             usd_path=scene_usd_file, prim_path="/World/test_scene"
         )
