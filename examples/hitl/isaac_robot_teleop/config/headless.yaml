@@ -13,13 +13,20 @@ habitat_hitl:
       enable: True
     # client_max_idle_duration: 180.0   # TODO: Set up AFK timers.
     enable_connections_by_default: False
+
+    do_mock: False
   experimental:
     headless:
       do_headless: True
+      # exit_after: 1500
+
   client_sync:
     server_camera: False
     server_input: True
     skinning: True
+
+  # temp
+  target_sps: 9999
 
 isaac_robot_teleop:
   draw_debug_shapes: False
@@ -27,9 +34,11 @@ isaac_robot_teleop:
   lock_pc_camera_to_robot: True
   usd_scene_path: "../../../data/usd/scenes/"
   navmesh_path: "data/hssd-hab/navmeshes/"
-  scene_name: "103997403_171030405"
-  episode_dataset: "episodes/hitl_teleop_episodes_05_09.json.gz"
-  episode_index: 1
+  # scene_name: "103997403_171030405"
+  # episode_dataset: "episodes/hitl_teleop_episodes_05_09.json.gz"
+  # episode_index: 1
+  episode_dataset: "data/datasets/hitl_teleop_episodes_220.json.gz"
+  episode_index: 110
 
   #physx configuration settings
   #applied to all rigid objects added to the scene (e.g. from Episodes)

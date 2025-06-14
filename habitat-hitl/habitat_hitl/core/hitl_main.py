@@ -151,7 +151,7 @@ def hitl_headed_main(hitl_config, app_config, create_app_state_lambda):
 def _headless_app_loop(hitl_config, driver):
     headless_config = hitl_config.experimental.headless
     frequency_limiter = FrequencyLimiter(hitl_config.target_sps)
-    sps_rate_tracker = AverageRateTracker(1.0)
+    sps_rate_tracker = AverageRateTracker(5.0)  # temp
     dt = 1.0 / hitl_config.target_sps
 
     step_count = 0
@@ -186,14 +186,16 @@ def _headless_app_loop(hitl_config, driver):
         new_rate = sps_rate_tracker.increment()
         if new_rate is not None:
             low_sps_warning_threshold = hitl_config.target_sps * 0.9
-            if new_rate < low_sps_warning_threshold:
-                print(f"low SPS: {new_rate:.1f}")
+            # if new_rate < low_sps_warning_threshold:
+            #     print(f"low SPS: {new_rate:.1f}")
+            print(f"SPS: {new_rate:.1f}, frame time: {1000.0 / new_rate:.3f} ms")
 
         step_count += 1
         if (
             headless_config.exit_after is not None
             and step_count == headless_config.exit_after
         ):
+            print(f"forcing exit after {headless_config.exit_after} steps!")
             break
 
     if video_helper:

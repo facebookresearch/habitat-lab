@@ -234,6 +234,8 @@ class SimDriver(AppDriver):
                     )
 
             self._remote_client_state.on_frame_end()
-            self._send_keyframes(keyframes)
+
+            if not self._hitl_config.networking.do_mock:
+                self._send_keyframes(keyframes)
 
         return post_sim_update_dict

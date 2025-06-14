@@ -15,6 +15,13 @@ class XRPose:
     Encapsulates the XR controller and head pose states.
     """
 
+    def load_static_pose():   
+        with open("data/isaac_robot_teleop_xr_pose.json", "r") as f:
+            json_pose_dict = json.load(f)    
+        return json_pose_dict
+
+    cached_json_pose_dict = load_static_pose()
+
     def __init__(
         self,
         remote_client_state: RemoteClientState = None,
@@ -33,6 +40,10 @@ class XRPose:
         self.rot_left: mn.Quaternion = None
         self.pos_right: mn.Vector3 = None
         self.rot_right: mn.Quaternion = None
+
+        if XRPose.cached_json_pose_dict is not None:
+            remote_client_state = None
+            json_pose_dict = XRPose.cached_json_pose_dict
 
         if remote_client_state is not None and json_pose_dict is not None:
             self.valid = False
@@ -231,7 +242,7 @@ class XRPoseAdapter:
         # this transform should be constructed to map xr local space into the final global coordinate space
         # NOTE: this is done within the application
         self.xr_local_to_global: mn.Matrix4 = mn.Matrix4()
-        self.arm_extension_scale_factor = 1.75
+        self.arm_extension_scale_factor = 1.0  # temp 1.75
 
     def xr_pose_transformed(
         self, xr_pose: XRPose, transform: mn.Matrix4

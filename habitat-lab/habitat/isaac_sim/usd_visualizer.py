@@ -41,6 +41,7 @@ class _InstanceGroup:
         self._render_instance_helper = RenderInstanceHelper(hab_sim, False)
         self._is_rigid = is_rigid
         self._world = isaac_world
+        self._do_add_jitter = False
 
     def set_dirty(
         self,
@@ -92,6 +93,15 @@ class _InstanceGroup:
             positions, orientations
         )
 
+        if self._do_add_jitter:
+            # 64 is approximately the number of instances of the robot, although we
+            # don't try to jitter the robot's specific instances here.
+            num_jitter = min(64, len(positions))
+            jitter = np.random.rand() * 0.02
+            for i in range(num_jitter):
+                positions[i][0] += jitter
+
+
         self._render_instance_helper.set_world_poses(
             np.ascontiguousarray(positions), np.ascontiguousarray(orientations)
         )
@@ -115,6 +125,9 @@ class UsdVisualizer:
                 self._world,
                 is_rigid=group_type == _InstanceGroupType.DYNAMIC,
             )
+
+    def set_dynamic_jitter(self, do_jitter):
+        self._instance_groups[_InstanceGroupType.DYNAMIC]._do_add_jitter = do_jitter
 
     def clear_render_instances(self):
         """
@@ -258,8 +271,17 @@ class UsdVisualizer:
 
             asset_abs_path = asset_path
 
-            # todo: consider doing this check later
             is_dynamic = prim.HasAPI(UsdPhysics.RigidBodyAPI)
+
+            # reference code to put kinematic bodies in the non-dynamic group; this
+            # doesn't give a significant speedup however.
+            # def is_dynamic_body(prim):
+            #     if not prim.HasAPI(UsdPhysics.RigidBodyAPI):
+            #         return False
+            #     rigid_api = UsdPhysics.RigidBodyAPI(prim)
+            #     attr = rigid_api.GetKinematicEnabledAttr()
+            #     return not (attr and attr.Get())
+            # is_dynamic = is_dynamic_body(prim)
 
             group_type = (
                 _InstanceGroupType.DYNAMIC

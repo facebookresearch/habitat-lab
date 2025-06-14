@@ -78,7 +78,10 @@ class AppDriver:
             self._interprocess_record = InterprocessRecord(
                 self._hitl_config.networking
             )
-            launch_networking_process(self._interprocess_record)
+            if not self._hitl_config.networking.do_mock:
+                launch_networking_process(self._interprocess_record)
+            else:
+                print("hitl_config.networking.do_mock==True so skipping networking!")
             self._remote_client_state = RemoteClientState(
                 hitl_config=self._hitl_config,
                 client_message_manager=self._client_message_manager,

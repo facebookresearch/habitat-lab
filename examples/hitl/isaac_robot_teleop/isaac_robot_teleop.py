@@ -4,6 +4,24 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+DO_HEADLESS = True
+
+FORCE_IK = True
+DO_STUB_IK = False
+DO_FAST_IK = True
+DO_ADD_IK_JITTER = True
+
+DO_STEP_PHYSICS = True  # we still do ~20 steps at the start even if False
+FORCE_STATIC_SCENE = True
+APPROX_APP_FPS = 30  # default is 30; setting to 60 slows time and compute by 50%
+FORCE_TURN = False
+FORCE_MOVE = False
+
+DO_ADD_RENDER_JITTER = True
+DO_MOCK_NETWORKING = False
+
+STEP_COUNTER = 0
+
 import os
 import random
 import sys
@@ -124,6 +142,33 @@ def bind_physics_material_to_hierarchy(
     material.CreateStaticFrictionAttr().Set(static_friction)
     material.CreateDynamicFrictionAttr().Set(dynamic_friction)
 
+def make_static_kinematic(stage, root_path):
+    def recurse(prim):
+        from pxr import Usd, UsdPhysics, PhysxSchema
+        # Remove articulation APIs if present
+        if prim.HasAPI(UsdPhysics.ArticulationRootAPI):
+            prim.RemoveAPI(UsdPhysics.ArticulationRootAPI)
+        if prim.HasAPI(PhysxSchema.PhysxArticulationAPI):
+            prim.RemoveAPI(PhysxSchema.PhysxArticulationAPI)
+
+        # Remove physics joint prims
+        if prim.GetTypeName().startswith("Physics"):
+            stage.RemovePrim(prim.GetPath())
+            return
+
+        # Set kinematic enabled for rigid bodies
+        if prim.HasAPI(UsdPhysics.RigidBodyAPI):
+            UsdPhysics.RigidBodyAPI(prim).CreateKinematicEnabledAttr(True)
+
+        # Optionally remove MassAPI
+        if prim.HasAPI(UsdPhysics.MassAPI):
+            prim.RemoveAPI(UsdPhysics.MassAPI)
+
+        for child in prim.GetChildren():
+            recurse(child)
+
+    root_prim = stage.GetPrimAtPath(root_path)
+    recurse(root_prim)
 
 class AppStateIsaacSimViewer(AppStateBase):
     """ """
@@ -171,6 +216,7 @@ class AppStateIsaacSimViewer(AppStateBase):
             self._isaac_wrapper = app_data.isaac_wrapper
         isaac_world = self._isaac_wrapper.service.world
         self._usd_visualizer = self._isaac_wrapper.service.usd_visualizer
+        self._usd_visualizer.set_dynamic_jitter(DO_ADD_RENDER_JITTER)
 
         self._isaac_physics_dt = 1.0 / 180
         # beware goofy behavior if physics_dt doesn't equal rendering_dt
@@ -255,6 +301,9 @@ class AppStateIsaacSimViewer(AppStateBase):
         add_reference_to_stage(
             usd_path=scene_usd_file, prim_path="/World/test_scene"
         )
+        if FORCE_STATIC_SCENE:
+            make_static_kinematic(self._isaac_wrapper.service.world.stage, "/World/test_scene")
+
         self._usd_visualizer.on_add_reference_to_stage(
             usd_path=scene_usd_file, prim_path="/World/test_scene"
         )
@@ -858,6 +907,11 @@ class AppStateIsaacSimViewer(AppStateBase):
         xr_input = self._app_service.remote_client_state.get_xr_input(0)
         left = xr_input.left_controller
         right = xr_input.right_controller
+
+        if FORCE_IK:
+            left._hand_trigger = 1.0
+            right._hand_trigger = 1.0
+
         from habitat_hitl.core.xr_input import XRButton
 
         if left.get_button_down(XRButton.ONE):
@@ -970,9 +1024,17 @@ class AppStateIsaacSimViewer(AppStateBase):
                         )
                         ee_pos_global = global_xr_pose.pos_right
 
-                    new_arm_pose = self._ik.inverse_kinematics(
-                        to_ik_pose(xr_pose), cur_arm_pose
-                    )
+                    if DO_STUB_IK:
+                        new_arm_pose = self._ik.robot.q
+                    else:
+                        if not DO_FAST_IK:
+                            self._ik._helper = None
+                        if DO_ADD_IK_JITTER:
+                            xr_pose[0].x += np.random.rand() * 0.2
+                        new_arm_pose = self._ik.inverse_kinematics(
+                            to_ik_pose(xr_pose), cur_arm_pose
+                        )
+
 
                     debug_draw_axis(
                         self._app_service.gui_drawer,
@@ -1109,13 +1171,13 @@ class AppStateIsaacSimViewer(AppStateBase):
         if not self.robot.base_vel_controller.track_waypoints:
             self.robot.base_vel_controller.reset()
 
-        if gui_input.get_key(KeyCode.I):
+        if gui_input.get_key(KeyCode.I) or FORCE_MOVE:
             self.robot.base_vel_controller.track_waypoints = False
             self.robot.base_vel_controller.target_linear_vel = lin_speed
         if gui_input.get_key(KeyCode.K):
             self.robot.base_vel_controller.track_waypoints = False
             self.robot.base_vel_controller.target_linear_vel = -lin_speed
-        if gui_input.get_key(KeyCode.J):
+        if gui_input.get_key(KeyCode.J) or FORCE_TURN:
             # self.robot.base_rot += 0.1
             self.robot.base_vel_controller.track_waypoints = False
             self.robot.base_vel_controller.target_angular_vel = ang_speed
@@ -1178,11 +1240,12 @@ class AppStateIsaacSimViewer(AppStateBase):
             if not sim_app.is_running():
                 post_sim_update_dict["application_exit"] = True
             else:
-                approx_app_fps = 30
+                approx_app_fps = APPROX_APP_FPS
                 num_steps = int(
                     1.0 / (approx_app_fps * self._isaac_physics_dt)
                 )
-                self._isaac_wrapper.step(num_steps=num_steps)
+                if DO_STEP_PHYSICS or STEP_COUNTER < 20:
+                    self._isaac_wrapper.step(num_steps=num_steps)
                 self._isaac_wrapper.pre_render()
 
     def set_physics_paused(self, do_pause_physics):
@@ -1602,6 +1665,9 @@ class AppStateIsaacSimViewer(AppStateBase):
                 "task_prompt"
             ] = self.task_prompt
 
+        global STEP_COUNTER
+        STEP_COUNTER += 1
+
     def _is_episode_finished(self) -> bool:
         return self._task_finished
 
@@ -1661,10 +1727,14 @@ class AppStateIsaacSimViewer(AppStateBase):
         """
 
 
+static_config_name = "headless" if DO_HEADLESS else "isaac_robot_teleop"
+
 @hydra.main(
-    version_base=None, config_path="./config", config_name="isaac_robot_teleop"
+    version_base=None, config_path="./config", config_name=static_config_name
 )
 def main(config):
+    if DO_MOCK_NETWORKING:
+        config.habitat_hitl.networking.do_mock = True
     hitl_main(config, lambda app_service: AppStateIsaacSimViewer(app_service))
 
 
