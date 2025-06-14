@@ -470,6 +470,7 @@ class Robot:
             if hasattr(self.robot_cfg, "fixed_base")
             else False,
             force_reload=True,
+            maintain_link_order=False,  # todo: consider setting to True for better consistency with other URDF readers and simulators
         )
         self.obj_ids = [self.ao.object_id] + list(
             self.ao.link_object_ids.keys()

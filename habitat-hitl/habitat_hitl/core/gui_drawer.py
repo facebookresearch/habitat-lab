@@ -65,6 +65,25 @@ class GuiDrawer:
             # Networking not implemented
             pass
 
+    def draw_axes(self, transform: mn.Matrix4, scale):
+        self.push_transform(transform)
+        self.draw_transformed_line(
+            mn.Vector3(0.0, 0.0, 0.0),
+            mn.Vector3(scale, 0.0, 0.0),
+            mn.Color4(1.0, 0.0, 0.0, 1.0),
+        )
+        self.draw_transformed_line(
+            mn.Vector3(0.0, 0.0, 0.0),
+            mn.Vector3(0.0, scale, 0.0),
+            mn.Color4(0.0, 1.0, 0.0, 1.0),
+        )
+        self.draw_transformed_line(
+            mn.Vector3(0.0, 0.0, 0.0),
+            mn.Vector3(0.0, 0.0, scale),
+            mn.Color4(0.0, 0.0, 1.0, 1.0),
+        )
+        self.pop_transform()
+
     def push_transform(
         self,
         transform: mn.Matrix4,
