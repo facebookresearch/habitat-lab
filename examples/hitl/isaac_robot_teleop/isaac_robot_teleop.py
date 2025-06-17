@@ -125,6 +125,32 @@ def bind_physics_material_to_hierarchy(
     material.CreateDynamicFrictionAttr().Set(dynamic_friction)
 
 
+def create_stage_mesh_contact_sensors(root_prim):
+    """
+    We need to manually apply the PhysxContactReportAPI to simplified stage meshes to detect contacts with them.
+    It also helps to increase the ContactOffsetAttr which controls the distance at which collision detection occurs.
+    """
+    from pxr import PhysxSchema, Usd
+
+    prim_range = Usd.PrimRange(root_prim)
+    it = iter(prim_range)
+    for prim in it:
+        if prim.HasAPI(
+            PhysxSchema.PhysxTriangleMeshSimplificationCollisionAPI
+        ):
+            # NOTE: useless except to identify stage meshes
+            # mesh_simp_api = PhysxSchema.PhysxTriangleMeshSimplificationCollisionAPI(prim)
+
+            collision_api = PhysxSchema.PhysxCollisionAPI(prim)
+            # NOTE: tune this for application
+            collision_api.CreateContactOffsetAttr(0.01)
+            # collision_api.CreateRestOffsetAttr(0.5)
+
+            PhysxSchema.PhysxContactReportAPI.Apply(prim)
+            # TODO: could tune this?
+            # _contactReportAPI.CreateThresholdAttr().Set(0)
+
+
 class AppStateIsaacSimViewer(AppStateBase):
     """ """
 
@@ -280,6 +306,8 @@ class AppStateIsaacSimViewer(AppStateBase):
             dynamic_friction=self._app_cfg.stage_dynamic_friction,
             restitution=self._app_cfg.stage_restitution,
         )
+        # setup the stage contact sensors
+        create_stage_mesh_contact_sensors(root_prim=prim)
 
         isaac_world.reset()
 
@@ -693,6 +721,7 @@ class AppStateIsaacSimViewer(AppStateBase):
             status_str += self._recent_mouse_ray_hit_info["rigidBody"] + "\n"
         status_str += f"base rot: {self.robot.base_rot} \n"
         status_str += f"time: {self._timer}\n"
+        status_str += f"robot in contact: {self.robot.in_contact}\n"
         if self._frame_recorder.replaying:
             status_str += f"-REPLAYING FRAMES [{self._frame_recorder.frame_data[0]['t'], self._frame_recorder.frame_data[-1]['t']}]-\n"
         elif self._frame_recorder.recording:
@@ -1294,6 +1323,9 @@ class AppStateIsaacSimViewer(AppStateBase):
         if gui_input.get_key_down(KeyCode.ONE):
             self.reset_episode_objects()
 
+        if gui_input.get_key_down(KeyCode.THREE):
+            print(f"Robot in contact = {self.robot.in_contact}")
+
         if gui_input.get_key_down(KeyCode.F):
             self.cursor_follow_robot = not self.cursor_follow_robot
             print(f"Set cursor_follow_robot = {self.cursor_follow_robot}")
@@ -1471,10 +1503,12 @@ class AppStateIsaacSimViewer(AppStateBase):
         self._cam_transform = self._camera_helper.get_cam_transform()
         post_sim_update_dict["cam_transform"] = self._cam_transform
 
+        # need this in the app even if other debug lines are turned off
+        self.debug_draw_quest()
+
         if self._draw_debug_shapes:
             # draw lookat ring
             self.draw_lookat()
-            self.debug_draw_quest()
             # draw the robot frame
             self.robot.draw_debug(self._app_service.gui_drawer)
             # self.debug_draw_hands()

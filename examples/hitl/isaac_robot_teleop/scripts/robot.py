@@ -6,7 +6,7 @@
 
 import json
 import os
-from typing import Dict, List, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 import magnum as mn
 import numpy as np
@@ -23,6 +23,7 @@ default_pose_cache_path = os.path.join(dir_path, "robot_poses.json")
 
 from omni.isaac.core.robots import Robot
 from omni.isaac.core.utils.types import ArticulationAction
+from omni.physx import get_physx_simulation_interface
 from pxr import PhysxSchema, Usd, UsdPhysics  # Sdf UsdGeom
 
 from habitat.isaac_sim import isaac_prim_utils
@@ -565,15 +566,15 @@ class RobotAppWrapper:
             usd_path=self.robot_cfg.usd, prim_path=self._robot_prim_path
         )
 
-        robot_prim = self._isaac_service.world.stage.GetPrimAtPath(
+        self.robot_prim = self._isaac_service.world.stage.GetPrimAtPath(
             self._robot_prim_path
         )
-        if not robot_prim.IsValid():
+        if not self.robot_prim.IsValid():
             raise ValueError(f"Prim at {self._robot_prim_path} is not valid.")
 
         # create joint motors
         # Traverse only the robot's prim hierarchy
-        for prim in Usd.PrimRange(robot_prim):
+        for prim in Usd.PrimRange(self.robot_prim):
             # joint vel max
             if prim.HasAPI(PhysxSchema.PhysxJointAPI):
                 joint_api = PhysxSchema.PhysxJointAPI(prim)
@@ -634,6 +635,9 @@ class RobotAppWrapper:
         self.ground_to_base_offset = self.robot_cfg.ground_to_base_offset
         # TODO: configure the base controller from settings yaml
         self.base_vel_controller = RobotBaseVelController(self)
+        # datastructure to aggregate the results of contact callbacks in a queryable format
+        self.contact_state: Dict[Any, Any] = {}
+        self._in_contact = False
 
     def get_global_view_offset(self) -> mn.Vector3:
         """
@@ -728,6 +732,201 @@ class RobotAppWrapper:
         self.base_vel_controller.track_waypoints = (
             self.robot_cfg.track_waypoints
         )
+
+        self.apply_contact_report_sensors()
+
+    def apply_contact_report_sensors(self):
+        """
+        Here we are hooking the robot's links into a contact callback.
+        NOTE: We also set the sensitivity of the contact report to cull small erroneous contacts.
+        """
+
+        # NOTE: hardcoded for now because iteration caused some (e.g. base) to invalidate the physx view
+        self.contact_sensor_links = [
+            "/World/env_0/Murp/base_link",
+            "/World/env_0/Murp/torso_link",
+            "/World/env_0/Murp/left_base",
+            "/World/env_0/Murp/left_fr3_link0",
+            "/World/env_0/Murp/left_fr3_link1",
+            "/World/env_0/Murp/left_fr3_link2",
+            "/World/env_0/Murp/left_fr3_link3",
+            "/World/env_0/Murp/left_fr3_link4",
+            "/World/env_0/Murp/left_fr3_link5",
+            "/World/env_0/Murp/left_fr3_link6",
+            "/World/env_0/Murp/left_fr3_link7",
+            "/World/env_0/Murp/left_fr3_link8",
+            "/World/env_0/Murp/base_link_lhand",
+            "/World/env_0/Murp/link_l0_0",
+            "/World/env_0/Murp/link_l1_0",
+            "/World/env_0/Murp/link_l2_0",
+            "/World/env_0/Murp/link_l3_0",
+            "/World/env_0/Murp/link_l3_0_digit2_sensor_base",
+            "/World/env_0/Murp/link_l3_0_tip",
+            "/World/env_0/Murp/link_l12_0",
+            "/World/env_0/Murp/link_l13_0",
+            "/World/env_0/Murp/link_l14_0",
+            "/World/env_0/Murp/link_l15_0",
+            "/World/env_0/Murp/link_l15_0_digit2_sensor_base",
+            "/World/env_0/Murp/link_l15_0_tip",
+            "/World/env_0/Murp/link_l4_0",
+            "/World/env_0/Murp/link_l5_0",
+            "/World/env_0/Murp/link_l6_0",
+            "/World/env_0/Murp/link_l7_0",
+            "/World/env_0/Murp/link_l7_0_digit2_sensor_base",
+            "/World/env_0/Murp/link_l7_0_tip",
+            "/World/env_0/Murp/link_l8_0",
+            "/World/env_0/Murp/link_l9_0",
+            "/World/env_0/Murp/link_l10_0",
+            "/World/env_0/Murp/link_l11_0",
+            "/World/env_0/Murp/link_l11_0_digit2_sensor_base",
+            "/World/env_0/Murp/link_l11_0_tip",
+            "/World/env_0/Murp/right_base",
+            "/World/env_0/Murp/right_fr3_link0",
+            "/World/env_0/Murp/right_fr3_link1",
+            "/World/env_0/Murp/right_fr3_link2",
+            "/World/env_0/Murp/right_fr3_link3",
+            "/World/env_0/Murp/right_fr3_link4",
+            "/World/env_0/Murp/right_fr3_link5",
+            "/World/env_0/Murp/right_fr3_link6",
+            "/World/env_0/Murp/right_fr3_link7",
+            "/World/env_0/Murp/right_fr3_link8",
+            "/World/env_0/Murp/base_link_hand",
+            "/World/env_0/Murp/link_0_0",
+            "/World/env_0/Murp/link_1_0",
+            "/World/env_0/Murp/link_2_0",
+            "/World/env_0/Murp/link_3_0",
+            "/World/env_0/Murp/link_3_0_digit2_sensor_base",
+            "/World/env_0/Murp/link_3_0_tip",
+            "/World/env_0/Murp/link_12_0",
+            "/World/env_0/Murp/link_13_0",
+            "/World/env_0/Murp/link_14_0",
+            "/World/env_0/Murp/link_15_0",
+            "/World/env_0/Murp/link_15_0_digit2_sensor_base",
+            "/World/env_0/Murp/link_15_0_tip",
+            "/World/env_0/Murp/link_4_0",
+            "/World/env_0/Murp/link_5_0",
+            "/World/env_0/Murp/link_6_0",
+            "/World/env_0/Murp/link_7_0",
+            "/World/env_0/Murp/link_7_0_digit2_sensor_base",
+            "/World/env_0/Murp/link_7_0_tip",
+            "/World/env_0/Murp/link_8_0",
+            "/World/env_0/Murp/link_9_0",
+            "/World/env_0/Murp/link_10_0",
+            "/World/env_0/Murp/link_11_0",
+            "/World/env_0/Murp/link_11_0_digit2_sensor_base",
+            "/World/env_0/Murp/link_11_0_tip",
+        ]
+        for prim_path in self.contact_sensor_links:
+            my_prim = self._isaac_service.world.stage.GetPrimAtPath(prim_path)
+            contactReportAPI = PhysxSchema.PhysxContactReportAPI.Apply(my_prim)
+            # NOTE: this should be tuned empirically for application.
+            contactReportAPI.CreateThresholdAttr().Set(1.0)
+
+        self._contact_report_sub = (
+            get_physx_simulation_interface().subscribe_contact_report_events(
+                self._on_contact_report_event
+            )
+        )
+
+    def _on_contact_report_event(self, contact_headers, contact_data):
+        """
+        Callback function triggered within physx loop when contacts are detected.
+        Populates internal datastructures for later query.
+        #NOTE: this function profiled on Lambda at 0.0015sec in heavy contact (both hands)
+        """
+        from omni.physx.bindings._physx import ContactEventType
+        from pxr import PhysicsSchemaTools
+
+        # reset internal datastructures
+        self._in_contact = False
+        self.contact_state = {}
+
+        # TODO: this should fill our datastructure which we will query when we need recent contact info
+        for contact_header in contact_headers:
+            # print("Got contact header type: " + str(contact_header.type))
+            actor0 = PhysicsSchemaTools.intToSdfPath(contact_header.actor0)
+            actor1 = PhysicsSchemaTools.intToSdfPath(contact_header.actor1)
+            if (
+                contact_header.type == ContactEventType.CONTACT_PERSIST
+                and actor0 in self.contact_sensor_links
+                or actor1 in self.contact_sensor_links
+            ):
+                self._in_contact = True
+
+                # print(
+                #     "Actor0: "
+                #     + str(PhysicsSchemaTools.intToSdfPath(contact_header.actor0))
+                # )
+                # print(
+                #     "Actor1: "
+                #     + str(PhysicsSchemaTools.intToSdfPath(contact_header.actor1))
+                # )
+            continue
+
+            # print(
+            #     "Collider0: "
+            #     + str(
+            #         PhysicsSchemaTools.intToSdfPath(contact_header.collider0)
+            #     )
+            # )
+            # print(
+            #     "Collider1: "
+            #     + str(
+            #         PhysicsSchemaTools.intToSdfPath(contact_header.collider1)
+            #     )
+            # )
+            # print("StageId: " + str(contact_header.stage_id))
+            # print(
+            #     "Number of contacts: " + str(contact_header.num_contact_data)
+            # )
+
+            # contact_data_offset = contact_header.contact_data_offset
+            # num_contact_data = contact_header.num_contact_data
+
+            # for index in range(
+            #     contact_data_offset, contact_data_offset + num_contact_data, 1
+            # ):
+            #     print("Contact:")
+            #     print("Contact position: " + str(contact_data[index].position))
+            #     print("Contact normal: " + str(contact_data[index].normal))
+            #     print("Contact impulse: " + str(contact_data[index].impulse))
+            #     print(
+            #         "Contact separation: "
+            #         + str(contact_data[index].separation)
+            #     )
+            #     print(
+            #         "Contact faceIndex0: "
+            #         + str(contact_data[index].face_index0)
+            #     )
+            #     print(
+            #         "Contact faceIndex1: "
+            #         + str(contact_data[index].face_index1)
+            #     )
+            #     print(
+            #         "Contact material0: "
+            #         + str(
+            #             PhysicsSchemaTools.intToSdfPath(
+            #                 contact_data[index].material0
+            #             )
+            #         )
+            #     )
+            #     print(
+            #         "Contact material1: "
+            #         + str(
+            #             PhysicsSchemaTools.intToSdfPath(
+            #                 contact_data[index].material1
+            #             )
+            #         )
+            #     )
+
+    @property
+    def in_contact(self) -> bool:
+        """
+        Boolean contact function for the full body.
+        Useful for rejection sampling.
+        NOTE: does not update from state without Isaac simulation step.
+        """
+        return self._in_contact
 
     def physics_callback(self, step_size: float):
         """
@@ -1115,7 +1314,10 @@ class RobotAppWrapper:
             prim_path = str(prim.GetPath())
 
             if not prim.HasAPI(UsdPhysics.RigidBodyAPI):
+                print(f"prim_path {prim_path} not RigidBody")
                 continue
+            else:
+                pass
 
             # we found a rigid body, so let's ignore children
             it.PruneChildren()
@@ -1131,7 +1333,6 @@ class RobotAppWrapper:
         self._rigid_prim_view = RigidPrimView(prim_paths)
         physics_sim_view = self._isaac_service.world.physics_sim_view
         assert physics_sim_view
-        self._rigid_prim_view.initialize(physics_sim_view)
 
     def update_body_prim_states(self) -> None:
         """

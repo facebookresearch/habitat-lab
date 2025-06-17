@@ -6,7 +6,7 @@ import re
 import xml.etree.ElementTree as ET
 from typing import Dict, List, Tuple
 
-from omni.isaac.lab.app import AppLauncher
+from isaaclab.app import AppLauncher
 
 parser = argparse.ArgumentParser(
     description="Create an empty Issac Sim stage."
@@ -16,11 +16,14 @@ AppLauncher.add_app_launcher_args(parser)
 # parse the arguments
 args_cli = parser.parse_args()
 # launch omniverse app
-app_launcher = AppLauncher(args_cli)
+# app_launcher = AppLauncher(args_cli)
+# NOTE: to get ISaacLab main with 4.5 working, the extension needs to be here at init. Other methods were flaking.
+app_launcher = AppLauncher(extensions=["omni.kit.asset_converter"])
 simulation_app = app_launcher.app
 
 import omni.physx.scripts.utils
-from omni.isaac.core.utils.extensions import enable_extension
+
+# from omni.isaac.core.utils.extensions import enable_extension
 from pxr import Gf, PhysxSchema, Sdf, Usd, UsdGeom, UsdPhysics
 
 
@@ -165,10 +168,10 @@ async def async_convert_mesh_to_usd(
 ) -> bool:
     """ported from IsaacLab mesh_converter.py _convert_mesh_to_usd"""
 
-    enable_extension("omni.kit.asset_converter")
+    # enable_extension("omni.kit.asset_converter")
 
-    import omni.kit.asset_converter
-    import omni.usd
+    # import omni.kit.asset_converter
+    # import omni.usd
 
     # Create converter context
     converter_context = omni.kit.asset_converter.AssetConverterContext()
