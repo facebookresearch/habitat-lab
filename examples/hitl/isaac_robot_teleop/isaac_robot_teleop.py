@@ -1008,12 +1008,40 @@ class AppStateIsaacSimViewer(AppStateBase):
                         xr_pose_in_robot_frame.rot_left,
                     )
                     ee_pos_global = global_xr_pose.pos_left
+                    ee_rot_global = global_xr_pose.rot_left
                     if "right" in base_link_key:
                         xr_pose = (
                             xr_pose_in_robot_frame.pos_right,
                             xr_pose_in_robot_frame.rot_right,
                         )
                         ee_pos_global = global_xr_pose.pos_right
+                        ee_rot_global = global_xr_pose.rot_right
+
+                    cur_ef_T = arm_base_transform.__matmul__(
+                        self._ik.get_ee_T(q=cur_arm_pose)
+                    )
+                    tar_disp = ee_pos_global - cur_ef_T.translation
+                    tar_dist = (tar_disp).length()
+                    max_tar_dist = 0.05
+                    if tar_dist > max_tar_dist:
+                        tar_ef = (
+                            cur_ef_T.translation
+                            + tar_disp.normalized() * max_tar_dist
+                        )
+                        xr_pose = (
+                            arm_base_transform.inverted().transform_point(
+                                tar_ef
+                            ),
+                            xr_pose[1],
+                        )
+                        tar_ef_T = mn.Matrix4.from_(
+                            ee_rot_global.to_matrix(), tar_ef
+                        )
+                        debug_draw_axis(
+                            self._app_service.gui_drawer,
+                            tar_ef_T,
+                            scale=0.25,
+                        )
 
                     new_arm_pose = self._ik.inverse_kinematics(
                         to_ik_pose(xr_pose), cur_arm_pose

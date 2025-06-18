@@ -52,11 +52,15 @@ class DifferentialInverseKinematics:
         # 0 to have no secondary tasks
         self.epsilon = 0.1
 
-    def get_ee_T(self):
+    def get_ee_T(self, q=None):
         """
         Get the end effector transform in robot base space as a Matrix4.
         """
-        return mn.Matrix4(self.robot.fkine(self.robot.q,end=self.robot.links[8]).A)
+        if q is not None:
+            self.robot.q = q
+        return mn.Matrix4(
+            self.robot.fkine(self.robot.q, end=self.robot.links[8]).A
+        )
 
     def inverse_kinematics(self, pose, q):
         if len(q) != 7:
@@ -77,7 +81,7 @@ class DifferentialInverseKinematics:
         qd = prog.NewContinuousVariables(7, "qd")
 
         max_qd = [2.1750, 2.1750, 2.1750, 2.1750, 2.61, 2.61, 2.61]
-        
+
         max_q = [2.7437, 1.7837, 2.9007, -0.1518, 2.8065, 4.5169, 3.0159]
         min_q = [-2.7437, -1.7837, -2.9007, -2.9, -2.8065, 0.5445, -3.0159]
 
