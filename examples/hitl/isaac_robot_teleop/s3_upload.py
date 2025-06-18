@@ -64,17 +64,11 @@ else:
 
 
 def generate_unique_session_id(
-    episode_indices: List[int], connection_records: Dict[int, ConnectionRecord]
+   connection_records: Dict[int, ConnectionRecord]
 ) -> str:
     """
     Generate a unique name for a session.
     """
-    # Generate episodes string
-    episodes_str = (
-        "-".join(str(x) for x in episode_indices)
-        if len(episode_indices) > 0
-        else "no-episode"
-    )
 
     # Generate users string
     users_str = ""
@@ -88,7 +82,7 @@ def generate_unique_session_id(
         else:
             users_str += "invalid-user"
 
-    return f"{episodes_str}_{users_str}_{timestamp()}"
+    return f"{timestamp()}_{users_str}"
 
 
 def make_s3_filename(session_id: str, orig_file_name: str) -> str:

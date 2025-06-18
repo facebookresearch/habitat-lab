@@ -84,7 +84,7 @@ class AppStateEndSession(AppStateBase):
 
         # Generate unique session ID
         session_id = generate_unique_session_id(
-            session.episode_indices, session.connection_records
+            session.connection_records
         )
         s3_path = os.path.join(s3_path, session_id)
 
