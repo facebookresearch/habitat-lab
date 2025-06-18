@@ -611,6 +611,62 @@ class AppStateIsaacSimViewer(AppStateBase):
             restitution=self.robot.robot_cfg.link_restitution,
         )
 
+    def sample_valid_robot_base_state(self, reset_objects=True):
+        """
+        Resets robot joint state and attempts to set the robot base state to a collision free navmesh point within the target region.
+        :param reset_objects: if true, reset object states from episode initial states
+        """
+
+        base_rot = random.uniform(-mn.math.pi, mn.math.pi)
+        default_joint_state = self.robot.pos_subsets["full"].fetch_cached_pose(
+            pose_name=self.robot.robot_cfg.initial_pose
+        )
+
+        # place robot in a region containing most objects
+        obj_region_counts: defaultdict = defaultdict(int)
+        max_region: int = None
+        for obj in self._rigid_objects:
+            possible_regions = self._sim.semantic_scene.get_regions_for_point(
+                obj.translation
+            )
+            for rix in possible_regions:
+                obj_region_counts[rix] += 1
+                if (
+                    max_region is None
+                    or obj_region_counts[max_region] < obj_region_counts[rix]
+                ):
+                    max_region = rix
+        assert max_region is not None
+
+        # we have a region, now sample a navmesh point
+        nav_point = self._sim.pathfinder.get_random_navigable_point()
+        nav_samples = 0
+        max_nav_samples = 1500
+        # TODO: we use navmeshes closest obstacle as a proxy for collision detection. We should implement that for Isaac or pre-sample valid poses from Habitat-Bullet and cache them.
+        while nav_samples < max_nav_samples and (
+            max_region
+            not in self._sim.semantic_scene.get_regions_for_point(
+                nav_point + mn.Vector3(0, 0.1, 0)
+            )
+            or self.robot_contact_test(
+                pos=nav_point,
+                rot_angle=base_rot,
+                joint_pos=default_joint_state,
+            )
+        ):
+            nav_point = self._sim.pathfinder.get_random_navigable_point()
+            # resample base rotation as necessary
+            base_rot = random.uniform(-mn.math.pi, mn.math.pi)
+            nav_samples += 1
+        if nav_samples < max_nav_samples:
+            # self.robot.set_root_pose(pos=nav_point)
+            print("found collision free point?")
+        else:
+            print("Failed to find new nav point, max samples exceeded.")
+
+        if reset_objects:
+            self.reset_episode_objects()
+
     def set_robot_base_initial_state(self):
         """
         Either sets the configured initial state or samples a random point from the navmesh.
@@ -620,66 +676,26 @@ class AppStateIsaacSimViewer(AppStateBase):
             set_positions=True,
             set_motor_targets=True,
         )
+        # get an initial base rotation from config
+        base_rot = (
+            random.uniform(-mn.math.pi, mn.math.pi)
+            if not hasattr(self._app_cfg, "initial_robot_rotation")
+            else self._app_cfg.initial_robot_rotation
+        )
+
         if hasattr(self._app_cfg, "initial_robot_position"):
             # load initial base position if configured
             initial_pos = mn.Vector3(*self._app_cfg.initial_robot_position)
             self.robot.set_root_pose(pos=initial_pos)
+            self.robot.base_rot = base_rot
         elif self.episode is not None and len(self._rigid_objects) > 0:
-            # place robot in a region containing most objects
-            obj_region_counts: defaultdict = defaultdict(int)
-            max_region: int = None
-            for obj in self._rigid_objects:
-                possible_regions = (
-                    self._sim.semantic_scene.get_regions_for_point(
-                        obj.translation
-                    )
-                )
-                for rix in possible_regions:
-                    obj_region_counts[rix] += 1
-                    if (
-                        max_region is None
-                        or obj_region_counts[max_region]
-                        < obj_region_counts[rix]
-                    ):
-                        max_region = rix
-            assert max_region is not None
-
-            # we have a region, now sample a navmesh point
-            nav_point = self._sim.pathfinder.get_random_navigable_point()
-            nav_samples = 0
-            max_nav_samples = 1500
-            # TODO: we use navmeshes closest obstacle as a proxy for collision detection. We should implement that for Isaac or pre-sample valid poses from Habitat-Bullet and cache them.
-            while nav_samples < max_nav_samples and (
-                max_region
-                not in self._sim.semantic_scene.get_regions_for_point(
-                    nav_point + mn.Vector3(0, 0.1, 0)
-                )
-                or self._sim.pathfinder.distance_to_closest_obstacle(nav_point)
-                < 0.25
-            ):
-                nav_point = self._sim.pathfinder.get_random_navigable_point()
-                nav_samples += 1
-            if nav_samples < max_nav_samples:
-                self.robot.set_root_pose(pos=nav_point)
-            else:
-                print("Failed to find new nav point, max samples exceeded.")
-            print(
-                f"self._sim.pathfinder.distance_to_closest_obstacle(nav_point) = {self._sim.pathfinder.distance_to_closest_obstacle(nav_point)}"
-            )
-
+            self.sample_valid_robot_base_state()
         else:
             # place the robot on the navmesh
             self.robot.set_root_pose(
                 pos=self._sim.pathfinder.get_random_navigable_point()
             )
-
-        if hasattr(self._app_cfg, "initial_robot_rotation"):
-            self.robot.base_rot = self._app_cfg.initial_robot_rotation
-        else:
-            self.robot.base_rot = random.random() * mn.math.pi * 2 - mn.math.pi
-            print(
-                f"Setting random robot initial rotation = {self.robot.base_rot}"
-            )
+            self.robot.base_rot = base_rot
 
     def draw_lookat(self):
         if self._hide_gui:
@@ -943,7 +959,7 @@ class AppStateIsaacSimViewer(AppStateBase):
         # TODO: PRIMARY_THUMBSTICK (click?) unmapped currently and available
         if left.get_button_down(XRButton.PRIMARY_THUMBSTICK):
             # reset the robot state (e/g/ to unstick or restart)
-            self.set_robot_base_initial_state()
+            self.sample_valid_robot_base_state()
 
         # IK for each hand when trigger is pressed
         xr_pose = XRPose(
@@ -1201,6 +1217,37 @@ class AppStateIsaacSimViewer(AppStateBase):
         if self.cursor_follow_robot:
             self._cursor_pos = self.robot.get_global_view_offset()
 
+    def single_step_isaac(self):
+        """
+        Do a single step of isaac simulation in order to update the collision structures.
+        NOTE: This is intended to be used for instantaneous collision detection.
+        """
+        self._isaac_wrapper.step(num_steps=1)
+
+    def robot_contact_test(
+        self, pos=None, rot=None, rot_angle=None, joint_pos=None
+    ):
+        """
+        Sets the robot's state from inputs and runs a single step of isaac simulation and then returns the robot's in_contact property.
+        NOTE: Expected to be called immediately after a kinematic update to the robot's state in order to place the robot.
+        Should not be called during active simulation, but rather used when modifying the state BEFORE acting.
+
+        :param rot_angle: The scalar rotation angle around the Y axis, separate representation than 'rot', the rotation quaternion
+        """
+        if pos is not None or rot is not None:
+            self.robot.set_root_pose(pos=pos, rot=rot)
+        if rot_angle is not None:
+            assert (
+                rot is None
+            ), "Can't set the base rotation by quaternion and scalar simultaneously."
+            self.robot.base_rot = rot_angle
+        if joint_pos is not None:
+            self.robot.pos_subsets["full"].set_motor_pos(joint_pos)
+            self.robot.pos_subsets["full"].set_pos(joint_pos)
+            self.robot.pos_subsets["full"].clear_velocities()
+        self.single_step_isaac()
+        return self.robot.in_contact
+
     def update_isaac(self, post_sim_update_dict):
         if self._isaac_wrapper:
             sim_app = self._isaac_wrapper.service.simulation_app
@@ -1279,7 +1326,8 @@ class AppStateIsaacSimViewer(AppStateBase):
             )
 
         if gui_input.get_key_down(KeyCode.M):
-            self.set_robot_base_initial_state()
+            self.sample_valid_robot_base_state()
+            # self.set_robot_base_initial_state()
 
         # cache a pose
         if gui_input.get_key_down(KeyCode.T):
@@ -1324,7 +1372,7 @@ class AppStateIsaacSimViewer(AppStateBase):
             self.reset_episode_objects()
 
         if gui_input.get_key_down(KeyCode.THREE):
-            print(f"Robot in contact = {self.robot.in_contact}")
+            print(f"Robot in contact = {self.robot_contact_test()}")
 
         if gui_input.get_key_down(KeyCode.F):
             self.cursor_follow_robot = not self.cursor_follow_robot

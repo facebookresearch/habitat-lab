@@ -77,7 +77,7 @@ class ConfigurationSubset:
         robot: "RobotAppWrapper",
         dofs: Union[List[int], List[str]] = None,
     ) -> None:
-        self._robot = robot
+        self._robot: "RobotAppWrapper" = robot
         if dofs is None:
             # by default collect all 1 DoF links
             self.joint_ixs = range(self._robot._robot.num_dof)
@@ -117,6 +117,15 @@ class ConfigurationSubset:
         Get the current configuration of the configured subset of joints.
         """
         return self._robot._robot.get_joint_positions(self.joint_ixs)
+
+    def clear_velocities(self) -> None:
+        """
+        Clear all velocities associated with this configuration subset.
+        """
+        self._robot._robot.set_joint_velocities(
+            velocities=np.zeros(len(self.joint_ixs)),
+            joint_indices=self.joint_ixs,
+        )
 
     def set_motor_pos_from_full(
         self, all_joint_pos_targets: List[float]
@@ -621,7 +630,7 @@ class RobotAppWrapper:
                 )
 
         self._name = f"{self.robot_cfg.robot_prim_path_name}_{instance_id}"
-        self._robot = self._isaac_service.world.scene.add(
+        self._robot: Robot = self._isaac_service.world.scene.add(
             Robot(prim_path=self._robot_prim_path, name=self._name)
         )
         self._robot_controller = self._robot.get_articulation_controller()
@@ -848,19 +857,25 @@ class RobotAppWrapper:
             actor1 = PhysicsSchemaTools.intToSdfPath(contact_header.actor1)
             if (
                 contact_header.type == ContactEventType.CONTACT_PERSIST
-                and actor0 in self.contact_sensor_links
+                or contact_header.type == ContactEventType.CONTACT_FOUND
+            ) and (
+                actor0 in self.contact_sensor_links
                 or actor1 in self.contact_sensor_links
             ):
                 self._in_contact = True
 
-                # print(
-                #     "Actor0: "
-                #     + str(PhysicsSchemaTools.intToSdfPath(contact_header.actor0))
-                # )
-                # print(
-                #     "Actor1: "
-                #     + str(PhysicsSchemaTools.intToSdfPath(contact_header.actor1))
-                # )
+                print(
+                    "Actor0: "
+                    + str(
+                        PhysicsSchemaTools.intToSdfPath(contact_header.actor0)
+                    )
+                )
+                print(
+                    "Actor1: "
+                    + str(
+                        PhysicsSchemaTools.intToSdfPath(contact_header.actor1)
+                    )
+                )
             continue
 
             # print(
@@ -992,7 +1007,8 @@ class RobotAppWrapper:
                 isaac_prim_utils.magnum_quat_to_list_wxyz(rot)
             )
         if pos is not None and convention == "hab":
-            self.target_base_height = pos[1] + self.ground_to_base_offset
+            pos[1] += self.ground_to_base_offset
+            self.target_base_height = pos[1]
             pos = isaac_prim_utils.habitat_to_usd_position(pos)
 
         self._robot.set_world_pose(pos, rot)
