@@ -8,11 +8,13 @@ import argparse
 import datetime
 import gzip
 import json
+import math
 import os
 import pprint
 from collections import defaultdict
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
+import magnum as mn
 from tqdm import tqdm
 
 # NOTE: use known version days to split sessions by expected features or contents
@@ -62,6 +64,99 @@ def get_ep_success(ep_json: Dict[Any, Any]) -> bool:
         succeeded = float(ep_json["episode"]["task_percent_complete"]) > 0.0
         return succeeded
     return False
+
+
+def get_good_first_ep_frame(ep_frames_json: List[Dict[Any, Any]]) -> int:
+    """
+    From an episode frames JSON dict finds a good first frame for replaying relevant content.
+    """
+
+    start_frame_ix = None
+
+    # []"frames"][<ix>]
+    robot_turning_threshold = 0.0001
+    robot_translating_threshold = 0.001  # NOTE: only look at xz
+    robot_moving_min_time = 1.0
+    robot_teleport_threshold = 0.25  # NOTE: only look at xz
+    # object_moving_threshold = 0.001  # NOTE: get "most moved" object
+
+    robot_moving: Tuple[bool, float, int] = (False, None, None)
+    # robot_moving = (True, <start_time>)
+
+    prev_frame_data: Dict[Any, Any] = None
+    for ix, frame_data in enumerate(ep_frames_json):
+        if prev_frame_data is not None:
+            prev_base_rot_ang = (
+                prev_frame_data["robot_state"]["base_rotation_angle"] + math.pi
+            )
+            cur_base_rot_ang = (
+                frame_data["robot_state"]["base_rotation_angle"] + math.pi
+            )
+            delta_base_rot_ang = abs(cur_base_rot_ang - prev_base_rot_ang)
+            robot_rotating = delta_base_rot_ang > robot_turning_threshold
+
+            prev_base_pos = mn.Vector3(
+                *prev_frame_data["robot_state"]["base_pos"]
+            )
+            cur_base_pos = mn.Vector3(*frame_data["robot_state"]["base_pos"])
+            delta_base_pos = cur_base_pos - prev_base_pos
+            # NOTE: remove vertical translation
+            delta_base_pos[1] = 0
+            robot_translating = (
+                delta_base_pos.length() > robot_translating_threshold
+            )
+
+            robot_moving_now = robot_translating or robot_rotating
+            if robot_moving_now and not robot_moving[0]:
+                # the robot has started moving
+                robot_moving = (True, frame_data["t"], ix)
+            elif not robot_moving_now:
+                # the robot has stopped moving
+                robot_moving = (False, None, None)
+
+            # NOTE: teleporting resets the move tracker and start_frame_ix
+            robot_teleporting = (
+                delta_base_pos.length() > robot_teleport_threshold
+            )
+            if robot_teleporting:
+                # the robot has teleported
+                robot_moving = (False, None, None)
+                start_frame_ix = None
+
+            if (
+                (start_frame_ix is None)
+                and robot_moving[0]
+                and (frame_data["t"] - robot_moving[1])
+                >= robot_moving_min_time
+            ):
+                print(
+                    f"start_frame_ix = {robot_moving[2]} | set at frame {ix} with move time of {(frame_data['t']-robot_moving[1])}"
+                )
+                # breakpoint()
+                start_frame_ix = robot_moving[2]
+
+        prev_frame_data = frame_data
+
+    # TODO: look for object resets
+    # ["object_states"][<ix>]["object_id"] - to id the object
+    # ["object_states"][<ix>]["transformation"] - reconstruct like:
+    # ro_t = mn.Matrix4(
+    #     [
+    #         [
+    #             object_state_record["transformation"][j][i]
+    #             for j in range(4)
+    #         ]
+    #         for i in range(4)
+    #     ]
+    # )
+    # try:
+    #     ro.transformation = ro_t
+    # except ValueError as e:
+    #     print(
+    #         f"Failed to set object transform '{ro._rigid_prim.prim_path}' with error: {e}"
+    #    )
+
+    return start_frame_ix
 
 
 def get_sessions_by_version_range(
@@ -177,8 +272,11 @@ def process_record_stats(
         else:
             fail_eps.append(ep_path)
 
-    print("Episode frequency:")
-    pprint.pprint(ep_counts)
+    # print("Episode frequency:")
+    # pprint.pprint(ep_counts)
+    print("Successful Episodes:")
+    pprint.pprint(success_eps)
+
     print(f"Successful: {len(success_eps)}")
     print(f"Failed: {len(fail_eps)}")
     print(f"Success rate: {len(success_eps)/len(session_episodes)}")

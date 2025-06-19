@@ -168,6 +168,12 @@ class AppStateIsaacSimViewer(AppStateBase):
             app_service.config.isaac_robot_teleop
         )
 
+        # NOTE: replay mode requires specific configuration. See configs/replay_episode_record.yaml
+        self.in_replay_mode = (
+            hasattr(self._app_cfg, "replay_mode")
+            and self._app_cfg.replay_mode == True
+        )
+
         self._camera_helper = CameraHelper(
             self._app_service.hitl_config, self._app_service.gui_input
         )
@@ -206,6 +212,8 @@ class AppStateIsaacSimViewer(AppStateBase):
         )
 
         self._frame_recorder = FrameRecorder(self)
+        self.reverse_replay = False
+        self.pause_replay = False
 
         # This variable is triggered by the user to indicate finished task
         self._task_finished_signaled = False
@@ -228,22 +236,37 @@ class AppStateIsaacSimViewer(AppStateBase):
         scene_navmesh_file: str = None
         scene_name = ""
 
-        if self._app_data and self._session:
+        setup_from_episode = False
+
+        if self.in_replay_mode:
+            from scripts.record_post_process import (
+                get_good_first_ep_frame,
+                load_json_gz,
+            )
+
+            # Setup from the episode record
+            self._frame_recorder.load_episode_record_json_gz(
+                self._app_cfg.episode_record_filepath
+            )
+            self._frame_recorder.replaying = True
+            good_start_frame = get_good_first_ep_frame(
+                self._frame_recorder.frame_data
+            )
+            self._frame_recorder.replay_frame = good_start_frame
+            self._frame_recorder._start_frame = good_start_frame
+            self.episode_metadata = load_json_gz(
+                self._app_cfg.episode_record_filepath
+            )["episode"]
+            self.episode_index = self.episode_metadata["episode_index"]
+            setup_from_episode = True
+
+        elif self._app_data and self._session:
+            setup_from_episode = True
             assert hasattr(self._app_cfg, "episode_dataset")
 
             # NOTE: recording is always active for session driven interactions
             self._frame_recorder.recording = True
-
-            self.load_episode_dataset(self._app_cfg.episode_dataset)
             self.episode_index = self._session.current_episode_index
-            self.episode = (
-                self.episode_dataset.episodes[  # type:ignore[attr-defined]
-                    self.episode_index
-                ]
-            )
-            scene_name = self.episode.scene_id.split("/")[-1].split(".")[0]
-            scene_usd_file = usd_scenes_path + scene_name + ".usda"
-            scene_navmesh_file = navmeshes_path + scene_name + ".navmesh"
 
         else:
             # load from local yaml file
@@ -251,18 +274,10 @@ class AppStateIsaacSimViewer(AppStateBase):
                 ######################
                 ## YES EPISODES LOGIC (load the episode)
                 # NOTE: initializes self.episode_dataset
-                self.load_episode_dataset(self._app_cfg.episode_dataset)
+                setup_from_episode = True
                 if hasattr(self._app_cfg, "episode_index"):
                     self.episode_index = self._app_cfg.episode_index
-                self.episode = (
-                    self.episode_dataset.episodes[  # type:ignore[attr-defined]
-                        self.episode_index
-                    ]
-                )
 
-                scene_name = self.episode.scene_id.split("/")[-1].split(".")[0]
-                scene_usd_file = usd_scenes_path + scene_name + ".usda"
-                scene_navmesh_file = navmeshes_path + scene_name + ".navmesh"
             else:
                 ######################
                 ## NO EPISODES LOGIC (defaults)
@@ -273,6 +288,19 @@ class AppStateIsaacSimViewer(AppStateBase):
                 scene_navmesh_file = (
                     navmeshes_path + self._app_cfg.scene_name + ".navmesh"
                 )
+
+        if setup_from_episode:
+            self.load_episode_dataset(self._app_cfg.episode_dataset)
+
+            self.episode = (
+                self.episode_dataset.episodes[  # type:ignore[attr-defined]
+                    self.episode_index
+                ]
+            )
+
+            scene_name = self.episode.scene_id.split("/")[-1].split(".")[0]
+            scene_usd_file = usd_scenes_path + scene_name + ".usda"
+            scene_navmesh_file = navmeshes_path + scene_name + ".navmesh"
 
         ######################
         ## instantiate isaac world
@@ -328,7 +356,8 @@ class AppStateIsaacSimViewer(AppStateBase):
         self._is_recording = False
 
         self._sps_tracker = AverageRateTracker(2.0)
-        self._do_pause_physics = False
+        # NOTE: we pause physics for replay to avoid jittering and extra work between frame applications.
+        self._do_pause_physics = self.in_replay_mode
 
         self.init_mouse_raycaster()
 
@@ -584,6 +613,13 @@ class AppStateIsaacSimViewer(AppStateBase):
         self.robot = RobotAppWrapper(
             self._isaac_wrapper.service, self._sim, robot_cfg
         )
+        if self.in_replay_mode:
+            # NOTE: This is a necessary workaround to accurately replay episodes before robot_settings were cached for the session
+            # TODO: we'll remove this hack and retire the data in near future
+            self.robot.ground_to_base_offset = 0
+            print(
+                "!! OVERWRITING self.robot.ground_to_base_offset = 0 FOR v0.1 EPISODE REPLAY !!"
+            )
         # TODO: figure out how to initialize the robot in isolation instead of resetting the world. Doesn't work as expected.
         self._isaac_wrapper.service.world.reset()
         self.robot.post_init()
@@ -739,7 +775,14 @@ class AppStateIsaacSimViewer(AppStateBase):
         status_str += f"time: {self._timer}\n"
         status_str += f"robot in contact: {self.robot.in_contact}\n"
         if self._frame_recorder.replaying:
-            status_str += f"-REPLAYING FRAMES [{self._frame_recorder.frame_data[0]['t'], self._frame_recorder.frame_data[-1]['t']}]-\n"
+            start_time = (
+                self._frame_recorder.frame_data[0]["t"]
+                if self._frame_recorder._start_frame is None
+                else self._frame_recorder.frame_data[
+                    self._frame_recorder._start_frame
+                ]["t"]
+            )
+            status_str += f"Replaying {self._frame_recorder.replay_time:.2f} from range [{start_time:.2f}, {self._frame_recorder.frame_data[-1]['t']:.2f}]-\n"
         elif self._frame_recorder.recording:
             status_str += (
                 f"-RECORDING FRAMES ({len(self._frame_recorder.frame_data)})-"
@@ -1286,7 +1329,8 @@ class AppStateIsaacSimViewer(AppStateBase):
                 num_steps = int(
                     1.0 / (approx_app_fps * self._isaac_physics_dt)
                 )
-                self._isaac_wrapper.step(num_steps=num_steps)
+                if not self._do_pause_physics:
+                    self._isaac_wrapper.step(num_steps=num_steps)
                 self._isaac_wrapper.pre_render()
 
     def set_physics_paused(self, do_pause_physics):
@@ -1309,8 +1353,14 @@ class AppStateIsaacSimViewer(AppStateBase):
             post_sim_update_dict["application_exit"] = True
 
         if gui_input.get_key_down(KeyCode.SPACE):
-            self._frame_recorder.recording = not self._frame_recorder.recording
-            print(f"Set state recording = {self._frame_recorder.recording}")
+            # self._frame_recorder.recording = not self._frame_recorder.recording
+            # print(f"Set state recording = {self._frame_recorder.recording}")
+            self.pause_replay = not self.pause_replay
+            print(f"Pause Replay = {self.pause_replay}")
+
+        if gui_input.get_key_down(KeyCode.TAB):
+            self.reverse_replay = not self.reverse_replay
+            print(f"Reverse Replay = {self.reverse_replay}")
 
         if gui_input.get_key_down(KeyCode.B):
             self._frame_recorder.save_json()
@@ -1533,35 +1583,35 @@ class AppStateIsaacSimViewer(AppStateBase):
                 body_name, force_vec, hit_pos_usd
             )
 
-    def debug_draw_hands(self):
-        """
-        Draw finger tips as circles.
-        NOTE: This is only necessary while finger tips are not rendering in the client.
-        """
-        dblr = self._app_service.gui_drawer
-        for finger_subset_key in [
-            "left_thumb_tip",
-            "right_thumb_tip",
-            "left_finger_tips",
-            "right_finger_tips",
-        ]:
-            color = mn.Color3(0.6, 0.4, 0.6)
-            # this distance is applied to offset the render shape from the root of the parent link
-            finger_offset_dist = 0.043
-            link_pos, link_rots = self.robot.get_link_world_poses(
-                indices=self.robot.link_subsets[finger_subset_key].link_ixs
-            )
-            for pos, rot in zip(link_pos, link_rots):
-                finger_normal = rot.transform_vector(mn.Vector3(0, 0, 1.0))
-                dblr.draw_circle(
-                    pos + finger_normal * finger_offset_dist,
-                    0.01,
-                    color,
-                    normal=finger_normal,
-                )
-                dblr.draw_transformed_line(
-                    pos, pos + finger_normal * finger_offset_dist, color
-                )
+    # def debug_draw_hands(self):
+    #     """
+    #     Draw finger tips as circles.
+    #     NOTE: This is only necessary while finger tips are not rendering in the client.
+    #     """
+    #     dblr = self._app_service.gui_drawer
+    #     for finger_subset_key in [
+    #         "left_thumb_tip",
+    #         "right_thumb_tip",
+    #         "left_finger_tips",
+    #         "right_finger_tips",
+    #     ]:
+    #         color = mn.Color3(0.6, 0.4, 0.6)
+    #         # this distance is applied to offset the render shape from the root of the parent link
+    #         finger_offset_dist = 0.043
+    #         link_pos, link_rots = self.robot.get_link_world_poses(
+    #             indices=self.robot.link_subsets[finger_subset_key].link_ixs
+    #         )
+    #         for pos, rot in zip(link_pos, link_rots):
+    #             finger_normal = rot.transform_vector(mn.Vector3(0, 0, 1.0))
+    #             dblr.draw_circle(
+    #                 pos + finger_normal * finger_offset_dist,
+    #                 0.01,
+    #                 color,
+    #                 normal=finger_normal,
+    #             )
+    #             dblr.draw_transformed_line(
+    #                 pos, pos + finger_normal * finger_offset_dist, color
+    #             )
 
     def sim_update(self, dt, post_sim_update_dict):
         self._sps_tracker.increment()
@@ -1578,6 +1628,11 @@ class AppStateIsaacSimViewer(AppStateBase):
         self._camera_helper.update(self._cursor_pos, dt)
         self._cam_transform = self._camera_helper.get_cam_transform()
         post_sim_update_dict["cam_transform"] = self._cam_transform
+
+        if self.in_replay_mode:
+            self._frame_recorder.get_xr_pose_from_frame().draw_pose(
+                self._app_service.gui_drawer
+            )
 
         # need this in the app even if other debug lines are turned off
         self.debug_draw_quest()
@@ -1692,7 +1747,12 @@ class AppStateIsaacSimViewer(AppStateBase):
 
         self._update_help_text()
         self._timer = time.time() - self._start_time
-        self._frame_recorder.update(self._timer)
+
+        if not self.pause_replay:
+            r = -1 if self.reverse_replay else 1
+            self._frame_recorder.update(
+                self._frame_recorder.replay_time + dt * r
+            )
 
         # record state trajectory frames in the session object for cloud serialization
         if self._session is not None:
@@ -1711,6 +1771,12 @@ class AppStateIsaacSimViewer(AppStateBase):
             self._session.session_recorder.episode_records[-1].episode_info[
                 "task_prompt"
             ] = self.task_prompt
+            # record the robot settings
+            from omegaconf import OmegaConf
+
+            self._session.session_recorder.session_record.config[
+                "robot_settings"
+            ] = OmegaConf.to_container(self.robot.robot_cfg)
 
     def _is_episode_finished(self) -> bool:
         return self._task_finished

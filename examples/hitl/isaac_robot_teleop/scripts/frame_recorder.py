@@ -4,7 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-
+import gzip
+import json
 from typing import TYPE_CHECKING, Any, Dict, List
 
 import magnum as mn
@@ -33,7 +34,13 @@ class FrameRecorder:
         # mutually exclusive execution modes
         self._recording = False
         self._replaying = False
-        self._replay_frame = 0
+        # NOTE: this keeps continuous time independent of discrete frame but is overwritten with frame is explicitly set
+        self._replay_time: float = 0
+        self._replay_frame: int = 0
+        # if true, replay will loop when complete
+        self._looping = True
+        # optional variable to set a custom start frame for looping
+        self._start_frame: int = None
 
     @property
     def recording(self):
@@ -69,12 +76,13 @@ class FrameRecorder:
                 f"Requested replay frame '{replay_frame}' out of range for loaded {len(self.frame_data)} frames."
             )
         self._replay_frame = replay_frame
+        self._replay_time = self.frame_data[self._replay_frame]["t"]
 
     @property
-    def replay_time(self):
+    def replay_time(self) -> float:
         if len(self.frame_data) == 0:
-            return 0
-        return self.frame_data[self._replay_frame]["t"]
+            return 0.0
+        return self._replay_time
 
     @replay_time.setter
     def replay_time(self, replay_time: float):
@@ -98,6 +106,7 @@ class FrameRecorder:
                 break
             m = (r + l) // 2
         self._replay_frame = m
+        self._replay_time = replay_time
 
     def get_robot_state(self):
         """
@@ -205,7 +214,12 @@ class FrameRecorder:
                     for i in range(4)
                 ]
             )
-            ro.transformation = ro_t
+            try:
+                ro.transformation = ro_t
+            except ValueError as e:
+                print(
+                    f"Failed to set object transform '{ro._rigid_prim.prim_path}' with error: {e}"
+                )
             ro.angular_velocity = mn.Vector3(
                 *object_state_record["angular_velocity"]
             )
@@ -252,6 +266,12 @@ class FrameRecorder:
         self.set_object_states(frame_data["object_states"])
         self.set_robot_state(frame_data["robot_state"])
 
+    def get_xr_pose_from_frame(self, frame: int = None):
+        if frame is None:
+            frame = self.replay_frame
+
+        return XRPose(json_pose_dict=self.frame_data[frame]["xr_state"])
+
     def update(self, t: float) -> None:
         """
         Control loop callback.
@@ -265,13 +285,22 @@ class FrameRecorder:
             # in this case t is the desired wall clock time to replay
             # NOTE: will match to one of the closest frames not an exact time
             self.replay_time = t
+            if self._looping and self.replay_time > self.frame_data[-1]["t"]:
+                self.replay_frame = (
+                    0 if self._start_frame is None else self._start_frame
+                )
+            elif self._looping and (
+                self.replay_time < self.frame_data[0]["t"]
+                or self._start_frame is not None
+                and self.replay_time < self.frame_data[self._start_frame]["t"]
+            ):
+                self.replay_frame = len(self.frame_data) - 1
             self.apply_state(self.replay_frame)
 
     def save_json(self, filename: str = "frame_data.json"):
         """
         Serialize the frame data to JSON
         """
-        import json
 
         with open(filename, "w") as f:
             json.dump(
@@ -287,7 +316,14 @@ class FrameRecorder:
         """
         Load a serialized frame data json for replay.
         """
-        import json
 
         with open(filename, "r") as f:
             self.frame_data = json.load(f)
+
+    def load_episode_record_json_gz(self, filepath: str) -> None:
+        """
+        Loads the serialized frame data from within an episode record (i.e. a crowd sourced session's data file)
+        """
+
+        with gzip.open(filepath, "rt") as f:
+            self.frame_data = json.load(f)["frames"]

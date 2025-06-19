@@ -1,0 +1,130 @@
+# For more info about Hydra in Habitat, see habitat-lab/habitat/config/README.md
+# @package _global_
+
+#################################
+# Replay Episode Record config:
+# Tl;DR: use this config to replay a recorded set of frames from data collection.
+#################################
+
+habitat_hitl:
+  driver: "SimDriver"
+  disable_policies_and_stepping: True
+
+
+  ######################
+  # Windowing setup:
+  # Choose to open a HitL display (default) or instead open the Isaac Sim viewer
+  # For Isaac Sim viewer uncomment the following block and comment the "window" block below
+
+  # experimental:
+  #   headless:
+  #     do_headless: True
+  # window: ~
+
+  window:
+    title: "IsaacSim Robot Teleop Viewer"
+    width: 1920
+    height: 1080
+    display_font_size: 24
+  ######################
+
+  networking:
+    enable: True
+    max_client_count: 1
+    http_availability_server:
+      enable: False
+    enable_connections_by_default: True
+    client_sync:
+      server_camera: False
+      server_input: True
+      skinning: True
+
+isaac_robot_teleop:
+  ######################
+  # Settings relevant for episode replay only
+  replay_mode: True
+  # The episode record's .json.gz file
+
+#Successful Episodes from the 25_06_16 batch assuming directory structure `teleop_data/` in the same folder as `habitat-lab/`
+#  '../teleop_data/25_06_16/184-183-181-179_8200_1749675203/181.json.gz',
+#  '../teleop_data/25_06_16/184-183-181-179_8200_1749675203/183.json.gz',
+#  '../teleop_data/25_06_16/184-183-181-179_8200_1749675203/179.json.gz',
+#  '../teleop_data/25_06_16/109-108-107-104_5660_1749679287/109.json.gz',
+#  '../teleop_data/25_06_16/9-7-6-4_6990_1750102225/6.json.gz',
+#  '../teleop_data/25_06_16/25-24-22-21_0450_1750100990/24.json.gz',
+#  '../teleop_data/25_06_16/65-66-67-69_6942_1749827696/65.json.gz',
+#  '../teleop_data/25_06_16/52-54-55-56_0450_1750105931/54.json.gz',
+#  '../teleop_data/25_06_16/36-38-39-43_0450_1750104404/39.json.gz',
+#  '../teleop_data/25_06_16/36-38-39-43_0450_1750104404/36.json.gz',
+#  '../teleop_data/25_06_16/193-192-191-190_0734_1750117390/193.json.gz',
+#  '../teleop_data/25_06_16/25-24-22-21_5660_1749755003/25.json.gz',
+#  '../teleop_data/25_06_16/51-50-45-44_6990_1750097196/50.json.gz',
+#  '../teleop_data/25_06_16/131-130-127-125_1111_1749678881/131.json.gz',
+#  '../teleop_data/25_06_16/154-152-149-148_8200_1749675845/154.json.gz',
+#  '../teleop_data/25_06_16/150-151-153-157_0738_1750113014/150.json.gz',
+#  '../teleop_data/25_06_16/42-41-40-37_6942_1749748445/37.json.gz',
+#  '../teleop_data/25_06_16/42-41-40-37_6942_1749748445/41.json.gz',
+#  '../teleop_data/25_06_16/196-197-198-199_6942_1749657525/198.json.gz',
+#  '../teleop_data/25_06_16/146-145-143-140_1111_1749677209/143.json.gz',
+#  '../teleop_data/25_06_16/14-13-11-10_0616_1749759145/10.json.gz',
+#  '../teleop_data/25_06_16/193-192-191-190_5048_1749925784/190.json.gz',
+#  '../teleop_data/25_06_16/150-151-153-157_8318_1749922688/150.json.gz',
+#  '../teleop_data/25_06_16/20-19-17-16_1111_1749758035/16.json.gz',
+#  '../teleop_data/25_06_16/80-82-84-85_0397_1749849466/82.json.gz',
+#  '../teleop_data/25_06_16/80-82-84-85_0397_1749849466/84.json.gz',
+#  '../teleop_data/25_06_16/80-82-84-85_0397_1749849466/80.json.gz',
+#  '../teleop_data/25_06_16/79-78-77-73_9840_1749943647/77.json.gz',
+#  '../teleop_data/25_06_16/79-78-77-73_9840_1749943647/78.json.gz',
+#  '../teleop_data/25_06_16/196-197-198-199_0738_1750117539/196.json.gz',
+#  '../teleop_data/25_06_16/141-142-144-147_0738_1750111988/141.json.gz',
+#  '../teleop_data/25_06_16/103-102-99-96_1111_1749680803/103.json.gz',
+#  '../teleop_data/25_06_16/103-102-99-96_1111_1749680803/102.json.gz',
+#  '../teleop_data/25_06_16/72-70-68-63_1111_1749682550/72.json.gz',
+#  '../teleop_data/25_06_16/5-8-12-15_6942_1749760215/12.json.gz'
+
+  episode_record_filepath: "../teleop_data/25_06_16/5-8-12-15_6942_1749760215/12.json.gz"
+  # This must be the same as used by the recorded session.
+  # See session.json.gz ["session"]["config"]["isaac_robot_teleop"]["episode_dataset"]
+  episode_dataset: "data/datasets/hitl_teleop_episodes.json.gz"
+  # episode_index: will come from the episode
+  # scene_name: will come from the episode
+
+  ######################
+
+  draw_debug_shapes: True
+  camera_move_speed: 0.1
+  lock_pc_camera_to_robot: True
+  #optionally force the initial state of the robot (will be snapped to namvmesh)
+  #NOTE: these values initialize in the kitchen for scene 103997403_171030405
+  #initial_robot_position: [-11.4, 0, -3.2]
+  #initial_robot_rotation: -1.7 # [-pi, pi]
+
+  #relative paths to the directories containing navmeshes and usd scene files
+  usd_scene_path: "../../../data/usd/scenes/"
+  navmesh_path: "data/hssd-hab/navmeshes/"
+  scene_name: "108736635_177263256"
+
+  #Fremont option
+  #scene_name: "fremont_dynamic_alternate_handles"
+  #navmesh_path: "data/Fremont-Knuckles/navmeshes/"
+
+  # OR initialize by episode. These will take precedent when provided
+  #episode_dataset: "data/datasets/hitl_teleop_episodes.json.gz"
+  #episode_dataset: "data/datasets/hitl_teleop_episodes_220.json.gz"
+  #episode_index: 0
+
+  #physx configuration settings
+  #applied to all rigid objects added to the scene (e.g. from Episodes)
+  object_static_friction: 20
+  object_dynamic_friction: 20
+  object_restitution: 0
+  #applied to the contents of the scene (architecture, furniture, etc...)
+  stage_static_friction: 10
+  stage_dynamic_friction: 10
+  stage_restitution: 0
+
+defaults:
+  # Load default parameters for the HITL framework. See
+  # habitat-hitl/habitat_hitl/config/hitl_defaults.yaml.
+  - hitl_defaults
+  - _self_
