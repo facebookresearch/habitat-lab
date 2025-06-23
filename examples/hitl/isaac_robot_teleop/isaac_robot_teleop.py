@@ -1772,11 +1772,14 @@ class AppStateIsaacSimViewer(AppStateBase):
                 "task_prompt"
             ] = self.task_prompt
             # record the robot settings
+            # TODO: This is not yet implemented.
+            """
             from omegaconf import OmegaConf
 
             self._session.session_recorder.session_record.config[
                 "robot_settings"
             ] = OmegaConf.to_container(self.robot.robot_cfg)
+            """
 
     def _is_episode_finished(self) -> bool:
         return self._task_finished
