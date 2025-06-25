@@ -63,14 +63,9 @@ def shortest_path_navigation(args):
     
     with SimpleRLEnv(config=config) as env:
         goal_radius = env.episodes[0].goals[0].radius
+        turn_angle = config.habitat.simulator.turn_angle
         if goal_radius is None:
             goal_radius = config.habitat.simulator.forward_step_size
-        
-        follower = ShortestPathFollower(
-            env.habitat_env.sim, goal_radius, False
-        )
-
-        turn_angle = config.habitat.simulator.turn_angle
 
         if args.verbose:
             print("Environment creation successful")
@@ -82,14 +77,21 @@ def shortest_path_navigation(args):
             if random.random() < args.sample:
                 continue
 
+            goal = env.habitat_env.current_episode.goals[0]
+            follower = ShortestPathFollower(
+                env.habitat_env.sim, goal_radius, False
+            )
+
             # save the top-down map image
             maps = []
             
-            goal = env.habitat_env.current_episode.goals[0]
-            goal_category = ' '.join(goal.object_category.split('_'))
+            try:
+                goal_category = ' '.join(goal.object_category.split('_'))
+            except:
+                goal_category = ''
             if hasattr(goal, "view_points"):
                 max_dist, view_n = 0, 0
-                for i, view in enumerate(env.habitat_env.current_episode.goals[0].view_points):
+                for i, view in enumerate(goal.view_points):
                     # choose the furthest one because the object of interest is much better visible on the goal image in that case
                     if max_dist < np.linalg.norm(np.array(view.agent_state.position) - np.array(goal.position)):
                         max_dist = np.linalg.norm(np.array(view.agent_state.position) - np.array(goal.position))
@@ -113,8 +115,10 @@ def shortest_path_navigation(args):
                 obs = env.habitat_env.sim.get_sensor_observations() # get the observation at the goal
                 goal_image = obs["rgb"][:, :, :3]
                 env.habitat_env.sim.set_agent_state(original_state.position, original_state.rotation) # return the agent in the starting position
-            elif hasattr(observations, "instance_imagegoal"):
+            elif instance_imagegoal in observations:
                 goal_image = observations['instance_imagegoal']
+            elif "imagegoal" in observations:
+                goal_image = observations['imagegoal']
             else:
                 goal_image = None
 
@@ -127,7 +131,7 @@ def shortest_path_navigation(args):
 
             images, actions, distances, views = [], [], [], []
             while not env.habitat_env.episode_over:
-                best_action = follower.get_next_action()
+                best_action = follower.get_next_action(env.habitat_env.current_episode.goals[0].position)
                 if best_action is None:
                     break
                 
