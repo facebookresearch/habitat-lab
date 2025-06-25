@@ -32,7 +32,7 @@ type: Nav-v0
 end_on_success: True
 reward_measure: distance_to_goal_reward
 success_measure: spl
-# goal_sensor_uuid: instance_imagegoal
+goal_sensor_uuid: instance_imagegoal
 measurements:
   distance_to_goal:
     distance_to: VIEW_POINTS

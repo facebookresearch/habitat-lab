@@ -17,6 +17,7 @@ from habitat.utils.geometry_utils import quaternion_from_coeff, quaternion_to_li
 from habitat.utils.visualizations import maps
 from matplotlib import pyplot as plt
 from tqdm.auto import tqdm
+from transformers import BlipProcessor, BlipForConditionalGeneration
 
 from vint_based import load_distance_model
 from vip import load_vip
@@ -281,3 +282,28 @@ def animate_episode(
     # Save video
     images_to_video(rendered, out_video, fps=fps)
     print(f"Saved animation to {out_video}")
+
+
+class ImageDescriber:
+    def __init__(self, device=None, prompt_template="the {label} is"):
+        self.device = torch.device(device) if device else torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        self.prompt_template = prompt_template
+        self.processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-large")
+        self.model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-large").to(self.device)
+    
+    def describe_image(self, image, label, max_length=150):
+        prompt = self.prompt_template.format(label=label)
+        inputs = self.processor(image, prompt, return_tensors="pt").to(self.device)
+        
+        output = self.model.generate(**inputs, max_length=max_length, early_stopping=True)
+        
+        # Full generated tokens including prompt and new text
+        generated_text = self.processor.decode(output[0], skip_special_tokens=True)
+        
+        # Remove prompt fragment from generated_text safely
+        prompt = prompt.lower()
+        if prompt in generated_text:
+            generated_text = generated_text.split(prompt, 1)[-1].strip()
+        
+        return generated_text
