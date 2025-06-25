@@ -20,6 +20,8 @@ import os
 import json
 import random
 
+from habitat.mochi.mochi_wrapper import MochiWrapper
+
 # import habitat.isaacsim.isaacsim_wrapper as isaacsim_wrapper
 # from habitat.isaacsim.usd_visualizer import UsdVisualizer
 from habitat.isaac_sim.isaac_app_wrapper import IsaacAppWrapper
@@ -39,6 +41,8 @@ from habitat_hitl.core.gui_input import GuiInput
 from habitat_hitl._internal.networking.average_rate_tracker import (
     AverageRateTracker,
 )
+
+ENABLE_ISAAC=False
 
 import traceback
 
@@ -469,75 +473,82 @@ class AppStateIsaacSimViewer(AppState):
         # not supported
         assert not self._app_service.hitl_config.camera.first_person_mode
 
-        self._cursor_pos = mn.Vector3(-7.2, 0.8, -7.7)  # mn.Vector3(-7.0, 1.0, -2.75)
-        self._do_camera_follow_spot = True
-        self._do_control_spot = True
+        self._cursor_pos = mn.Vector3(0.0, 0.0, 0.0)  # mn.Vector3(-7.2, 0.8, -7.7)  # mn.Vector3(-7.0, 1.0, -2.75)
+        self._do_camera_follow_spot = False
+        self._do_control_spot = False
         self._camera_helper.update(self._cursor_pos, 0.0)
 
         # self._app_service.reconfigure_sim("data/fpss/hssd-hab-siro.scene_dataset_config.json", "102817140.scene_instance.json")
 
         # self._spot = SpotWrapper(self._sim)
 
-        # always do headless Isaac. Consider setting to True locally for debugging with Isaac GUI.
-        do_isaac_headless = True
+        self._isaac_wrapper = None
+        if ENABLE_ISAAC:
+            # always do headless Isaac. Consider setting to True locally for debugging with Isaac GUI.
+            do_isaac_headless = True
 
-        # self._isaac_wrapper = isaacsim_wrapper.IsaacSimWrapper(headless=do_isaac_headless)
-        self._isaac_wrapper = IsaacAppWrapper(self._sim, headless=do_isaac_headless)
-        isaac_world = self._isaac_wrapper.service.world
-        self._usd_visualizer = self._isaac_wrapper.service.usd_visualizer
+            # self._isaac_wrapper = isaacsim_wrapper.IsaacSimWrapper(headless=do_isaac_headless)
+            self._isaac_wrapper = IsaacAppWrapper(self._sim, headless=do_isaac_headless)
+            isaac_world = self._isaac_wrapper.service.world
+            self._usd_visualizer = self._isaac_wrapper.service.usd_visualizer
 
-        self._isaac_physics_dt = 1.0 / 180
-        # beware goofy behavior if physics_dt doesn't equal rendering_dt
-        isaac_world.set_simulation_dt(physics_dt = self._isaac_physics_dt, rendering_dt = self._isaac_physics_dt)
+            self._isaac_physics_dt = 1.0 / 180
+            # beware goofy behavior if physics_dt doesn't equal rendering_dt
+            isaac_world.set_simulation_dt(physics_dt = self._isaac_physics_dt, rendering_dt = self._isaac_physics_dt)
 
-        # asset_path = "/home/eric/projects/habitat-lab/data/usd/scenes/102817140.usda"
-        asset_path = "/home/eric/projects/habitat-lab/data/usd/scenes/102344193.usda"
-        from omni.isaac.core.utils.stage import add_reference_to_stage
-        add_reference_to_stage(usd_path=asset_path, prim_path="/World/test_scene")
-        self._usd_visualizer.on_add_reference_to_stage(usd_path=asset_path, prim_path="/World/test_scene")
+            # asset_path = "/home/eric/projects/habitat-lab/data/usd/scenes/102817140.usda"
+            asset_path = "/home/eric/projects/habitat-lab/data/usd/scenes/102344193.usda"
+            from omni.isaac.core.utils.stage import add_reference_to_stage
+            add_reference_to_stage(usd_path=asset_path, prim_path="/World/test_scene")
+            self._usd_visualizer.on_add_reference_to_stage(usd_path=asset_path, prim_path="/World/test_scene")
 
-        from habitat.isaac_sim._internal.spot_robot_wrapper import SpotRobotWrapper
-        self._spot_wrapper = SpotRobotWrapper(self._isaac_wrapper.service)
+            from habitat.isaac_sim._internal.spot_robot_wrapper import SpotRobotWrapper
+            self._spot_wrapper = SpotRobotWrapper(self._isaac_wrapper.service)
 
-        from habitat.isaac_sim._internal.metahand_robot_wrapper import MetahandRobotWrapper
-        self._metahand_wrapper = MetahandRobotWrapper(self._isaac_wrapper.service)
+            from habitat.isaac_sim._internal.metahand_robot_wrapper import MetahandRobotWrapper
+            self._metahand_wrapper = MetahandRobotWrapper(self._isaac_wrapper.service)
 
-        self._rigid_objects = []
-        self.add_or_reset_rigid_objects()
-        self._pick_target_rigid_object_idx = None
+            self._rigid_objects = []
+            self.add_or_reset_rigid_objects()
+            self._pick_target_rigid_object_idx = None
 
-        if False:
-            from pxr import UsdGeom, Gf
-            test_scene_root_prim = isaac_world.stage.GetPrimAtPath("/World/test_scene")
-            test_scene_root_xform = UsdGeom.Xform(test_scene_root_prim)
-            translate_op = test_scene_root_xform.AddTranslateOp()
-            translate_op.Set(Gf.Vec3f([0.0, 0.0, 0.1]))
+            if False:
+                from pxr import UsdGeom, Gf
+                test_scene_root_prim = isaac_world.stage.GetPrimAtPath("/World/test_scene")
+                test_scene_root_xform = UsdGeom.Xform(test_scene_root_prim)
+                translate_op = test_scene_root_xform.AddTranslateOp()
+                translate_op.Set(Gf.Vec3f([0.0, 0.0, 0.1]))
 
-        stage = self._isaac_wrapper.service.world.stage
-        prim = stage.GetPrimAtPath("/World")
-        bind_physics_material_to_hierarchy(stage=stage, root_prim=prim, material_name="my_material", static_friction=1.0, dynamic_friction=1.0, restitution=0.0)
+            stage = self._isaac_wrapper.service.world.stage
+            prim = stage.GetPrimAtPath("/World")
+            bind_physics_material_to_hierarchy(stage=stage, root_prim=prim, material_name="my_material", static_friction=1.0, dynamic_friction=1.0, restitution=0.0)
 
-        isaac_world.reset()
-        self._spot_wrapper.post_reset()
-        self._metahand_wrapper.post_reset()
-        self._isaac_rom.post_reset()
+            isaac_world.reset()
+            self._spot_wrapper.post_reset()
+            self._metahand_wrapper.post_reset()
+            self._isaac_rom.post_reset()
 
-        # position spot near table
-        # pos_usd = isaac_prim_utils.habitat_to_usd_position([-7.9, 1.0, -6.4])
-        pos_usd = isaac_prim_utils.habitat_to_usd_position([-1.2, 1.0, -5.2])
-        self._spot_wrapper._robot.set_world_pose(pos_usd, [1.0, 0.0, 0.0, 0.0])
+            # position spot near table
+            # pos_usd = isaac_prim_utils.habitat_to_usd_position([-7.9, 1.0, -6.4])
+            pos_usd = isaac_prim_utils.habitat_to_usd_position([-1.2, 1.0, -5.2])
+            self._spot_wrapper._robot.set_world_pose(pos_usd, [1.0, 0.0, 0.0, 0.0])
 
-        self._hand_records = [HandRecord(idx=0), HandRecord(idx=1)]
-        self._did_function_load_fail = False
+            self._hand_records = [HandRecord(idx=0), HandRecord(idx=1)]
+            self._did_function_load_fail = False
 
-        # self._spot_pick_helper = SpotPickHelper(len(self._spot_wrapper._arm_joint_indices))
-        self._spot_state_machine = SpotStateMachine(self._spot_wrapper, self._app_service.line_render)
-        self._spot_state_machine.reset()
+            # self._spot_pick_helper = SpotPickHelper(len(self._spot_wrapper._arm_joint_indices))
+            self._spot_state_machine = SpotStateMachine(self._spot_wrapper, self._app_service.line_render)
+            self._spot_state_machine.reset()
+
+            self._do_camera_follow_spot = True
+            self._do_control_spot = True
+
+
         self._hide_gui = False
         self._is_recording = False
 
         # arbitrary spot for VR avatar (near table)
-        human_pos = mn.Vector3(-3.1, 0.0, -7.6)  # mn.Vector3(-7.5, 0.0, -8.0)
+        human_pos = mn.Vector3(0.0, 0.0, 0.0)  # mn.Vector3(-3.1, 0.0, -7.6)
 
         client_message_manager = self._app_service.client_message_manager
         if client_message_manager:
@@ -558,6 +569,8 @@ class AppStateIsaacSimViewer(AppState):
         self._timer = 0.0
 
         self.init_mouse_raycaster()
+
+        self.init_mochi()
 
         pass
 
@@ -674,15 +687,20 @@ class AppStateIsaacSimViewer(AppState):
         controls_str += "ESC: exit\n"
         controls_str += "R + mousemove: rotate camera\n"
         controls_str += "mousewheel: cam zoom\n"
-        controls_str += "WASD: move Spot\n"
-        controls_str += "N: next hand recording\n"
-        controls_str += "G: toggle Spot control\n"
         controls_str += "H: toggle GUI\n"
-        controls_str += "P: pause physics\n"
-        controls_str += "J: reset rigid objects\n"
+
+        if self._isaac_wrapper:
+            controls_str += "WASD: move Spot\n"
+            # controls_str += "N: next hand recording\n"
+            controls_str += "G: toggle Spot control\n"
+            controls_str += "P: pause physics\n"
+            controls_str += "J: reset rigid objects\n"
+            controls_str += "Y: apply force at mouse\n"
+
+        controls_str += "T: reset Mochi\n"
+
         controls_str += "K: start recording\n"
         controls_str += "L: stop recording\n"
-        controls_str += "Y: apply force at mouse\n"
         if self._sps_tracker.get_smoothed_rate() is not None:
             controls_str += f"server SPS: {self._sps_tracker.get_smoothed_rate():.1f}\n"
 
@@ -760,6 +778,8 @@ class AppStateIsaacSimViewer(AppState):
 
         if not self._do_camera_follow_spot:
             return
+
+        assert self._isaac_wrapper
 
         # robot_pos = isaac_prim_utils.get_pos(self._spot_wrapper._robot)
         robot_forward = isaac_prim_utils.get_forward(self._spot_wrapper._robot)
@@ -1166,76 +1186,77 @@ class AppStateIsaacSimViewer(AppState):
         # new_joint_pos = (self._app_service.get_anim_fraction() - 0.5) * 0.3
         # self._spot.set_all_joints(new_joint_pos)
 
-        if gui_input.get_key(GuiInput.KeyNS.SPACE):
-            self._sim.step_physics(dt=1.0/60)
-
-        if gui_input.get_key_down(GuiInput.KeyNS.P):
-            self.set_physics_paused(not self._do_pause_physics)
-
-        if gui_input.get_key_down(GuiInput.KeyNS.G):
-            self._do_camera_follow_spot = not self._do_camera_follow_spot
+        if gui_input.get_key_down(GuiInput.KeyNS.T):
+            self._mochi_wrapper._env.reset()
 
         if gui_input.get_key_down(GuiInput.KeyNS.H):
             self._hide_gui = not self._hide_gui
 
-        if gui_input.get_key_down(GuiInput.KeyNS.J):
-            self.add_or_reset_rigid_objects()
+        if self._isaac_wrapper:
+            if gui_input.get_key_down(GuiInput.KeyNS.P):
+                self.set_physics_paused(not self._do_pause_physics)
+
+            if gui_input.get_key_down(GuiInput.KeyNS.G):
+                self._do_camera_follow_spot = not self._do_camera_follow_spot
+
+            if gui_input.get_key_down(GuiInput.KeyNS.J):
+                self.add_or_reset_rigid_objects()
 
 
-        def set_spot_pick_target(rigid_object_idx):
-            self._pick_target_rigid_object_idx = rigid_object_idx
+            def set_spot_pick_target(rigid_object_idx):
+                self._pick_target_rigid_object_idx = rigid_object_idx
 
-            def get_pick_target_pos():
-                ro = self._rigid_objects[self._pick_target_rigid_object_idx]
-                com_world = isaac_prim_utils.get_com_world(ro._rigid_prim)
-                self.draw_axis(0.05, mn.Matrix4.translation(com_world))
-                return com_world
+                def get_pick_target_pos():
+                    ro = self._rigid_objects[self._pick_target_rigid_object_idx]
+                    com_world = isaac_prim_utils.get_com_world(ro._rigid_prim)
+                    self.draw_axis(0.05, mn.Matrix4.translation(com_world))
+                    return com_world
 
-            self._spot_state_machine.set_pick_target(get_pick_target_pos)
+                self._spot_state_machine.set_pick_target(get_pick_target_pos)
 
-        self._timer += dt
-        reset_period = 25.0
-        if self._timer > reset_period:
-            self._timer = 0.0
-            self.add_or_reset_rigid_objects()
-            # self._spot_state_machine.reset()
-            # self._pick_target_rigid_object_idx = 2
-            # # if self._pick_target_rigid_object_idx is None:
-            # #     self._pick_target_rigid_object_idx = 2
-            # # self._pick_target_rigid_object_idx += 1
-            # # # iterate over range [2, 6]
-            # # if self._pick_target_rigid_object_idx > 6:
-            # #     self._pick_target_rigid_object_idx = 2
-            # print(f"setting pick target = {self._pick_target_rigid_object_idx}")
-            # set_spot_pick_target(self._pick_target_rigid_object_idx)
+            self._timer += dt
+            # reset_period = 25.0
+            # if self._timer > reset_period:
+            #     self._timer = 0.0
+            #     self.add_or_reset_rigid_objects()
+                # self._spot_state_machine.reset()
+                # self._pick_target_rigid_object_idx = 2
+                # # if self._pick_target_rigid_object_idx is None:
+                # #     self._pick_target_rigid_object_idx = 2
+                # # self._pick_target_rigid_object_idx += 1
+                # # # iterate over range [2, 6]
+                # # if self._pick_target_rigid_object_idx > 6:
+                # #     self._pick_target_rigid_object_idx = 2
+                # print(f"setting pick target = {self._pick_target_rigid_object_idx}")
+                # set_spot_pick_target(self._pick_target_rigid_object_idx)
 
-        # self._timer += dt
-        # reset_period = 3.0
-        # if self._timer > reset_period:
-        #     world = self._isaac_wrapper.service.world
-        #     if world.is_playing():
-        #         self.add_or_reset_rigid_objects()
-        #     self._timer = 0.0
+            # self._timer += dt
+            # reset_period = 3.0
+            # if self._timer > reset_period:
+            #     world = self._isaac_wrapper.service.world
+            #     if world.is_playing():
+            #         self.add_or_reset_rigid_objects()
+            #     self._timer = 0.0
 
-        pick_target_keys = [
-            GuiInput.KeyNS.ONE,
-            GuiInput.KeyNS.TWO,
-            GuiInput.KeyNS.THREE,
-            GuiInput.KeyNS.FOUR,
-            GuiInput.KeyNS.FIVE,
-            GuiInput.KeyNS.SIX,
-            GuiInput.KeyNS.SEVEN,
-            GuiInput.KeyNS.EIGHT,
-        ]
-        assert len(pick_target_keys) <= len(self._rigid_objects)
-        for i, key in enumerate(pick_target_keys):
-            if gui_input.get_key_down(key):
-                set_spot_pick_target(i)
-                break
+            pick_target_keys = [
+                GuiInput.KeyNS.ONE,
+                GuiInput.KeyNS.TWO,
+                GuiInput.KeyNS.THREE,
+                GuiInput.KeyNS.FOUR,
+                GuiInput.KeyNS.FIVE,
+                GuiInput.KeyNS.SIX,
+                GuiInput.KeyNS.SEVEN,
+                GuiInput.KeyNS.EIGHT,
+            ]
+            assert len(pick_target_keys) <= len(self._rigid_objects)
+            for i, key in enumerate(pick_target_keys):
+                if gui_input.get_key_down(key):
+                    set_spot_pick_target(i)
+                    break
 
-        if gui_input.get_key_down(GuiInput.KeyNS.ZERO):
-            self._pick_target_rigid_object_idx = None
-            self._spot_state_machine.reset()
+            if gui_input.get_key_down(GuiInput.KeyNS.ZERO):
+                self._pick_target_rigid_object_idx = None
+                self._spot_state_machine.reset()
        
         if gui_input.get_key_down(GuiInput.KeyNS.K):
             self._app_service.video_recorder.start_recording()
@@ -1306,6 +1327,30 @@ class AppStateIsaacSimViewer(AppState):
             get_physx_interface().apply_force_at_pos(body_name, force_vec, hit_pos_usd)
 
 
+    def init_mochi(self):
+
+        self._mochi_wrapper = MochiWrapper(self._sim)
+
+        from habitat_sim._ext.habitat_sim_bindings import RenderInstanceHelper
+        tmp_render_instance_helper = RenderInstanceHelper(self._sim, use_xyzw_orientations=False)
+        render_asset_filepath = "/home/eric/projects/MochiAssets/ycb_root/004_sugar_box.stl"
+        semantic_id = 0
+        scale = mn.Vector3(1.0, 1.0, 1.0)
+        tmp_render_instance_helper.add_instance(render_asset_filepath, semantic_id, scale)
+
+        
+
+    def update_mochi(self):
+
+        if not self._mochi_wrapper:
+            return
+
+        self._mochi_wrapper.step()
+        self._mochi_wrapper.pre_render()
+
+        pass
+
+        # self._metahand_wrapper._target_joint_positions = self._mochi_wrapper.get_allegro_joint_positions()
 
     def sim_update(self, dt, post_sim_update_dict):
         
@@ -1336,11 +1381,12 @@ class AppStateIsaacSimViewer(AppState):
         # self.update_metahand_from_art_hand(use_identify_root_transform=False, extra_pos=mn.Vector3(0.2, 0.00, 0.0))
         self.update_metahand_from_art_hand(use_identify_root_transform=False, extra_pos=None)
 
-        self.update_spot_pre_step(dt)
+        if self._isaac_wrapper:
+            self.update_spot_pre_step(dt)
 
-        self.update_mouse_raycaster(dt)
+            self.update_mouse_raycaster(dt)
 
-        self.update_isaac(post_sim_update_dict)
+            self.update_isaac(post_sim_update_dict)
 
         do_show_vr_cam_pose = False
         vr_cam_pose = self.get_vr_camera_pose()
@@ -1354,6 +1400,8 @@ class AppStateIsaacSimViewer(AppState):
             self._cam_transform = self._camera_helper.get_cam_transform()
 
         post_sim_update_dict["cam_transform"] = self._cam_transform
+
+        self.update_mochi()
 
         # draw lookat ring
         self.draw_lookat()
