@@ -570,6 +570,7 @@ class DebugVisualizer:
         debug_circles: Optional[
             List[Tuple[mn.Vector3, float, mn.Vector3, mn.Color4]]
         ] = None,
+        distance_from_subject: Optional[float] = None,
     ) -> DebugObservation:
         """
         Generic "peek" function generating a DebugObservation image or a set of images centered on a subject and taking as input all reasonable ways to define a subject to peek. Use this function to quickly "peek" at an object or the top-down view of the full scene.
@@ -579,6 +580,7 @@ class DebugVisualizer:
         :param peek_all_axis: Optionally create a merged 3x2 matrix of images looking at the object from all angles.
         :param debug_lines: Optionally provide a list of debug line render tuples, each with a list of points and a color. These will be displayed in all peek images.
         :param debug_circles: Optionally provide a list of debug line render circle Tuples, each with (center, radius, normal, color). These will be displayed in all peek images.
+        :param distance_from_subject: Optionally provide a distance from the subject to place the camera. If not provided, the distance is computed based on the subject's bounding box size and camera field of view.
         :return: the DebugObservation containing either 1 image or 6 joined images depending on value of peek_all_axis.
         """
 
@@ -629,6 +631,7 @@ class DebugVisualizer:
             peek_all_axis=peek_all_axis,
             debug_lines=debug_lines,
             debug_circles=debug_circles,
+            distance_from_subject=distance_from_subject,
         )
 
     def _peek_bb(
@@ -641,6 +644,7 @@ class DebugVisualizer:
         debug_circles: Optional[
             List[Tuple[mn.Vector3, float, mn.Vector3, mn.Color4]]
         ] = None,
+        distance_from_subject: Optional[float] = None,
     ) -> DebugObservation:
         """
         Internal helper function to generate image(s) of any bb for contextual debugging purposes.
@@ -652,6 +656,7 @@ class DebugVisualizer:
         :param peek_all_axis: Optionally create a merged 3x2 matrix of images looking at the object from all angles.
         :param debug_lines: Optionally provide a list of debug line render tuples, each with a list of points and a color. These will be displayed in all peek images.
         :param debug_circles: Optionally provide a list of debug line render circle Tuples, each with (center, radius, normal, color). These will be displayed in all peek images.
+        :param distance_from_subject: Optionally provide a distance from the subject to place the camera. If not provided, the distance is computed based on the bounding box size and camera field of view.
         :return: the DebugObservation containing either 1 image or 6 joined images depending on value of peek_all_axis.
         """
 
@@ -661,18 +666,22 @@ class DebugVisualizer:
         if world_transform is None:
             world_transform = mn.Matrix4.identity_init()
         look_at = world_transform.transform_point(bb.center())
-        bb_size = bb.size()
-        fov = 90 if self._equirect else self.sensor._spec.hfov
-        aspect = (
-            float(self.sensor._spec.resolution[1])
-            / self.sensor._spec.resolution[0]
-        )
-        import math
 
-        # compute the optimal view distance from the camera specs and object size
-        distance = (np.amax(np.array(bb_size)) / aspect) / math.tan(
-            fov / (360 / math.pi)
-        )
+        distance = distance_from_subject
+        if distance_from_subject is None:
+            bb_size = bb.size()
+            fov = 90 if self._equirect else self.sensor._spec.hfov
+            aspect = (
+                float(self.sensor._spec.resolution[1])
+                / self.sensor._spec.resolution[0]
+            )
+            import math
+
+            # compute the optimal view distance from the camera specs and object size
+            distance = (np.amax(np.array(bb_size)) / aspect) / math.tan(
+                fov / (360 / math.pi)
+            )
+
         if cam_local_pos is None:
             # default to -Z (forward) of the object
             cam_local_pos = mn.Vector3(0, 0, -1)
