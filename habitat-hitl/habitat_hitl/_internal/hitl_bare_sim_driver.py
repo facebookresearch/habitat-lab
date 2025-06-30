@@ -68,8 +68,8 @@ class HitlBareSimDriver(AppDriver):
         cfg_settings = habitat_sim.utils.settings.default_sim_settings.copy()
         # keyword "NONE" initializes a scene with no scene mesh
         cfg_settings["scene"] = "NONE"
-        cfg_settings["scene_dataset_config_file"] = "data/fpss/hssd-hab-siro.scene_dataset_config.json"
-        cfg_settings["scene"] = "NONE"  # "102344022.scene_instance.json"
+        # cfg_settings["scene_dataset_config_file"] = "data/fpss/hssd-hab-siro.scene_dataset_config.json"
+        # cfg_settings["scene"] = "NONE"  # "102344022.scene_instance.json"
         cfg_settings["depth_sensor"] = False
         cfg_settings["color_sensor"] = False
         hab_cfg = habitat_sim.utils.settings.make_cfg(cfg_settings)
@@ -296,6 +296,22 @@ class HitlBareSimDriver(AppDriver):
 
         if self.network_server_enabled:
             for keyframe_json in keyframes:
+
+                keyframe_json = keyframe_json.replace(
+                    '/home/eric/projects/mochi2/habitat_render_data/data/hssd-hab',
+                    'data/scene_datasets/hssd-hab',
+                )
+
+                keyframe_json = keyframe_json.replace(
+                    '/home/eric/blender',
+                    'data/from_gum/meshes',
+                )
+
+                keyframe_json = keyframe_json.replace(
+                    '.obj',
+                    '.glb',
+                )                
+
                 obj = json.loads(keyframe_json)
                 assert "keyframe" in obj
                 keyframe_obj = obj["keyframe"]

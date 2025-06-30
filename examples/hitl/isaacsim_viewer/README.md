@@ -1,6 +1,8 @@
 # IsaacSim Viewer
 ![spot_and_hand_banner](https://github.com/user-attachments/assets/6aaf5ab1-2568-4b22-bd3c-54ab521b0ee7)
 
+This is an updated version of the IsaacSim Viewer with an alternate Mochi backend.
+
 The app is an interactive VR physics sandbox. It features an HSSD scene, YCB objects, and a policy-driven Spot. If you connect a VR client, you can also interact with the scene via a Metahand. The app is also a good starting point for testing/hacking/benchmarking.
 
 ## Requirements
@@ -10,13 +12,17 @@ The app is an interactive VR physics sandbox. It features an HSSD scene, YCB obj
 
 ## Installation
 
+### Mochi
+
+See [habitat-lab/habitat/mochi/README.md](../../../habitat-lab/habitat/mochi/README.md).
+
 ### Isaac Sim
 
 See [habitat-lab/habitat/isaac_sim/README.md](../../../habitat-lab/habitat/isaac_sim/README.md).
 
 ### Habitat-sim
 
-1. Use the [eundersander/isaac_vr](https://github.com/facebookresearch/habitat-sim/tree/eundersander/isaac_vr) branch. See [BUILD_FROM_SOURCE.md](https://github.com/facebookresearch/habitat-sim/blob/eundersander/isaac_vr/BUILD_FROM_SOURCE.md).
+1. Use the [eundersander/mochi_vr](https://github.com/facebookresearch/habitat-sim/tree/eundersander/mochi_vr) branch. See [BUILD_FROM_SOURCE.md](https://github.com/facebookresearch/habitat-sim/blob/eundersander/mochi_vr/BUILD_FROM_SOURCE.md).
 2. Verify your install with `python -c "import habitat_sim; print(habitat_sim)"`. Verify you imported the habitat-sim you just cloned and built.
 
 ### Data

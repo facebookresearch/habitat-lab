@@ -1,0 +1,118 @@
+{
+    "render_map": {
+        "Object": {
+            "is_dynamic": true,
+            "render_asset_filepath5": "/home/eric/projects/mochi2/common/assets/sketchfab/replica_greek_vase2.glb",
+            "render_asset_filepath4": "/home/eric/projects/mochi2/common/assets/sketchfab/frying_pan.glb",
+            "render_asset_filepath3": "/home/eric/projects/mochi2/common/assets/sketchfab/screwdriver.glb",
+            "render_asset_filepath2": "/home/eric/projects/mochi2/common/assets/sketchfab/hammer.glb",
+            "render_asset_filepath": "data/objects/ycb/meshes/010_potted_meat_can/google_16k/textured.glb",
+            "scale5": [0.6, 0.6, 0.6],
+            "scale4": [0.01, 0.01, 0.01],
+            "scale3": [1.5, 1.5, 1.5],
+            "scale2": [0.16, 0.16, 0.16],
+            "scale":  [1.0, 1.0, 1.0],
+            "do_legacy_blender_glb_fixup": true
+        },
+        "Agent/link": {
+            "is_dynamic": true,
+            "render_asset_filepath": "/home/eric/blender/allegro/base_link.glb"
+        },
+        "Agent/link_0.0": {
+            "is_dynamic": true,
+            "render_asset_filepath": "/home/eric/blender/allegro/link_0.0.glb"
+        },
+        "Agent/link_1.0": {
+            "is_dynamic": true,
+            "render_asset_filepath": "/home/eric/blender/allegro/link_1.0.glb"
+        },
+        "Agent/link_2.0": {
+            "is_dynamic": true,
+            "render_asset_filepath": "/home/eric/blender/allegro/link_2.0.glb"
+        },
+        "Agent/link_3.0": {
+            "is_dynamic": true,
+            "render_asset_filepath": "/home/eric/blender/allegro/link_3.0.glb"
+        },
+        "Agent/link_3.0_tip": {
+            "is_dynamic": true,
+            "render_asset_filepath": "/home/eric/blender/digit_centered/digit2_sensor_base_tip.glb"
+        },
+        "Agent/link_3.0_digit2_sensor_base": {
+            "is_dynamic": true,
+            "render_asset_filepath": "/home/eric/blender/digit_centered/digit2_sensor_base.glb"
+        },
+        "Agent/link_4.0": {
+            "is_dynamic": true,
+            "render_asset_filepath": "/home/eric/blender/allegro/link_0.0.glb"
+        },
+        "Agent/link_5.0": {
+            "is_dynamic": true,
+            "render_asset_filepath": "/home/eric/blender/allegro/link_1.0.glb"
+        },
+        "Agent/link_6.0": {
+            "is_dynamic": true,
+            "render_asset_filepath": "/home/eric/blender/allegro/link_2.0.glb"
+        },
+        "Agent/link_7.0": {
+            "is_dynamic": true,
+            "render_asset_filepath": "/home/eric/blender/allegro/link_3.0.glb"
+        },
+        "Agent/link_7.0_tip": {
+            "is_dynamic": true,
+            "render_asset_filepath": "/home/eric/blender/digit_centered/digit2_sensor_base_tip.glb"
+        },
+        "Agent/link_7.0_digit2_sensor_base": {
+            "is_dynamic": true,
+            "render_asset_filepath": "/home/eric/blender/digit_centered/digit2_sensor_base.glb"
+        },
+        "Agent/link_8.0": {
+            "is_dynamic": true,
+            "render_asset_filepath": "/home/eric/blender/allegro/link_0.0.glb"
+        },
+        "Agent/link_9.0": {
+            "is_dynamic": true,
+            "render_asset_filepath": "/home/eric/blender/allegro/link_1.0.glb"
+        },
+        "Agent/link_10.0": {
+            "is_dynamic": true,
+            "render_asset_filepath": "/home/eric/blender/allegro/link_2.0.glb"
+        },
+        "Agent/link_11.0": {
+            "is_dynamic": true,
+            "render_asset_filepath": "/home/eric/blender/allegro/link_3.0.glb"
+        },
+        "Agent/link_11.0_tip": {
+            "is_dynamic": true,
+            "render_asset_filepath": "/home/eric/blender/digit_centered/digit2_sensor_base_tip.glb"
+        },
+        "Agent/link_11.0_digit2_sensor_base": {
+            "is_dynamic": true,
+            "render_asset_filepath": "/home/eric/blender/digit_centered/digit2_sensor_base.glb"
+        },
+        "Agent/link_12.0": {
+            "is_dynamic": true,
+            "render_asset_filepath": "/home/eric/blender/allegro/link_12.0_right.glb"
+        },
+        "Agent/link_13.0": {
+            "is_dynamic": true,
+            "render_asset_filepath": "/home/eric/blender/allegro/link_13.0.glb"
+        },
+        "Agent/link_14.0": {
+            "is_dynamic": true,
+            "render_asset_filepath": "/home/eric/blender/allegro/link_14.0.glb"
+        },
+        "Agent/link_15.0": {
+            "is_dynamic": true,
+            "render_asset_filepath": "/home/eric/blender/allegro/link_15.0.glb"
+        },
+        "Agent/link_15.0_tip": {
+            "is_dynamic": true,
+            "render_asset_filepath": "/home/eric/blender/digit_centered/digit2_sensor_base_tip.glb"
+        },
+        "Agent/link_15.0_digit2_sensor_base": {
+            "is_dynamic": true,
+            "render_asset_filepath": "/home/eric/blender/digit_centered/digit2_sensor_base.glb"
+        }
+    }
+}

@@ -31,8 +31,7 @@ class _InstanceGroup:
     def __init__(self, hab_sim, isaac_world, is_rigid=False):
         self._prim_path_to_render_asset = {}
         self._xform_prim_view = None
-        isaac_identity_rotation_wxyz = [1.0, 0.0, 0.0, 0.0]
-        self._render_instance_helper = RenderInstanceHelper(hab_sim, isaac_identity_rotation_wxyz)
+        self._render_instance_helper = RenderInstanceHelper(hab_sim, use_xyzw_orientations=False)
         self._is_rigid = is_rigid
         self._world = isaac_world
 

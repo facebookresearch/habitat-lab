@@ -12,23 +12,16 @@ from habitat_sim._ext.habitat_sim_bindings import RenderInstanceHelper
 import numpy as np
 import magnum as mn
 
-def quat_multiply(q1, q2):
-    w1, x1, y1, z1 = q1
-    w2, x2, y2, z2 = q2
-    w = w1*w2 - x1*x2 - y1*y2 - z1*z2
-    x = w1*x2 + x1*w2 + y1*z2 - z1*y2
-    y = w1*y2 - x1*z2 + y1*w2 + z1*x2
-    z = w1*z2 + x1*y2 - y1*x2 + z1*w2
-    return [w, x, y, z]
+# This is needed so that gfx-replay keyframes contain an extra rotation for GLB render assets which is expected by our legacy Unity VR app.
+ADD_HACK_ROTATION = True
 
-def quat_transpose(q):
-    w, x, y, z = q
-    return [w, -x, -y, -z]
 
-def quat_rotate(q, v):
-    q_conj = quat_transpose(q)
-    v_quat = [0, *v]
-    return quat_multiply(quat_multiply(q, v_quat), q_conj)[1:]
+from habitat.mochi.mochi_utils import (
+    quat_multiply,
+    rotvec_to_quat_wxyz,
+    magnum_quat_to_list_wxyz,
+    mochi_to_habitat_position
+)
 
 class _InstanceGroup:
     def __init__(self, hab_sim):
@@ -36,26 +29,12 @@ class _InstanceGroup:
         # self._render_instance_helper = RenderInstanceHelper(hab_sim, identity_rotation_wxyz)
         self._render_instance_helper = RenderInstanceHelper(hab_sim, use_xyzw_orientations=False)
         self._object_handles = {}
+        self._hack_rotations = {}
 
     def flush_to_hab_sim(self, mochi):
 
         if len(self._object_handles) == 0:
             return
-
-        def rotvec_to_quat_wxyz(rotvec):
-            theta = np.linalg.norm(rotvec)
-            if theta < 1e-8:
-                # No rotation, return identity quaternion
-                return np.array([1.0, 0.0, 0.0, 0.0])  # [x, y, z, w]
-            
-            axis = rotvec / theta
-            half_theta = theta / 2.0
-            sin_half_theta = np.sin(half_theta)
-            cos_half_theta = np.cos(half_theta)
-            
-            q_xyz = axis * sin_half_theta
-            q_w = cos_half_theta
-            return np.concatenate([[q_w], q_xyz])
 
         num_objects = len(self._object_handles)
 
@@ -63,10 +42,13 @@ class _InstanceGroup:
         wxyz_rotations = np.zeros((num_objects, 4), dtype=np.float32)  # perf todo: use np.empty
         for (i, name) in enumerate(self._object_handles):
             handle = self._object_handles[name]
-            pose_com = mochi.get_object_com_transform(handle)
             pose = mochi.get_object_origin_transform(handle)
-            positions[i] = pose[0]
+            positions[i] = mochi_to_habitat_position(pose[0])
             wxyz_rotations[i] = rotvec_to_quat_wxyz(pose[1])
+
+            if name in self._hack_rotations:
+                hack_rotation = self._hack_rotations[name]
+                wxyz_rotations[i] = quat_multiply(wxyz_rotations[i], hack_rotation)
 
         # todo: coordinate frame conversion?
         # todo: use true object origin instead of CoM
@@ -110,6 +92,7 @@ class MochiVisualizer:
             item_json = render_map_json[elem_name]
             is_dynamic = item_json["is_dynamic"]
             render_asset_filepath = item_json["render_asset_filepath"]
+            do_legacy_blender_glb_fixup = item_json.get("do_legacy_blender_glb_fixup")
             if render_asset_filepath is None:
                 continue
             semantic_id = item_json.get("semantic_id")
@@ -119,6 +102,21 @@ class MochiVisualizer:
             scale = item_json.get("scale")
             scale = mn.Vector3(scale) if scale is not None else unitScale
 
+            if ADD_HACK_ROTATION:
+                if do_legacy_blender_glb_fixup:
+                    init_rotation = mn.Quaternion()
+                    runtime_rotation = mn.Quaternion.rotation(mn.Rad(1.5708), mn.Vector3.x_axis())
+                else:
+                    init_rotation = mn.Quaternion()
+                    runtime_rotation = None
+            else:
+                if do_legacy_blender_glb_fixup:
+                    init_rotation = mn.Quaternion.rotation(mn.Rad(1.5708), mn.Vector3.x_axis())
+                    runtime_rotation = None
+                else:
+                    init_rotation = mn.Quaternion()
+                    runtime_rotation = None
+
             if elem_name not in object_names:
                 print(f"MochiVisualizer: no object found for {elem_name} named in {render_map_filepath}")
                 continue
@@ -127,8 +125,10 @@ class MochiVisualizer:
 
             group_type = _InstanceGroupType.DYNAMIC if is_dynamic else _InstanceGroupType.STATIC
             group = self._instance_groups[group_type]
-            group._render_instance_helper.add_instance(render_asset_filepath, semantic_id, scale)
+            group._render_instance_helper.add_instance(render_asset_filepath, semantic_id, scale=scale, rotation=init_rotation)
             group._object_handles[elem_name] = mochi_handle
+            if runtime_rotation:
+                group._hack_rotations[elem_name] = magnum_quat_to_list_wxyz(runtime_rotation)
 
     def flush_to_hab_sim(self):
 
