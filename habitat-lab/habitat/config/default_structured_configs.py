@@ -120,7 +120,9 @@ class EnvironmentConfig(HabitatBaseConfig):
     """
     max_episode_steps: int = 1000
     max_episode_seconds: int = 10000000
-    iterator_options: IteratorOptionsConfig = field(default_factory=IteratorOptionsConfig)
+    iterator_options: IteratorOptionsConfig = field(
+        default_factory=IteratorOptionsConfig
+    )
 
 
 # -----------------------------------------------------------------------------
@@ -1783,7 +1785,9 @@ class SimulatorConfig(HabitatBaseConfig):
     # if default navmesh is used, should it include static objects
     navmesh_include_static_objects: bool = False
 
-    habitat_sim_v0: HabitatSimV0Config = field(default_factory=HabitatSimV0Config)
+    habitat_sim_v0: HabitatSimV0Config = field(
+        default_factory=HabitatSimV0Config
+    )
     # ep_info is added to the config in some rearrange tasks inside
     # merge_sim_episode_with_object_config
     ep_info: Optional[Any] = None

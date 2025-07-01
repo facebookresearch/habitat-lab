@@ -277,7 +277,9 @@ class PolicyConfig(HabitatBaselinesBaseConfig):
     action_distribution_type: str = "categorical"  # or 'gaussian'
     # If the list is empty, all keys will be included.
     # For gaussian action distribution:
-    action_dist: ActionDistributionConfig = field(default_factory=ActionDistributionConfig)
+    action_dist: ActionDistributionConfig = field(
+        default_factory=ActionDistributionConfig
+    )
     obs_transforms: Dict[str, ObsTransformConfig] = field(default_factory=dict)
     hierarchical_policy: HierarchicalPolicyConfig = MISSING
 
@@ -469,7 +471,9 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     force_blind_policy: bool = False
     verbose: bool = True
     # Creates the vectorized environment.
-    vector_env_factory: VectorEnvFactoryConfig = field(default_factory=VectorEnvFactoryConfig)
+    vector_env_factory: VectorEnvFactoryConfig = field(
+        default_factory=VectorEnvFactoryConfig
+    )
     evaluator: EvaluatorConfig = field(default_factory=EvaluatorConfig)
     eval_keys_to_include_in_name: List[str] = field(default_factory=list)
     # For our use case, the CPU side things are mainly memory copies
