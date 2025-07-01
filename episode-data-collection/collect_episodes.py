@@ -77,6 +77,9 @@ def shortest_path_navigation(args):
             if random.random() < args.sample:
                 continue
 
+            if episode < 200_000:
+                continue
+
             goal = env.habitat_env.current_episode.goals[0]
             follower = ShortestPathFollower(
                 env.habitat_env.sim, goal_radius, False
@@ -115,7 +118,7 @@ def shortest_path_navigation(args):
                 obs = env.habitat_env.sim.get_sensor_observations() # get the observation at the goal
                 goal_image = obs["rgb"][:, :, :3]
                 env.habitat_env.sim.set_agent_state(original_state.position, original_state.rotation) # return the agent in the starting position
-            elif instance_imagegoal in observations:
+            elif 'instance_imagegoal' in observations:
                 goal_image = observations['instance_imagegoal']
             elif "imagegoal" in observations:
                 goal_image = observations['imagegoal']
