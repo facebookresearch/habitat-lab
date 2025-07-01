@@ -64,10 +64,10 @@ Download the required datasets and place them in the `data/` directory. From the
     ```
 
 ## Run the Script
-
 To run the prototype script from your `habitat-lab/` root directory:
 ```bash
-python examples/grasp_pose_validator/grasp_pose_validator.py
+#NOTE: this is specific to the test object for now and you will need to generate an episode file first
+python examples/grasp_pose_validator/grasp_pose_validator.py --episode-dataset data/datasets/grasp_pose_validator_episodes.json.gz --grasps-json examples/grasp_pose_validator/grasp_08437cca1420fadbceb39818cc68a000eb0cf37e.json
 ```
 For additional options, use:
 ```bash
