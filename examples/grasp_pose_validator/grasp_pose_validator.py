@@ -2,8 +2,9 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import json
 import os
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 import magnum as mn
 
@@ -17,6 +18,42 @@ from habitat_sim import Simulator
 from habitat_sim.metadata import MetadataMediator
 from habitat_sim.physics import ManagedRigidObject
 from habitat_sim.utils.settings import default_sim_settings, make_cfg
+
+
+def load_grasp_pose_json(grasp_json_filepath: str):
+    """
+    Load a grasp pose JSON file and return the map of object id to grasp poses.
+    The JSON file should contain a dict mapping object names to a list of grasp dicts containing:
+    - "rotation": a 3x3 matrix representing the wrist rotation
+    - "translation": a 3D vector representing the wrist translation
+    - "fingers": the finger joint degrees of freedom (DOF) for the hand model
+    """
+
+    with open(grasp_json_filepath, "r") as f:
+        grasp_pose_data = json.load(f)
+
+    obj_to_grasps: Dict[
+        str, List[Tuple[mn.Quaternion, mn.Vector3, List[float]]]
+    ] = {}
+    for object_name, grap_poses in grasp_pose_data.items():
+        obj_to_grasps[object_name] = []
+        for grasp in grap_poses:
+            # Convert the grasp dict to a tuple of (rotation, translation, fingers)
+            rotation = mn.Quaternion.from_matrix(
+                mn.Matrix3(
+                    [
+                        [grasp["rotation"][i][j] for j in range(3)]
+                        for i in range(3)
+                    ]
+                )
+            )
+            translation = mn.Vector3(grasp["translation"])
+            finger_joints = grasp["fingers"]
+            obj_to_grasps[object_name].append(
+                (rotation, translation, finger_joints)
+            )
+
+    return obj_to_grasps
 
 
 def load_episode_dataset(dataset_file: str):
@@ -71,10 +108,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        "--episode_dataset",
+        "--episode-dataset",
         default="data/datasets/hssd/rearrange/val/social_rearrange.json.gz",
         type=str,
         help="the RearrangeEpisode dataset file to load.",
+    )
+    parser.add_argument(
+        "--grasps-json",
+        type=str,
+        help="the grasp pose JSON file to load. The file should contain a dict mapping object names to a list of grasp dicts.",
     )
     parser.add_argument(
         "--out-dir",
@@ -101,6 +143,9 @@ if __name__ == "__main__":
     ]
     # NOTE: split the scene_id to get the scene name separate from the file path
     scene_name = episode.scene_id.split("/")[-1].split(".")[0]
+
+    # load the grasp pose JSON file
+    obj_to_grasps = load_grasp_pose_json(args.grasps_json)
 
     # create an initial simulator config
     sim_settings: Dict[str, Any] = default_sim_settings
@@ -137,6 +182,7 @@ if __name__ == "__main__":
 
         # NOTE: assuming the 1st object is the star object
         star_object = episode_objects[0]
+        star_object_name = star_object.handle.split("_:")[0]
 
         # TODO: choose the hand model we want to use
         # load the hand URDF
@@ -147,9 +193,25 @@ if __name__ == "__main__":
             print("Failed to load the Metahand URDF, aborting.")
             exit(1)
 
-        # TODO: pose the hand
-        # for now we will just place it near the first object
-        hand_ao.translation = star_object.translation + mn.Vector3(0, 0.25, 0)
+        # pose the hand
+        if len(obj_to_grasps) > 0:
+            # TODO: use multiple grasps for the object
+            # load the first grasp pose for the star object
+            first_grasp = obj_to_grasps[star_object_name][0]
+
+            # pose the hand relative to the object transformation
+            hand_ao.translation = star_object.transformation.transform_point(
+                first_grasp[1]
+            )
+            hand_ao.rotation = star_object.rotation * first_grasp[0]
+
+            # set the finger joints to the specified DOF
+            hand_ao.joint_positions = first_grasp[2]
+        else:
+            # for now we will just place it near the first object
+            hand_ao.translation = star_object.translation + mn.Vector3(
+                0, 0.25, 0
+            )
         hand_object_ids: Dict[int, int] = hand_ao.link_object_ids
 
         # run collision detection and check for contact between the hand and environment

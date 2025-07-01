@@ -74,16 +74,17 @@ For additional options, use:
 python examples/grasp_pose_validator/grasp_pose_validator.py --help
 ```
 
-## (TODO) Generating New Episodes
-TODO: generate a config, then this will work as written...
+## Generating New Episodes
+Episodes can be generated from configuration in `hssd_single_obj.yaml`.
 
-Episodes can be generated from configuration in `(TODO provide a config).yaml`.
+NOTE: we are explicitly targeting object `08437cca1420fadbceb39818cc68a000eb0cf37e` for this prototype.
+
+TODO: we'll expand this to more scenes
 
 Run the following from your `habitat-lab/` root directory to generate a dataset with one compatible RearrangeEpisode:
 
 ```bash
-#TODO: needs a config to be runnable
-python habitat-lab/habitat/datasets/rearrange/run_episode_generator.py --config examples/grasp_pose_validator/grasp_pose_validator/<TODO>.yaml --out data/datasets/grasp_pose_validator_episodes.json.gz --run
+python habitat-lab/habitat/datasets/rearrange/run_episode_generator.py --config examples/grasp_pose_validator/hssd_single_obj.yaml --out data/datasets/grasp_pose_validator_episodes.json.gz --run
 ```
 
 
