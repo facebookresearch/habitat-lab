@@ -18,3 +18,5 @@ habitat:
           depth_sensor:
             width: 256
             height: 256
+  dataset:
+    scenes_dir: "/cluster/work/rsl/lmilikic/gibson"

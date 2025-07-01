@@ -105,7 +105,6 @@ class PointNavResNetPolicy(NetPolicy):
                 normalize_visual_inputs=normalize_visual_inputs,
                 fuse_keys=fuse_keys,
                 force_blind_policy=force_blind_policy,
-                force_depth_only_nav=policy_config.depth_only,
                 discrete_actions=discrete_actions,
             ),
             action_space=action_space,
@@ -191,7 +190,7 @@ class ResNetEncoder(nn.Module):
             observation_space.spaces[k].shape[2] for k in self.visual_keys
         )
 
-        if normalize_visual_inputs and not self.is_blind:
+        if normalize_visual_inputs:
             self.running_mean_and_var: nn.Module = RunningMeanAndVar(
                 self._n_input_channels
             )
@@ -412,7 +411,6 @@ class PointNavResNetNet(Net):
         normalize_visual_inputs: bool,
         fuse_keys: Optional[List[str]],
         force_blind_policy: bool = False,
-        force_depth_only_nav: bool = False,
         discrete_actions: bool = True,
     ):
         super().__init__()
@@ -554,13 +552,6 @@ class PointNavResNetNet(Net):
 
         if force_blind_policy:
             use_obs_space = spaces.Dict({})
-        elif force_depth_only_nav:
-            assert "depth" in observation_space.spaces, f"Depth only policy required but depth sensor not given: {observation_space.spaces}"
-            use_obs_space = spaces.Dict(
-                {
-                    "depth": observation_space.spaces["depth"]
-                }
-            )
         else:
             use_obs_space = spaces.Dict(
                 {

@@ -11,7 +11,7 @@ habitat_baselines:
   verbose: False
   trainer_name: "ppo"
   torch_gpu_id: 0
-  tensorboard_dir: "tb"
+  tensorboard_dir: "tb/point_nav_resnet"
   video_dir: "video_dir"
   # Evaluate on all episodes
   test_episode_count: -1
@@ -54,10 +54,3 @@ habitat_baselines:
       # when environment time is similar or larger than
       # policy inference time during rollout generation
       use_double_buffered_sampler: False
-
-    policy:
-      main_agent:
-        action_distribution_type: "categorical"
-        noise_coefficient: 0.1  
-    auxiliary_losses:
-      AuxL2Loss: {}
