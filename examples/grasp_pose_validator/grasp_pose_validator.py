@@ -109,7 +109,7 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "--episode-dataset",
-        default="data/datasets/hssd/rearrange/val/social_rearrange.json.gz",
+        default="data/datasets/grasp_pose_validator_episodes.json.gz",
         type=str,
         help="the RearrangeEpisode dataset file to load.",
     )
