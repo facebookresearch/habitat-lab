@@ -7,7 +7,6 @@
 import argparse
 import os
 import shutil
-import cv2
 import numpy as np
 import random
 import pickle
@@ -77,9 +76,6 @@ def shortest_path_navigation(args):
             if random.random() < args.sample:
                 continue
 
-            if episode < 200_000:
-                continue
-
             goal = env.habitat_env.current_episode.goals[0]
             follower = ShortestPathFollower(
                 env.habitat_env.sim, goal_radius, False
@@ -92,6 +88,7 @@ def shortest_path_navigation(args):
                 goal_category = ' '.join(goal.object_category.split('_'))
             except:
                 goal_category = ''
+
             if hasattr(goal, "view_points"):
                 max_dist, view_n = 0, 0
                 for i, view in enumerate(goal.view_points):
