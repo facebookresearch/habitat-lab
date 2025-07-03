@@ -16,7 +16,7 @@ from habitat.datasets.rearrange.rearrange_dataset import (
 from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
 from habitat_sim import Simulator
 from habitat_sim.metadata import MetadataMediator
-from habitat_sim.physics import ManagedRigidObject
+from habitat_sim.physics import JointType, ManagedRigidObject
 from habitat_sim.utils.settings import default_sim_settings, make_cfg
 
 
@@ -184,14 +184,26 @@ if __name__ == "__main__":
         star_object = episode_objects[0]
         star_object_name = star_object.handle.split("_:")[0]
 
-        # TODO: choose the hand model we want to use
         # load the hand URDF
+        # NOTE: I modified the mesh filepaths in these urdfs in order to load them
         hand_ao = sim.get_articulated_object_manager().add_articulated_object_from_urdf(
-            "data/hab_murp/meta_hand/meta_hand_standalone.urdf"
+            # "data/hab_murp/allegro/allegro.urdf", maintain_link_order=True,
+            "data/hab_murp/allegro/allegro_digit360_right_full_collision.urdf",
+            maintain_link_order=True,  # NOTE: this is more logically likely than tree traversal order (default)
         )
         if hand_ao is None:
-            print("Failed to load the Metahand URDF, aborting.")
+            print("Failed to load the Allegro URDF, aborting.")
             exit(1)
+
+        # print the links and joint names of the hand pose by index
+        print("Link Names:")
+        link_names = [
+            (hand_ao.get_link_name(idx), hand_ao.get_link_joint_name(idx))
+            for idx in hand_ao.get_link_ids()
+            if hand_ao.get_link_joint_type(idx) != JointType.Fixed
+        ]
+        for idx, (link_name, joint_name) in enumerate(link_names):
+            print(f" {idx}: {link_name} | {joint_name}")
 
         # pose the hand
         if len(obj_to_grasps) > 0:
@@ -206,7 +218,10 @@ if __name__ == "__main__":
             hand_ao.rotation = star_object.rotation * first_grasp[0]
 
             # set the finger joints to the specified DOF
-            hand_ao.joint_positions = first_grasp[2]
+            # hand_ao.joint_positions = first_grasp[2]
+            # NOTE: transposing thumb and fingers here
+            hand_ao.joint_positions = first_grasp[2][4:] + first_grasp[2][0:4]
+            print(hand_ao.joint_positions)
         else:
             # for now we will just place it near the first object
             hand_ao.translation = star_object.translation + mn.Vector3(
@@ -229,8 +244,14 @@ if __name__ == "__main__":
 
         # set camera to look at the object
         # TODO: refine this to use the hemisphere samples, for now just use a fixed offset direction and distance for prototype
-        dbv.peek(
-            star_object,
-            cam_local_pos=mn.Vector3(1.0, 1.0, 0),
-            distance_from_subject=0.5,
-        ).show()
+        for cam_pos in [
+            mn.Vector3(1.0, 1.0, 0),
+            mn.Vector3(-1.0, 1.0, 0),
+            mn.Vector3(0, 1.0, 1.0),
+            mn.Vector3(0, 1.0, -1.0),
+        ]:
+            dbv.peek(
+                star_object,
+                cam_local_pos=cam_pos,
+                distance_from_subject=0.5,
+            ).show()
