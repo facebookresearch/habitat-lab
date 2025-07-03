@@ -187,9 +187,9 @@ if __name__ == "__main__":
         # load the hand URDF
         # NOTE: I modified the mesh filepaths in these urdfs in order to load them
         hand_ao = sim.get_articulated_object_manager().add_articulated_object_from_urdf(
-            # "data/hab_murp/allegro/allegro.urdf", maintain_link_order=True,
-            "data/hab_murp/allegro/allegro_digit360_right_full_collision.urdf",
-            maintain_link_order=True,  # NOTE: this is more logically likely than tree traversal order (default)
+            "data/hab_murp/allegro/allegro.urdf",
+            # "data/hab_murp/allegro/allegro_digit360_right_full_collision.urdf",
+            maintain_link_order=True,
         )
         if hand_ao is None:
             print("Failed to load the Allegro URDF, aborting.")
@@ -219,8 +219,31 @@ if __name__ == "__main__":
 
             # set the finger joints to the specified DOF
             # hand_ao.joint_positions = first_grasp[2]
-            # NOTE: transposing thumb and fingers here
-            hand_ao.joint_positions = first_grasp[2][4:] + first_grasp[2][0:4]
+            # NOTE: transforming from pose with [index0, middle0, pinky0, thumb0, etc...] to [index0, index1, ...]
+            breadth_to_depth = [
+                0,
+                4,
+                8,
+                12,
+                1,
+                5,
+                8,
+                13,
+                2,
+                6,
+                9,
+                14,
+                3,
+                7,
+                10,
+                15,
+            ]
+
+            # hand_ao.joint_positions = first_grasp[2][4:] + first_grasp[2][0:4]
+            hand_ao.joint_positions = [
+                first_grasp[2][i] for i in breadth_to_depth
+            ]
+
             print(hand_ao.joint_positions)
         else:
             # for now we will just place it near the first object
@@ -250,6 +273,8 @@ if __name__ == "__main__":
             mn.Vector3(0, 1.0, 1.0),
             mn.Vector3(0, 1.0, -1.0),
         ]:
+            dbv.render_debug_frame(transformation=star_object.transformation)
+            dbv.render_debug_frame(transformation=hand_ao.transformation)
             dbv.peek(
                 star_object,
                 cam_local_pos=cam_pos,
