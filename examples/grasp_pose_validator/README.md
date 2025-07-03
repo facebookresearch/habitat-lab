@@ -49,7 +49,7 @@ Download the required datasets and place them in the `data/` directory. From the
 
 1. [hab_murp](https://huggingface.co/datasets/ai-habitat/hab_murp) - the robot URDF and assets
     ```bash
-    git clone https://huggingface.co/datasets/ai-habitat/hab_murp
+    git clone -b new_murp_urdf https://huggingface.co/datasets/ai-habitat/hab_murp
     ```
 2. [hssd-hab](https://huggingface.co/datasets/hssd/hssd-hab) - the HSSD scenes and assets (~12 GB)
     ```bash

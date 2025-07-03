@@ -183,6 +183,7 @@ if __name__ == "__main__":
         # NOTE: assuming the 1st object is the star object
         star_object = episode_objects[0]
         star_object_name = star_object.handle.split("_:")[0]
+        print(f"Star object com correction: {star_object.com_correction}")
 
         # load the hand URDF
         # NOTE: I modified the mesh filepaths in these urdfs in order to load them
@@ -205,78 +206,85 @@ if __name__ == "__main__":
         for idx, (link_name, joint_name) in enumerate(link_names):
             print(f" {idx}: {link_name} | {joint_name}")
 
-        # pose the hand
-        if len(obj_to_grasps) > 0:
-            # TODO: use multiple grasps for the object
-            # load the first grasp pose for the star object
-            first_grasp = obj_to_grasps[star_object_name][0]
+        # NOTE: transforming from pose with [index0, middle0, pinky0, thumb0, etc...] to [index0, index1, ...]
+        breadth_to_depth = [
+            0,
+            4,
+            8,
+            12,
+            1,
+            5,
+            8,
+            13,
+            2,
+            6,
+            9,
+            14,
+            3,
+            7,
+            10,
+            15,
+        ]
 
-            # pose the hand relative to the object transformation
-            hand_ao.translation = star_object.transformation.transform_point(
-                first_grasp[1]
-            )
-            hand_ao.rotation = star_object.rotation * first_grasp[0]
+        # NOTE: not sure why, but this is the delta rotation needed to align the coordinate systems of Habitat and the source simulation
+        corrective_rotation = mn.Quaternion.rotation(
+            mn.Rad(-1.56), mn.Vector3(1, 0, 0)
+        ) * mn.Quaternion.rotation(mn.Rad(-1.56), mn.Vector3(0, 1, 0))
 
-            # set the finger joints to the specified DOF
-            # hand_ao.joint_positions = first_grasp[2]
-            # NOTE: transforming from pose with [index0, middle0, pinky0, thumb0, etc...] to [index0, index1, ...]
-            breadth_to_depth = [
-                0,
-                4,
-                8,
-                12,
-                1,
-                5,
-                8,
-                13,
-                2,
-                6,
-                9,
-                14,
-                3,
-                7,
-                10,
-                15,
-            ]
-
-            # hand_ao.joint_positions = first_grasp[2][4:] + first_grasp[2][0:4]
-            hand_ao.joint_positions = [
-                first_grasp[2][i] for i in breadth_to_depth
-            ]
-
-            print(hand_ao.joint_positions)
-        else:
-            # for now we will just place it near the first object
-            hand_ao.translation = star_object.translation + mn.Vector3(
-                0, 0.25, 0
-            )
         hand_object_ids: Dict[int, int] = hand_ao.link_object_ids
 
-        # run collision detection and check for contact between the hand and environment
-        sim.perform_discrete_collision_detection()
-        cps = sim.get_physics_contact_points()
-        for cp in cps:
-            if (
-                cp.object_id_a in hand_object_ids
-                or cp.object_id_b in hand_object_ids
-            ):
-                # TODO: add filtering logic for contacts here
-                print(
-                    f"Contact detected between hand and environment: {cp.object_id_a} - {cp.object_id_b}"
+        # pose the hand
+        if len(obj_to_grasps) > 0:
+            # iterate over grasp poses for the star object
+            for grasp in obj_to_grasps[star_object_name]:
+                # TODO: this code isn't generalizing
+
+                # pose the hand relative to the object transformation
+                # NOTE: we need to apply the corrective com to origin translation here for the object
+                hand_ao.translation = (
+                    star_object.transformation.transform_point(
+                        corrective_rotation.transform_vector(grasp[1])
+                        + star_object.com_correction
+                    )
+                )
+                hand_ao.rotation = (
+                    star_object.rotation * grasp[0] * corrective_rotation
                 )
 
-        # set camera to look at the object
-        # TODO: refine this to use the hemisphere samples, for now just use a fixed offset direction and distance for prototype
-        for cam_pos in [
-            mn.Vector3(1.0, 1.0, 0),
-            mn.Vector3(-1.0, 1.0, 0),
-            mn.Vector3(0, 1.0, 1.0),
-            mn.Vector3(0, 1.0, -1.0),
-        ]:
-            dbv.render_debug_frame(transformation=star_object.transformation)
-            dbv.render_debug_frame(transformation=hand_ao.transformation)
-            dbv.peek(
-                star_object,
-                cam_local_pos=cam_pos,
-                distance_from_subject=0.5,
-            ).show()
+                # apply the finger poses by mapping one vector to another
+                hand_ao.joint_positions = [
+                    grasp[2][i] for i in breadth_to_depth
+                ]
+
+                print(hand_ao.joint_positions)
+
+                # run collision detection and check for contact between the hand and environment
+                sim.perform_discrete_collision_detection()
+                cps = sim.get_physics_contact_points()
+                for cp in cps:
+                    if (
+                        cp.object_id_a in hand_object_ids
+                        or cp.object_id_b in hand_object_ids
+                    ):
+                        # TODO: add filtering logic for contacts here
+                        print(
+                            f"Contact detected between hand and environment: {cp.object_id_a} - {cp.object_id_b}"
+                        )
+
+                # set camera to look at the object
+                # TODO: refine this to use the hemisphere samples, for now just use a fixed offset direction and distance for prototype
+                for cam_pos in [
+                    mn.Vector3(1.0, 1.0, 0),
+                    # mn.Vector3(-1.0, 1.0, 0),
+                    # mn.Vector3(0, 1.0, 1.0),
+                    # mn.Vector3(0, 1.0, -1.0),
+                ]:
+                    # dbv.render_debug_frame(transformation=star_object.transformation)
+                    # dbv.render_debug_frame(transformation=hand_ao.transformation)
+                    dbv.peek(
+                        star_object,
+                        cam_local_pos=cam_pos,
+                        distance_from_subject=0.5,
+                    ).show()
+                    # print(f"axis1: {unit_axis1}, rad1: {rad1}, axis2: {unit_axis2}, rad2: {rad2}")
+                    # breakpoint()
