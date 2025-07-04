@@ -29,7 +29,7 @@ from habitat.config import read_write
 
 from utils import draw_top_down_map, load_embedding, animate_episode
 
-MIN_STEPS_TO_SAVE = 10
+MIN_STEPS_TO_SAVE = 15
 
 IMAGE_DIR = os.path.join("examples", "images")
 if not os.path.exists(IMAGE_DIR):
@@ -90,11 +90,17 @@ def shortest_path_navigation(args):
                 goal_category = ''
 
             if hasattr(goal, "view_points"):
-                max_dist, view_n = 0, 0
+                init_agent_state = env.habitat_env.sim.get_agent_state()
+                init_agent_pos = np.array(init_agent_state.position)
+                
+                min_dist = float("inf")
+                view_n = 0
+                # choose the closest view for the goal
                 for i, view in enumerate(goal.view_points):
-                    # choose the furthest one because the object of interest is much better visible on the goal image in that case
-                    if max_dist < np.linalg.norm(np.array(view.agent_state.position) - np.array(goal.position)):
-                        max_dist = np.linalg.norm(np.array(view.agent_state.position) - np.array(goal.position))
+                    view_pos = np.array(view.agent_state.position)
+                    dist = np.linalg.norm(view_pos - init_agent_pos)
+                    if dist < min_dist:
+                        min_dist = dist
                         view_n = i
 
                 env.habitat_env.current_episode.goals[0].position = env.habitat_env.current_episode.goals[0].view_points[view_n].agent_state.position
