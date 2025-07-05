@@ -1,0 +1,24 @@
+# @package _global_
+
+defaults:
+  - imagenav_base
+  - /habitat/dataset/imagenav: gibson
+  - override /habitat/task: imagenav_distance
+  - _self_
+
+habitat:
+  environment:
+    max_episode_steps: 500
+  simulator:
+    turn_angle: 30
+    forward_step_size: 0.25 
+    agents:
+      main_agent:
+        sim_sensors:
+          rgb_sensor:
+            width: 256
+            height: 256
+            hfov: 90
+
+  dataset:
+    scenes_dir: "/cluster/work/rsl/lmilikic/gibson"

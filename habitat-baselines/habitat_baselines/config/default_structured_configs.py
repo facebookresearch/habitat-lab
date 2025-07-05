@@ -314,6 +314,9 @@ class PPOConfig(HabitatBaselinesBaseConfig):
     # Not that this does not change the memory requirements
     use_double_buffered_sampler: bool = False
 
+    # — CUSTOM AUGMENTATIONS —
+    random_crop: bool = False
+    rgb_color_jitter: float = 0.0
 
 @dataclass
 class VERConfig(HabitatBaselinesBaseConfig):
@@ -360,6 +363,10 @@ class DDPPOConfig(HabitatBaselinesBaseConfig):
     reset_critic: bool = True
     # Forces distributed mode for testing
     force_distributed: bool = False
+
+    # — CUSTOM AUGMENTATIONS —
+    encoder_backbone: str = 'dist_decoder_conf_100max'
+    encoder_mode: str = 'dense'
 
 
 @dataclass

@@ -115,7 +115,7 @@ class PPO(nn.Module, Updater):
             f"Number of params to train: {sum(param.numel() for param in params)}"
         )
         if len(params) > 0:
-            optim_cls = optim.Adam
+            optim_cls = optim.AdamW
             optim_kwargs = dict(
                 params=params,
                 lr=lr,

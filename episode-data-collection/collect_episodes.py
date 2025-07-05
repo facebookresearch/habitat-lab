@@ -77,9 +77,19 @@ def shortest_path_navigation(args):
                 continue
 
             goal = env.habitat_env.current_episode.goals[0]
-            follower = ShortestPathFollower(
-                env.habitat_env.sim, goal_radius, False
-            )
+            if hasattr(goal, 'rotation'):
+                follower = agent.ImageNavShortestPathFollower(
+                    env.habitat_env.sim, 
+                    goal_radius,
+                    goal.position, 
+                    goal.rotation, 
+                    False, 
+                    turn_angle
+                )
+            else:
+                follower = ShortestPathFollower(
+                    env.habitat_env.sim, goal_radius, False
+                )
 
             # save the top-down map image
             maps = []

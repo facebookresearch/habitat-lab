@@ -1,0 +1,24 @@
+# @package _global_
+
+defaults:
+  - imagenav_base
+  - /habitat/dataset/imagenav: hm3d
+  - _self_
+
+habitat:
+  environment:
+    max_episode_steps: 1000
+  simulator:
+    agents:
+      main_agent:
+        sim_sensors:
+          rgb_sensor:
+            width: 256
+            height: 256
+            hfov: 90
+            position: [0, 0.9, 0]
+          depth_sensor:
+            width: 256
+            height: 256
+  dataset:
+    scenes_dir: "/cluster/work/rsl/lmilikic/gibson"

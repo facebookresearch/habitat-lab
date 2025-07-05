@@ -1,0 +1,31 @@
+defaults:
+  - task_config_base
+  - actions:
+      - stop
+      - move_forward
+      - turn_left
+      - turn_right
+  - measurements:
+      - distance_to_goal
+      - success
+      - spl
+      - distance_to_goal_reward
+      # - orientation_to_goal
+      # - ovrl_reward
+  - lab_sensors:
+      - imagegoal_sensor
+      - compass_sensor
+      - gps_sensor
+  - _self_
+
+type: Nav-v0
+end_on_success: True
+reward_measure: "distance_to_goal_reward"
+success_measure: "spl"
+measurements:
+  success:
+    success_distance: 1.
+
+
+#   distance_to_goal:
+#     distance_to: VIEW_POINTS
