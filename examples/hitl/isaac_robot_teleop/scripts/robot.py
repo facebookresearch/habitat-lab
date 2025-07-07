@@ -647,6 +647,8 @@ class RobotAppWrapper:
         # datastructure to aggregate the results of contact callbacks in a queryable format
         self.contact_state: Dict[Any, Any] = {}
         self._in_contact = False
+        # NOTE: filtering contacts is relatively expensive so we'll only do so when necessary
+        self._contact_sensors_active = True
 
     def get_global_view_offset(self) -> mn.Vector3:
         """
@@ -837,12 +839,32 @@ class RobotAppWrapper:
             )
         )
 
+    def disable_contact_report_sensors(self):
+        """
+        Disables the contact sensors assuming the've been created already.
+        """
+        for prim_path in self.contact_sensor_links:
+            my_prim = self._isaac_service.world.stage.GetPrimAtPath(prim_path)
+            my_prim.RemoveAPI(PhysxSchema.PhysxContactReportAPI)
+
+    def enable_contact_report_sensors(self):
+        """
+        Called to re-enable contact sensors after the've been disabled.
+        """
+        for prim_path in self.contact_sensor_links:
+            my_prim = self._isaac_service.world.stage.GetPrimAtPath(prim_path)
+            contactReportAPI = PhysxSchema.PhysxContactReportAPI.Apply(my_prim)
+            contactReportAPI.CreateThresholdAttr().Set(1.0)
+
     def _on_contact_report_event(self, contact_headers, contact_data):
         """
         Callback function triggered within physx loop when contacts are detected.
         Populates internal datastructures for later query.
         #NOTE: this function profiled on Lambda at 0.0015sec in heavy contact (both hands)
         """
+        if not self._contact_sensors_active:
+            return
+
         from omni.physx.bindings._physx import ContactEventType
         from pxr import PhysicsSchemaTools
 

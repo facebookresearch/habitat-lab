@@ -11,9 +11,9 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import magnum as mn
 import numpy as np
-from xr_pose_adapter import XRPose
 
 from habitat.isaac_sim import isaac_prim_utils
+from scripts.xr_pose_adapter import XRPose
 
 if TYPE_CHECKING:
     from examples.hitl.isaac_robot_teleop.isaac_robot_teleop import (

@@ -125,6 +125,20 @@ def bind_physics_material_to_hierarchy(
     material.CreateDynamicFrictionAttr().Set(dynamic_friction)
 
 
+def remove_stage_mesh_contact_sensors(root_prim):
+    """
+    Disables the contact sensor API on all rigids under the stage mesh root.
+    NOTE: we do this after each contact check to recover perf for manipulation.
+    """
+    from pxr import PhysxSchema, Usd
+
+    prim_range = Usd.PrimRange(root_prim)
+    it = iter(prim_range)
+    for prim in it:
+        if prim.HasAPI(PhysxSchema.PhysxContactReportAPI):
+            prim.RemoveAPI(PhysxSchema.PhysxContactReportAPI)
+
+
 def create_stage_mesh_contact_sensors(root_prim):
     """
     We need to manually apply the PhysxContactReportAPI to simplified stage meshes to detect contacts with them.
@@ -240,7 +254,7 @@ class AppStateIsaacSimViewer(AppStateBase):
         setup_from_episode = False
 
         if self.in_replay_mode:
-            from scripts.record_post_process import (
+            from examples.hitl.isaac_robot_teleop.record_post_process import (
                 get_good_first_ep_frame,
                 load_json_gz,
             )
@@ -325,19 +339,19 @@ class AppStateIsaacSimViewer(AppStateBase):
         self._pick_target_rigid_object_idx = None
 
         stage = self._isaac_wrapper.service.world.stage
-        prim = stage.GetPrimAtPath("/World")
+        self.root_prim = stage.GetPrimAtPath("/World")
 
         # physics properties for the stage and furniture
         bind_physics_material_to_hierarchy(
             stage=stage,
-            root_prim=prim,
+            root_prim=self.root_prim,
             material_name="stage_physics_properties_material",
             static_friction=self._app_cfg.stage_static_friction,
             dynamic_friction=self._app_cfg.stage_dynamic_friction,
             restitution=self._app_cfg.stage_restitution,
         )
         # setup the stage contact sensors
-        create_stage_mesh_contact_sensors(root_prim=prim)
+        create_stage_mesh_contact_sensors(root_prim=self.root_prim)
 
         isaac_world.reset()
 
@@ -1308,6 +1322,7 @@ class AppStateIsaacSimViewer(AppStateBase):
 
         :param rot_angle: The scalar rotation angle around the Y axis, separate representation than 'rot', the rotation quaternion
         """
+        # self.robot._contact_sensors_active = True
         if pos is not None or rot is not None:
             self.robot.set_root_pose(pos=pos, rot=rot)
         if rot_angle is not None:
@@ -1319,7 +1334,12 @@ class AppStateIsaacSimViewer(AppStateBase):
             self.robot.pos_subsets["full"].set_motor_pos(joint_pos)
             self.robot.pos_subsets["full"].set_pos(joint_pos)
             self.robot.pos_subsets["full"].clear_velocities()
+        create_stage_mesh_contact_sensors(self.root_prim)
+        self.robot.enable_contact_report_sensors()
         self.single_step_isaac()
+        # self.robot._contact_sensors_active = False
+        remove_stage_mesh_contact_sensors(self.root_prim)
+        self.robot.disable_contact_report_sensors()
         return self.robot.in_contact
 
     def update_isaac(self, post_sim_update_dict):

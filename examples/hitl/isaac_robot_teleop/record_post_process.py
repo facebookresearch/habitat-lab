@@ -15,8 +15,9 @@ from collections import defaultdict
 from typing import Any, Dict, List, Tuple
 
 import magnum as mn
-from frame_recorder import FrameEvent
 from tqdm import tqdm
+
+from scripts.frame_recorder import FrameEvent
 
 # NOTE: use known version days to split sessions by expected features or contents
 version_days = {
