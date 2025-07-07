@@ -55,7 +55,7 @@ from habitat_hitl.core.key_mapping import KeyCode, MouseButton
 from habitat_hitl.core.text_drawer import TextOnScreenAlignment
 from habitat_hitl.core.xr_input import HAND_LEFT, HAND_RIGHT
 from habitat_hitl.environment.camera_helper import CameraHelper
-from scripts.frame_recorder import FrameRecorder
+from scripts.frame_recorder import FrameEvent, FrameRecorder
 from scripts.ik import DifferentialInverseKinematics, to_ik_pose
 from scripts.utils import LERP, debug_draw_axis
 from scripts.xr_pose_adapter import XRPose, XRPoseAdapter
@@ -212,6 +212,7 @@ class AppStateIsaacSimViewer(AppStateBase):
         )
 
         self._frame_recorder = FrameRecorder(self)
+        self._frame_events: List[FrameEvent] = []
         self.reverse_replay = False
         self.pause_replay = False
 
@@ -752,11 +753,8 @@ class AppStateIsaacSimViewer(AppStateBase):
         controls_str += "R + mousemove: rotate camera\n"
         controls_str += "mousewheel: cam zoom\n"
         controls_str += "WASD: move cursor\n"
+        controls_str += "IJKL: move robot base\n"
         controls_str += "H: toggle GUI\n"
-        controls_str += "P: pause physics\n"
-        controls_str += "J: reset rigid objects\n"
-        controls_str += "K: start recording\n"
-        controls_str += "L: stop recording\n"
         if self._sps_tracker.get_smoothed_rate() is not None:
             controls_str += (
                 f"server SPS: {self._sps_tracker.get_smoothed_rate():.1f}\n"
@@ -952,6 +950,7 @@ class AppStateIsaacSimViewer(AppStateBase):
         if left.get_button_down(XRButton.ONE):
             print("pressed one left")
             self.sync_xr_local_state()
+            self._frame_events.append(FrameEvent.SYNC_XR_OFFSET)
             print("synced headset state...")
         if left.get_button_up(XRButton.ONE):
             pass
@@ -967,6 +966,7 @@ class AppStateIsaacSimViewer(AppStateBase):
                     set_motor_targets=True,
                     set_positions=False,
                 )
+            self._frame_events.append(FrameEvent.RESET_ARMS_FINGERS)
 
         if left.get_button_up(XRButton.TWO):
             pass
@@ -993,6 +993,7 @@ class AppStateIsaacSimViewer(AppStateBase):
         if right.get_button_down(XRButton.TWO):
             print("pressed two right, resetting episode objects")
             self.reset_episode_objects()
+            self._frame_events.append(FrameEvent.RESET_OBJECTS)
         if right.get_button_up(XRButton.TWO):
             pass
         # NOTE: XRButton.START is reserved for Quest menu functionality
@@ -1004,6 +1005,7 @@ class AppStateIsaacSimViewer(AppStateBase):
         if left.get_button_down(XRButton.PRIMARY_THUMBSTICK):
             # reset the robot state (e/g/ to unstick or restart)
             self.sample_valid_robot_base_state()
+            self._frame_events.append(FrameEvent.TELEPORT)
 
         # IK for each hand when trigger is pressed
         xr_pose = XRPose(
@@ -1403,9 +1405,11 @@ class AppStateIsaacSimViewer(AppStateBase):
             self.robot.set_root_pose(
                 pos=self._sim.pathfinder.get_random_navigable_point()
             )
+            self._frame_events.append(FrameEvent.TELEPORT)
 
         if gui_input.get_key_down(KeyCode.M):
             self.sample_valid_robot_base_state()
+            self._frame_events.append(FrameEvent.TELEPORT)
             # self.set_robot_base_initial_state()
 
         # cache a pose
@@ -1446,9 +1450,13 @@ class AppStateIsaacSimViewer(AppStateBase):
                         self.robot.pos_subsets[subset_input].set_cached_pose(
                             pose_name=pose_key_input, set_motor_targets=True
                         )
+                        self._frame_events.append(
+                            FrameEvent.RESET_ARMS_FINGERS
+                        )
 
         if gui_input.get_key_down(KeyCode.ONE):
             self.reset_episode_objects()
+            self._frame_events.append(FrameEvent.RESET_OBJECTS)
 
         if gui_input.get_key_down(KeyCode.THREE):
             print(f"Robot in contact = {self.robot_contact_test()}")
@@ -1752,8 +1760,10 @@ class AppStateIsaacSimViewer(AppStateBase):
         if not self.pause_replay:
             r = -1 if self.reverse_replay else 1
             self._frame_recorder.update(
-                self._frame_recorder.replay_time + dt * r
+                self._frame_recorder.replay_time + dt * r,
+                [str(e) for e in self._frame_events],
             )
+            self._frame_events = []
 
         # record state trajectory frames in the session object for cloud serialization
         if self._session is not None:

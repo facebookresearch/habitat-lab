@@ -15,6 +15,7 @@ from collections import defaultdict
 from typing import Any, Dict, List, Tuple
 
 import magnum as mn
+from frame_recorder import FrameEvent
 from tqdm import tqdm
 
 # NOTE: use known version days to split sessions by expected features or contents
@@ -71,9 +72,27 @@ def get_ep_success(ep_json: Dict[Any, Any]) -> bool:
     return False
 
 
-def get_good_first_ep_frame(ep_frames_json: List[Dict[Any, Any]]) -> int:
+def get_event_frames(
+    ep_frames_json: List[Dict[Any, Any]], e: FrameEvent
+) -> List[int]:
+    """
+    Return all frames in the sequence which contain the specified FrameEvent in ascending order.
+    """
+    event_indices = []
+    key_string = str(e)
+    for ix, frame_data in enumerate(ep_frames_json):
+        if key_string in frame_data["events"]:
+            event_indices.append(ix)
+    return event_indices
+
+
+def get_good_first_ep_frame(
+    ep_frames_json: List[Dict[Any, Any]], skip_reset_events: bool = True
+) -> int:
     """
     From an episode frames JSON dict finds a good first frame for replaying relevant content.
+
+    :param skip_reset_events: If True, skip any frames before a reset event tag. For example, nothing before a robot base reset is considered.
     """
 
     start_frame_ix = None
@@ -88,8 +107,27 @@ def get_good_first_ep_frame(ep_frames_json: List[Dict[Any, Any]]) -> int:
     robot_moving: Tuple[bool, float, int] = (False, None, None)
     # robot_moving = (True, <start_time>)
 
+    # look for explicitly recorded reset events to indicate to start of an episode
+    if skip_reset_events:
+        max_reset_event_index = 0
+        for reset_event_type in [
+            FrameEvent.RESET_ARMS_FINGERS,
+            FrameEvent.RESET_OBJECTS,
+            FrameEvent.TELEPORT,
+        ]:
+            event_indices = get_event_frames(ep_frames_json, reset_event_type)
+            print(f"Event {reset_event_type} at indices {event_indices}")
+            if len(event_indices) > 0:
+                max_reset_event_index = max(
+                    max_reset_event_index, max(event_indices)
+                )
+        print(f"max_reset_event_index = {max_reset_event_index}")
+        start_frame_ix = max_reset_event_index
+
+    iter_start_frame = start_frame_ix if start_frame_ix is not None else 0
     prev_frame_data: Dict[Any, Any] = None
-    for ix, frame_data in enumerate(ep_frames_json):
+    for ix in range(iter_start_frame, len(ep_frames_json)):
+        frame_data = ep_frames_json[ix]
         if prev_frame_data is not None:
             prev_base_rot_ang = (
                 prev_frame_data["robot_state"]["base_rotation_angle"] + math.pi
@@ -206,6 +244,7 @@ def process_record_stats(
     out_dir: str,
     start_version: str = None,
     end_version: str = None,
+    is_local_dir: bool = False,
 ) -> None:
     """
     Process a directory containing teleop session records and compute statistics.
@@ -214,6 +253,7 @@ def process_record_stats(
     :param out_dir: The desired relative directory path where output should be saved.
     :param start_version: (optional) The first app version to include in stats calculations.
     :param end_version: (optional) The last app version to include in stats calculations.
+    :param is_local_dir: If true, assume the records are cached locally from mock deployment run.
     """
 
     # create the output directory
@@ -242,6 +282,11 @@ def process_record_stats(
     else:
         raise ValueError()
 
+    # NOTE: hack to adapt to local trajectory logging in mock mode
+    if is_local_dir:
+        session_dirs = [data_dir]
+        data_dir = "."
+
     # print(session_dirs)
 
     # NOTE: Expected session directory format: <ep0>-<ep1>-...-<epn>_<user>_<timestamp>
@@ -258,11 +303,15 @@ def process_record_stats(
     # TODO: eventually we'll parse by version string, but for now we'll do so by date
     session_days = defaultdict(list)
     users: defaultdict = defaultdict(int)
-    for s_dir in session_dirs:
-        session_day = convert_timestamp(int(s_dir.split("_")[-1])).date()
-        user = s_dir.split("_")[-2]
-        users[user] += 1
-        session_days[session_day].append(s_dir)
+    if is_local_dir:
+        # NOTE: hack to adapt to local trajectory logging in mock mode, so always collected today
+        session_day = datetime.datetime.today().date()
+    else:
+        for s_dir in session_dirs:
+            session_day = convert_timestamp(int(s_dir.split("_")[-1])).date()
+            user = s_dir.split("_")[-2]
+            users[user] += 1
+            session_days[session_day].append(s_dir)
 
     print("\nANALYSIS:\n")
 
@@ -294,9 +343,12 @@ def process_record_stats(
         # get the record dict from JSON
         ep_json = load_json_gz(ep_path)
 
-        interesting_frames = int(
-            ep_json["episode"]["frame_count"]
-        ) - get_good_first_ep_frame(ep_json["frames"])
+        good_first_frame = get_good_first_ep_frame(ep_json["frames"])
+        print(f"    good first frame = {good_first_frame}")
+
+        interesting_frames = (
+            int(ep_json["episode"]["frame_count"]) - good_first_frame
+        )
         frame_count_sum += interesting_frames
 
         # success sorting
@@ -329,6 +381,7 @@ if __name__ == "__main__":
     parser.add_argument("--out-dir", type=str, default="record_stats_out/")
     parser.add_argument("--start-version", type=str, default=None)
     parser.add_argument("--end-version", type=str, default=None)
+    parser.add_argument("--local", action="store_true", default=False)
     args = parser.parse_args()
 
     process_record_stats(
@@ -336,4 +389,5 @@ if __name__ == "__main__":
         out_dir=args.out_dir,
         start_version=args.start_version,
         end_version=args.end_version,
+        is_local_dir=args.local,
     )

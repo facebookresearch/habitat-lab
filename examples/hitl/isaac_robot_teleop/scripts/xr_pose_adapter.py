@@ -4,10 +4,10 @@ import os
 from typing import Any, Dict, List
 
 import magnum as mn
+from utils import debug_draw_axis
 
 from habitat_hitl.app_states.app_service import RemoteClientState
 from habitat_sim.gfx import DebugLineRender
-from scripts.utils import debug_draw_axis
 
 
 class XRPose:

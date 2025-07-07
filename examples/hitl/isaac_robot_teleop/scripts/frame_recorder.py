@@ -11,9 +11,9 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import magnum as mn
 import numpy as np
+from xr_pose_adapter import XRPose
 
 from habitat.isaac_sim import isaac_prim_utils
-from scripts.xr_pose_adapter import XRPose
 
 if TYPE_CHECKING:
     from examples.hitl.isaac_robot_teleop.isaac_robot_teleop import (
@@ -23,9 +23,14 @@ if TYPE_CHECKING:
 
 # events triggered from the UI which should be cached in metadata
 class FrameEvent(Enum):
+    # this event indicates the objects were reset to their initial positions from the episode
     RESET_OBJECTS = 1
+    # this event indicates the robot's arm or finger joint motor positions were updated manually (not via IK from XR)
     RESET_ARMS_FINGERS = 2
+    # this event indicates the robot's base position has been updated manually
     TELEPORT = 3
+    # this event indicates a discontinuity in the XR state due to user re-syncing their current state to the robot cursor origin
+    SYNC_XR_OFFSET = 4
 
     def __str__(self):
         return self.name.lower()
@@ -285,7 +290,9 @@ class FrameRecorder:
 
         return XRPose(json_pose_dict=self.frame_data[frame]["xr_state"])
 
-    def update(self, t: float) -> None:
+    def update(
+        self, t: float, frame_events: Optional[List[FrameEvent]] = None
+    ) -> None:
         """
         Control loop callback.
         Either records a frame or replays a frame depending on the configured mode variables.
@@ -293,7 +300,7 @@ class FrameRecorder:
 
         self.replay_time = t
         if self.recording:
-            self.record_state(t)
+            self.record_state(t, frame_events)
         elif self.replaying:
             # in this case t is the desired wall clock time to replay
             # NOTE: will match to one of the closest frames not an exact time

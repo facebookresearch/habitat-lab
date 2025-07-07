@@ -128,9 +128,17 @@ With data and code installed you can run the local app with default configuratio
 ```
 python examples/hitl/isaac_robot_teleop/isaac_robot_teleop.py
 ```
-
 - app settings can be changed in `isaac_robot_teleop.yaml` and `robot_settings.yaml`
 - cached robot poses are defined in `robot_poses.json`
+
+To mock a state machine deployment session (headless with XR client only):
+```
+python examples/hitl/isaac_robot_teleop/main.py --config mock_headless.yaml
+```
+- NOTE: in this mode, recorded trajectories are saved to `habitat-lab/hitl_output_18000/`
+
+To replay and evaluate a recorded trajectory see [REPLAY_EPISODE_RECORDS.MD](scripts/REPLAY_EPISODE_RECORDS.md).
+
 - episodes can be generated from configuration in `hssd_ycb_hitl_rearrange_ep_gen.yaml`.
   ```
   #run the following to generate a dataset with one compatible episode
@@ -144,7 +152,11 @@ This section details features and UI elements.
 ## (PC)(server) Camera Controls
 The local mouse and keyboard application camera follows a cursor visualized as a yellow and white circle in the frame.
 - `WASD` translate the cursor in-plane. (not active when cursor is locked to robot frame)
+- `IJKL` Drive the robot's base forward/backward and rotate about center.
 - `F` toggle cursor lock to robot position (initial setting from app config)
 - `ZX` translate the cursor up and down
 - `mouse wheel scroll` zooms the camera
 - `R` or `mouse wheel press` rotates the camera with mouse movement
+
+## (XR)(client) Controls
+TODO:
