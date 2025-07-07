@@ -26,6 +26,10 @@ version_days = {
     ),
 }
 
+# format of the strings changed mid-pilot, so we'll need to merge data
+rollout_dir_format = "timestamp_first"
+# rollout_dir_format = "timestamp_last"
+
 
 def load_json_gz(file_path: str) -> Dict[Any, Any]:
     """
@@ -62,6 +66,7 @@ def get_ep_success(ep_json: Dict[Any, Any]) -> bool:
     """
     if ep_json["episode"]["finished"] == True:
         succeeded = float(ep_json["episode"]["task_percent_complete"]) > 0.0
+        # print(f"succeeded = {succeeded}, %complete = {float(ep_json['episode']['task_percent_complete'])}")
         return succeeded
     return False
 
@@ -156,7 +161,7 @@ def get_good_first_ep_frame(ep_frames_json: List[Dict[Any, Any]]) -> int:
     #         f"Failed to set object transform '{ro._rigid_prim.prim_path}' with error: {e}"
     #    )
 
-    return start_frame_ix
+    return start_frame_ix if start_frame_ix is not None else 0
 
 
 def get_sessions_by_version_range(
@@ -178,7 +183,16 @@ def get_sessions_by_version_range(
 
     matching_sessions = []
     for session_dir in all_sessions:
-        session_day = convert_timestamp(int(session_dir.split("_")[-1])).date()
+        if rollout_dir_format == "timestamp_first":
+            session_day = convert_timestamp(
+                int(session_dir.split("_")[0])
+            ).date()
+        elif rollout_dir_format == "timestamp_last":
+            session_day = convert_timestamp(
+                int(session_dir.split("_")[-1])
+            ).date()
+        else:
+            raise ValueError()
         if (
             session_day >= start_version_date
             and session_day <= end_version_date
@@ -206,13 +220,27 @@ def process_record_stats(
     os.makedirs(out_dir, exist_ok=True)
 
     # collect all sessions
+    session_dirs = []
     # NOTE: filtering out "test" usernames = all non-numeric usernames
-    session_dirs = [
-        name
-        for name in os.listdir(data_dir)
-        if os.path.isdir(os.path.join(data_dir, name))
-        and name.split("_")[-2].isdigit()
-    ]
+    # NOTE: old style before 06/29 wiith timestamp last
+    if rollout_dir_format == "timestamp_last":
+        session_dirs = [
+            name
+            for name in os.listdir(data_dir)
+            if os.path.isdir(os.path.join(data_dir, name))
+            and name.split("_")[-2].isdigit()
+        ]
+    elif rollout_dir_format == "timestamp_first":
+        # NOTE: filtering out "test" usernames = all non-numeric usernames
+        # NOTE: new version with timestamp first
+        session_dirs = [
+            name
+            for name in os.listdir(data_dir)
+            if os.path.isdir(os.path.join(data_dir, name))
+            and name.split("_")[-1].isdigit()
+        ]
+    else:
+        raise ValueError()
 
     # print(session_dirs)
 
@@ -255,6 +283,7 @@ def process_record_stats(
     fail_eps = []
     success_eps = []
     ep_counts: defaultdict = defaultdict(int)
+    frame_count_sum = 0
 
     # NOTE: do all the stats processing for the episodes here
     print(f"Processing {len(session_episodes)} episode records ...")
@@ -265,6 +294,11 @@ def process_record_stats(
         # get the record dict from JSON
         ep_json = load_json_gz(ep_path)
 
+        interesting_frames = int(
+            ep_json["episode"]["frame_count"]
+        ) - get_good_first_ep_frame(ep_json["frames"])
+        frame_count_sum += interesting_frames
+
         # success sorting
         success = get_ep_success(ep_json)
         if success:
@@ -272,6 +306,7 @@ def process_record_stats(
         else:
             fail_eps.append(ep_path)
 
+    avg_frames = frame_count_sum / len(session_episodes)
     # print("Episode frequency:")
     # pprint.pprint(ep_counts)
     print("Successful Episodes:")
@@ -280,6 +315,7 @@ def process_record_stats(
     print(f"Successful: {len(success_eps)}")
     print(f"Failed: {len(fail_eps)}")
     print(f"Success rate: {len(success_eps)/len(session_episodes)}")
+    print(f"Frames: total={frame_count_sum}, avg={avg_frames}")
 
 
 if __name__ == "__main__":

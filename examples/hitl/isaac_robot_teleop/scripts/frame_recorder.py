@@ -6,7 +6,8 @@
 
 import gzip
 import json
-from typing import TYPE_CHECKING, Any, Dict, List
+from enum import Enum
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import magnum as mn
 import numpy as np
@@ -18,6 +19,16 @@ if TYPE_CHECKING:
     from examples.hitl.isaac_robot_teleop.isaac_robot_teleop import (
         AppStateIsaacSimViewer,
     )
+
+
+# events triggered from the UI which should be cached in metadata
+class FrameEvent(Enum):
+    RESET_OBJECTS = 1
+    RESET_ARMS_FINGERS = 2
+    TELEPORT = 3
+
+    def __str__(self):
+        return self.name.lower()
 
 
 class FrameRecorder:
@@ -179,6 +190,7 @@ class FrameRecorder:
     def record_state(
         self,
         elapsed_time: float,
+        frame_events: Optional[List[FrameEvent]] = None,
     ) -> None:
         """
         Scrapes the app for relevant per-frame state information and aggregates it in a dict.
@@ -190,6 +202,7 @@ class FrameRecorder:
             "object_states": self.get_object_states(),
             "robot_state": self.get_robot_state(),
             "xr_state": self.get_xr_state(),
+            "events": frame_events if frame_events is not None else [],
         }
         # TODO: user camera and cursor states
         self.frame_data.append(_frame_data)
@@ -278,13 +291,12 @@ class FrameRecorder:
         Either records a frame or replays a frame depending on the configured mode variables.
         """
 
+        self.replay_time = t
         if self.recording:
-            # in this case t is the current application wall clock time
             self.record_state(t)
         elif self.replaying:
             # in this case t is the desired wall clock time to replay
             # NOTE: will match to one of the closest frames not an exact time
-            self.replay_time = t
             if self._looping and self.replay_time > self.frame_data[-1]["t"]:
                 self.replay_frame = (
                     0 if self._start_frame is None else self._start_frame
@@ -296,6 +308,15 @@ class FrameRecorder:
             ):
                 self.replay_frame = len(self.frame_data) - 1
             self.apply_state(self.replay_frame)
+
+    def respace_frames(self):
+        """
+        Overwrites the frame times to evenly interpolate 1/30 sec between each frame.
+        NOTE: introduced to correct for a bug which locked the frame time in pilot data.
+        """
+        print("!!!RE-SPACING FRAMES!!!")
+        for ix, frame_data in enumerate(self.frame_data):
+            frame_data["t"] = ix * (1.0 / 30)
 
     def save_json(self, filename: str = "frame_data.json"):
         """
@@ -319,6 +340,8 @@ class FrameRecorder:
 
         with open(filename, "r") as f:
             self.frame_data = json.load(f)
+            # TODO: not necessary in long term, but needed for pilot
+            self.respace_frames()
 
     def load_episode_record_json_gz(self, filepath: str) -> None:
         """
@@ -326,4 +349,10 @@ class FrameRecorder:
         """
 
         with gzip.open(filepath, "rt") as f:
-            self.frame_data = json.load(f)["frames"]
+            replay_data = json.load(f)
+            self.frame_data = replay_data["frames"]
+            # TODO: not necessary in long term, but needed for pilot
+            self.respace_frames()
+            print(
+                f"Task Prompt: {replay_data['episode']['episode_info']['task_prompt']}"
+            )

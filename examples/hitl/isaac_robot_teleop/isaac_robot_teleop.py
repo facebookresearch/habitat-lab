@@ -249,6 +249,7 @@ class AppStateIsaacSimViewer(AppStateBase):
                 self._app_cfg.episode_record_filepath
             )
             self._frame_recorder.replaying = True
+            good_start_frame = 0
             good_start_frame = get_good_first_ep_frame(
                 self._frame_recorder.frame_data
             )
