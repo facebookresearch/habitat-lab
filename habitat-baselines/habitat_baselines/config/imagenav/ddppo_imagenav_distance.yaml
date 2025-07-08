@@ -72,10 +72,8 @@ habitat_baselines:
       pretrained_weights: data/ddppo-models/gibson-2plus-resnet50.pth
       # Initialize with pretrained weights
       pretrained: False
-      # Initialize just the visual encoder backbone with pretrained weights
-      pretrained_encoder: False
       # Whether the visual encoder backbone will be trained.
-      train_encoder: True
+      train_encoder: False
       # Whether to reset the critic linear layer
       reset_critic: True
 

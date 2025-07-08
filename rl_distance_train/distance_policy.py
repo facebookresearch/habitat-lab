@@ -35,6 +35,7 @@ class TemporalNavPolicy(NetPolicy):
         rgb_color_jitter=0.0,
         encoder_base="dist_decoder_conf_100max",
         encoder_mode="dense",
+        train_encoder=False,
         policy_config: "DictConfig" = None,
         **kwargs
     ):
@@ -59,7 +60,8 @@ class TemporalNavPolicy(NetPolicy):
             random_crop=random_crop,
             rgb_color_jitter=rgb_color_jitter,
             encoder_base=encoder_base,
-            encoder_mode=encoder_mode)
+            encoder_mode=encoder_mode,
+            train_encoder=train_encoder)
 
         super().__init__(net, action_space, policy_config=policy_config)
 
@@ -96,6 +98,7 @@ class TemporalNavPolicy(NetPolicy):
             rgb_color_jitter=getattr(ppo_cfg, 'rgb_color_jitter', 0.0),
             encoder_base=getattr(ddppo_cfg, 'encoder_backbone', 'dist_decoder_conf_100max'),
             encoder_mode=getattr(ddppo_cfg, 'encoder_mode', 'dense'),
+            train_encoder=getattr(ddppo_cfg, 'train_encoder'),
             policy_config=config.habitat_baselines.rl.policy[agent_name],
         )
 
@@ -115,6 +118,7 @@ class TemporalNavNet(Net):
         rgb_color_jitter,
         encoder_base,
         encoder_mode,
+        train_encoder,
     ):
         super().__init__()
         self._hidden_size = hidden_size
@@ -126,7 +130,7 @@ class TemporalNavNet(Net):
         # 2) Joint image-goal encoder
         self.distance_encoder = TemporalDistanceEncoder(
             encoder_base=encoder_base,
-            freeze=True,
+            freeze=not train_encoder,
             random_crop=random_crop,
             rgb_color_jitter=rgb_color_jitter,
             mode=encoder_mode,
