@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from torchvision.transforms import ColorJitter, RandomResizedCrop
+from torchvision.transforms import ColorJitter, RandomResizedCrop, Compose
 from typing import Union, List
 from PIL import Image
 
@@ -47,23 +47,28 @@ class TemporalDistanceEncoder(nn.Module):
         #    DistanceConfidenceModel inherits embed_dim from DistanceModel
         self.embed_dim = self.base.embed_dim
 
+        transform_list = []
+
         # 4) set image augmentations if applicable
         #    Color jitter on RGB channels
-        self._rgb_aug = None
         if rgb_color_jitter > 0:
-            self._rgb_aug = ColorJitter(
+            transform_list.append(ColorJitter(
                 brightness=rgb_color_jitter,
                 contrast=rgb_color_jitter,
                 saturation=rgb_color_jitter,
                 hue=rgb_color_jitter
-            )
+            ))
 
         #    Random resized crop (applied before jitter), using the model's expected input size if available
-        self._crop_aug = None
         if random_crop:
             # try to infer the target size from the base model, default to 224 if not present
             target_size = getattr(self.base, "img_size", 224)
-            self._crop_aug = RandomResizedCrop(size=target_size)
+            transform_list.append(RandomResizedCrop(size=target_size))
+
+        if transform_list:
+            self._common_transform = Compose(transform_list)
+        else:
+            self._common_transform = None
 
         # 5) determine our output vector length
         if self.mode == "dense":
@@ -87,19 +92,18 @@ class TemporalDistanceEncoder(nn.Module):
           - if `dense`:   Tensor of shape [B, embed_dim+2]
           - if `sparse`:  Tensor of shape [B, 2]
         """
+        # apply random crop to both observations and goals if enabled
+        if self._common_transform is not None:
+            if torch.is_tensor(observations):
+                observations = self._common_transform(observations.to(torch.float32).div(255.0)).prod(255) 
+                goals = self._common_transform(goals.to(torch.float32).div(255.0)).prod(255)
+            else:
+                observations = self._common_transform(observations)
+                goals = self._common_transform(goals)
+                   
         # Let the base model handle preprocessing (list of PIL, single PIL, or tensor)
         observations = self.base.preprocess(observations)
         goals = self.base.preprocess(goals)
-
-        # apply random crop to both observations and goals if enabled
-        if self._crop_aug is not None:
-            observations = self._crop_aug(observations)
-            goals = self._crop_aug(goals)
-
-        # apply color jitter if enabled
-        if self._rgb_aug is not None:
-            observations = self._rgb_aug(observations)
-            goals = self._rgb_aug(goals)
 
         return_last_hidden_state = self.mode == "dense"
         if self.freeze:
