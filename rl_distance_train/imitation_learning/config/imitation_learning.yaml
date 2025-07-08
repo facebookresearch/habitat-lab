@@ -43,7 +43,7 @@ habitat_baselines:
       num_mini_batch: 2
       value_loss_coef: 0.5
       entropy_coef: 0.01
-      lr: 1e-4
+      lr: 5e-4
       eps: 1e-5
       max_grad_norm: 0.2
       num_steps: 64
@@ -74,7 +74,7 @@ habitat_baselines:
       # Initialize just the visual encoder backbone with pretrained weights
       pretrained_encoder: False
       # Whether the visual encoder backbone will be trained.
-      train_encoder: True
+      train_encoder: False
       # Whether to reset the critic linear layer
       reset_critic: True
 
