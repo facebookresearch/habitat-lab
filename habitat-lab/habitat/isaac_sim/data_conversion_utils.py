@@ -7,6 +7,7 @@ import xml.etree.ElementTree as ET
 from typing import Dict, List, Tuple
 
 from isaaclab.app import AppLauncher
+from tqdm import tqdm
 
 parser = argparse.ArgumentParser(
     description="Create an empty Issac Sim stage."
@@ -18,7 +19,10 @@ args_cli = parser.parse_args()
 # launch omniverse app
 # app_launcher = AppLauncher(args_cli)
 # NOTE: to get ISaacLab main with 4.5 working, the extension needs to be here at init. Other methods were flaking.
-app_launcher = AppLauncher(extensions=["omni.kit.asset_converter"])
+app_launcher = AppLauncher(
+    extensions=["omni.kit.asset_converter"],
+    args=["--/app/log/level=3"],  # 3 corresponds to LOG_LEVEL_DEBUG
+)
 simulation_app = app_launcher.app
 
 import omni.physx.scripts.utils
@@ -402,6 +406,7 @@ def convert_hab_scene(
     project_root_folder,
     enable_collision_for_stage=True,
     overwrite_usd: bool = False,
+    skip_urdfs: bool = False,
 ):
     """
     Top level function to convert a target .scene_instance.json into an Isaac compatible .usda.
@@ -550,7 +555,9 @@ def convert_hab_scene(
             aobject_counts[base_object_name] = 1
 
         out_usd_path = f"./data/usd/objects/{base_object_name}.usda"
-        if overwrite_usd or not os.path.exists(out_usd_path):
+        if not skip_urdfs and (
+            overwrite_usd or not os.path.exists(out_usd_path)
+        ):
             ao_config_filename = (
                 f"{obj_instance_json['template_name']}.ao_config.json"
             )
@@ -804,9 +811,18 @@ def convert_urdf(
     """
     Converts a single URDF asset at urdf_filepath into a USD at out_usd_filepath.
     """
-    from omni.isaac.lab.sim.converters import UrdfConverter, UrdfConverterCfg
+    from isaaclab.sim.converters import UrdfConverter, UrdfConverterCfg
 
     out_dir, out_filename = os.path.split(out_usd_filepath)
+
+    # NOTE: when none get it from the URDF
+    pd_gains_cfg = UrdfConverterCfg.JointDriveCfg.PDGainsCfg(None, None)
+
+    joint_drive_cfg = UrdfConverterCfg.JointDriveCfg(
+        drive_type="acceleration",  # Default drive type for joints
+        target_type="position",  # Override joint dynamics
+        gains=pd_gains_cfg,
+    )
 
     # Define the configuration for the URDF conversion
     config = UrdfConverterCfg(
@@ -816,13 +832,13 @@ def convert_urdf(
         force_usd_conversion=True,  # Force conversion even if USD already exists
         make_instanceable=False,  # Make the USD asset instanceable
         link_density=1000.0,  # Default density for links
-        import_inertia_tensor=True,  # Import inertia tensor from URDF
-        convex_decompose_mesh=False,  # Decompose convex meshes
+        # import_inertia_tensor=True,  # Import inertia tensor from URDF
+        # convex_decompose_mesh=False,  # Decompose convex meshes
+        collider_type="convex_hull",  # Type of collider to create "convex_decomposition" or "convex_hull"
         fix_base=fix_base,  # Fix the base link
-        merge_fixed_joints=False,  # Merge links connected by fixed joints
+        merge_fixed_joints=True,  # Merge links connected by fixed joints
         self_collision=False,  # Enable self-collision
-        default_drive_type="position",  # Default drive type for joints
-        override_joint_dynamics=False,  # Override joint dynamics
+        joint_drive=joint_drive_cfg,  # Joint drive configuration
     )
 
     # Create the UrdfConverter with the specified configuration
@@ -1045,31 +1061,70 @@ if __name__ == "__main__":
         "102817140",
         "106879044_174887172",
     ]
+    # active scenes in the episode generator for HitL
+    scenes = [
+        "104862660_172226844",
+        "103997970_171031287",  # ok
+        "102344193",  # ok
+        "108294897_176710602",  # ok
+        "104862501_172226556",  # ok but large
+        "108736722_177263382",  # ok
+        "107734254_176000121",  # ok
+        "103997643_171030747",  # ok
+        "108294558_176710095",  # ok living area tight rooms
+        "108294939_176710668",  # ok
+        "104862621_172226772",  # ok
+        "106879080_174887211",  # ok
+        "106366104_174226332",  # ok
+        "104862681_172226874",  # ok
+        "104348133_171513054",  # ok
+        "106878945_174887058",  # ok
+        "108736635_177263256",  # ok
+        "108736884_177263634",
+    ]
+    scenes = ["103997895_171031182"]
+
+    # Example: get all scenes in a directory
+    scene_dir = "data/hssd-hab/scenes-articulated-regions"
+    found_scenes = [
+        f.split(".scene_instance.json")[0]
+        for f in os.listdir(scene_dir)
+        if f.endswith(".scene_instance.json")
+    ]
+
+    # here we filter the found scenes to only include those with substrings in the scenes list
+    # NOTE: this matches the per-region scenes with the original source set above
+    scenes = [
+        scene for scene in found_scenes if any(s in scene for s in scenes)
+    ]
+
     if True:
         # NOTE: HitL client app expects data/hssd-hab/ pathing
-        for scene_name in scenes:
+        for scene_name in tqdm(scenes):
             convert_hab_scene(
-                "data/hssd-hab/scenes-articulated/"
+                "data/hssd-hab/scenes-articulated-regions/"
                 + scene_name
                 + ".scene_instance.json",
                 project_root_folder="./",
                 enable_collision_for_stage=True,
                 overwrite_usd=True,
+                # NOTE: URDF conversion is broken in 4.5
+                skip_urdfs=True,
             )
 
     # convert YCB dataset
-    convert_objects_folder_to_usd(
-        "data/objects/ycb", "data/usd/objects/ycb/configs", "./"
-    )
+    # convert_objects_folder_to_usd(
+    #    "data/objects/ycb", "data/usd/objects/ycb/configs", "./"
+    # )
 
     # convert MURP
     if True:
         # murp_filepath = find_file(folder="data/hab_murp/", filename="franka_with_hand_v2.urdf")
         murp_filepath = find_file(
-            folder="data/hab_murp/", filename="franka_with_hand_v2.1.urdf"
+            folder="data/hab_murp/", filename="franka_with_hand_v2_1.urdf"
         )
         usd_path = os.path.join(
-            "data/usd/robots/", "franka_with_hand_v2.1.usda"
+            "data/usd/robots/", "franka_with_hand_v2_1.usda"
         )
         convert_urdf(
             urdf_filepath=murp_filepath,

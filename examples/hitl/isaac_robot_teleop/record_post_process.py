@@ -15,6 +15,7 @@ from collections import defaultdict
 from typing import Any, Dict, List, Tuple
 
 import magnum as mn
+import numpy as np
 from tqdm import tqdm
 
 from scripts.frame_recorder import FrameEvent
@@ -201,6 +202,27 @@ def get_good_first_ep_frame(
     #    )
 
     return start_frame_ix if start_frame_ix is not None else 0
+
+
+def get_robot_joint_poses_for_frame_range(
+    frame_json: List[Dict[Any, Any]], start: int, end: int, save_to: str = None
+):
+    """
+    Scrapes the robot's joint position vectors from the frame json and produces a numpy array of those vectors.
+    Option to save the result as a .npy file.
+    """
+    joint_poses = []
+    for frame in frame_json[start:end]:
+        # Assuming joint positions are stored under "robot_state" -> "joint_positions"
+        # Adjust the key as needed for your data structure
+        joint_positions = frame["robot_state"]["joint_positions"]
+        joint_poses.append(joint_positions)
+    joint_poses_array = np.array(joint_poses)
+    # Save to .npy file
+    if save_to is not None:
+        assert save_to.endswith(".npy")
+        np.save(save_to, joint_poses_array)
+    return joint_poses_array
 
 
 def get_sessions_by_version_range(

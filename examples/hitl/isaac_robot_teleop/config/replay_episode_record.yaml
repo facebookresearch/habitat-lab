@@ -45,10 +45,13 @@ isaac_robot_teleop:
   replay_mode: True
   # The episode record's .json.gz file
 
-  episode_record_filepath: '../teleop_data/data_collection_29/rollout1/1751235854_0738/19.json.gz'
+  #NOTE: the local output directory
+  episode_record_filepath: 'hitl_output_18000/0.json.gz'
+  #NOTE: example of a data dump from collectors
+  #episode_record_filepath: '../teleop_data/data_collection_29/rollout1/1751235854_0738/19.json.gz'
   # This must be the same as used by the recorded session.
   # See session.json.gz ["session"]["config"]["isaac_robot_teleop"]["episode_dataset"]
-  episode_dataset: "data/datasets/hitl_teleop_episodes.json.gz"
+  episode_dataset: "data/datasets/hitl_teleop_episodes_single_region_scenes.json.gz"
   # episode_index: will come from the episode
   # scene_name: will come from the episode
 

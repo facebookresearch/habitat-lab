@@ -208,6 +208,8 @@ class AppStateIsaacSimViewer(AppStateBase):
         self._ik: DifferentialInverseKinematics = (
             DifferentialInverseKinematics()
         )
+        # a flag to indicate the robot base is moving in order to prevent the arm from lag skipping on stale XR frames.
+        self._moving = False
         if app_data is None:
             self._isaac_wrapper = IsaacAppWrapper(
                 self._sim,
@@ -254,8 +256,9 @@ class AppStateIsaacSimViewer(AppStateBase):
         setup_from_episode = False
 
         if self.in_replay_mode:
-            from examples.hitl.isaac_robot_teleop.record_post_process import (
+            from record_post_process import (
                 get_good_first_ep_frame,
+                get_robot_joint_poses_for_frame_range,
                 load_json_gz,
             )
 
@@ -267,6 +270,12 @@ class AppStateIsaacSimViewer(AppStateBase):
             good_start_frame = 0
             good_start_frame = get_good_first_ep_frame(
                 self._frame_recorder.frame_data
+            )
+            get_robot_joint_poses_for_frame_range(
+                self._frame_recorder.frame_data,
+                start=good_start_frame,
+                end=len(self._frame_recorder.frame_data),
+                save_to="replay_joint_states.npy",
             )
             self._frame_recorder.replay_frame = good_start_frame
             self._frame_recorder._start_frame = good_start_frame
@@ -318,6 +327,9 @@ class AppStateIsaacSimViewer(AppStateBase):
             scene_usd_file = usd_scenes_path + scene_name + ".usda"
             scene_navmesh_file = navmeshes_path + scene_name + ".navmesh"
 
+        print(f"!!! LOADING scene: {scene_name} !!!")
+        # breakpoint()
+
         ######################
         ## instantiate isaac world
         from omni.isaac.core.utils.stage import add_reference_to_stage
@@ -362,9 +374,21 @@ class AppStateIsaacSimViewer(AppStateBase):
         # load episode contents
         if self.episode is not None:
             self.load_episode_contents()
+
+        # load the semantic scene file for regions
+        semantic_scene_name = scene_name
+
+        # NOTE: hack to get base semantic scene from a region split scene
+        has_region_postfix = len(scene_name.split("_")[-1]) <= 2
+        if has_region_postfix:
+            # this has a postfix region index, cut it off for semantic scene filename
+            semantic_scene_name = scene_name[
+                : -(len(scene_name.split("_")[-1]) + 1)
+            ]
+
         self.load_semantic_scene(
             "data/hssd-hab/semantics/scenes/"
-            + scene_name
+            + semantic_scene_name
             + ".semantic_config.json"
         )
 
@@ -1104,9 +1128,11 @@ class AppStateIsaacSimViewer(AppStateBase):
                     #         scale=0.25,
                     #     )
 
-                    new_arm_pose = self._ik.inverse_kinematics(
-                        to_ik_pose(xr_pose), cur_arm_pose
-                    )
+                    new_arm_pose = cur_arm_pose
+                    if not self._moving:
+                        new_arm_pose = self._ik.inverse_kinematics(
+                            to_ik_pose(xr_pose), cur_arm_pose
+                        )
 
                     debug_draw_axis(
                         self._app_service.gui_drawer,
@@ -1271,6 +1297,8 @@ class AppStateIsaacSimViewer(AppStateBase):
                 left = xr_input.controllers[HAND_LEFT]
                 right = xr_input.controllers[HAND_RIGHT]
 
+                self._moving = False
+
                 # use left thumbstick to move the robot
                 left_thumbstick = left.get_thumbstick()
                 if left_thumbstick[1] != 0:
@@ -1278,11 +1306,13 @@ class AppStateIsaacSimViewer(AppStateBase):
                         lin_speed * left_thumbstick[1]
                     )
                     self.robot.base_vel_controller.track_waypoints = False
+                    self._moving = True
                 if left_thumbstick[0] != 0:
                     self.robot.base_vel_controller.target_angular_vel = (
                         -ang_speed * left_thumbstick[0]
                     )
                     self.robot.base_vel_controller.track_waypoints = False
+                    self._moving = True
 
                 # use right thumbstick up/down to raise/lower the head point
                 # use right thumbstick left/right to rotate the alignment

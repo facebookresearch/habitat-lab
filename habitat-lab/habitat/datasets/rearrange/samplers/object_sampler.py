@@ -419,7 +419,7 @@ class ObjectSampler:
                         target_object_ids=[new_object.object_id],
                     ):
                         logger.info(
-                            "   - object is not accessible from navmesh, rejecting placement."
+                            f"   - object is not accessible from navmesh, rejecting placement. {sim.curr_scene_name}"
                         )
                         continue
                     return new_object
