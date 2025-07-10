@@ -58,6 +58,8 @@ class EpisodeRecord:
     end_timestamp: int
     finished: bool
     task_percent_complete: float
+    # NOTE: this flag is intended to indicate that the episode in question has a blocking issue and the task is therefore impossible
+    content_bug_flagged: bool
     frame_count: int
 
 
@@ -148,6 +150,7 @@ class SessionRecorder:
                 end_timestamp=time,
                 finished=False,
                 task_percent_complete=0.0,
+                content_bug_flagged=False,
                 frame_count=0,
             )
         )
@@ -158,6 +161,7 @@ class SessionRecorder:
         self,
         episode_finished: bool,
         task_percent_complete: float,
+        content_bug_flagged: bool,
         metrics: Dict[str, Any],
     ):
         """
@@ -171,6 +175,7 @@ class SessionRecorder:
         episode.end_timestamp = time
         episode.finished = episode_finished
         episode.task_percent_complete = task_percent_complete
+        episode.content_bug_flagged = content_bug_flagged
         self.metrics[-1] = metrics
 
     def record_frame(

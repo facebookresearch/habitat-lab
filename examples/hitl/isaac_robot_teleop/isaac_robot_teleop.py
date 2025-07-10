@@ -238,6 +238,8 @@ class AppStateIsaacSimViewer(AppStateBase):
         self._task_finished = False
         # This value is set by the user after signaling that the task is finished.
         self._task_success = 0.0
+        # This value is set by the user in the finish task UI if the episode or task content have a blocking issue rendering the task impossible to complete.
+        self._content_bug_flagged = False
         # This value is set on enter and when True, the language prompt is displayed on a splash screen.
         self._view_task_prompt = True
         # NOTE: this will be filled from the episode or contrived to fit the scenario
@@ -1760,6 +1762,7 @@ class AppStateIsaacSimViewer(AppStateBase):
                     FONT_SIZE_SMALL = 24
                     BTN_ID_SUCCESS = "btn_success"
                     BTN_ID_FAILURE = "btn_failure"
+                    BTN_ID_CONTENT_BUG = "btn_content_bug"
                     BTN_ID_CANCEL = "btn_cancel"
                     ctx.canvas_properties(
                         padding=12, background_color=[0.3, 0.3, 0.3, 0.7]
@@ -1780,6 +1783,11 @@ class AppStateIsaacSimViewer(AppStateBase):
                         text="Failure",
                         enabled=not self._task_finished,
                     )
+                    ctx.button(
+                        uid=BTN_ID_CONTENT_BUG,
+                        text="Content Bug!",
+                        enabled=not self._task_finished,
+                    )
                     ctx.separator()
                     ctx.spacer()
                     ctx.button(
@@ -1798,6 +1806,13 @@ class AppStateIsaacSimViewer(AppStateBase):
                 ):
                     self._task_finished = True
                     self._task_success = 0.0
+                    self._app_service.ui_manager.clear_all_canvases(Mask.ALL)
+                elif self._app_service.remote_client_state.ui_button_pressed(
+                    0, BTN_ID_CONTENT_BUG
+                ):
+                    self._task_finished = True
+                    self._task_success = 0.0
+                    self._content_bug_flagged = True
                     self._app_service.ui_manager.clear_all_canvases(Mask.ALL)
                 elif self._app_service.remote_client_state.ui_button_pressed(
                     0, BTN_ID_CANCEL
@@ -1892,6 +1907,7 @@ class AppStateIsaacSimViewer(AppStateBase):
         self._session.session_recorder.end_episode(
             episode_finished=episode_finished,
             task_percent_complete=self._task_success,
+            content_bug_flagged=self._content_bug_flagged,
             metrics={},
         )
 
