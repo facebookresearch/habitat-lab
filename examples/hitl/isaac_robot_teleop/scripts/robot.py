@@ -679,6 +679,16 @@ class RobotAppWrapper:
             self.pos_subsets[subset_cfg_name] = ConfigurationSubset(
                 self, dofs=subset_cfg_links
             )
+            print(self.pos_subsets[subset_cfg_name].joint_ixs)
+
+        # left_arm
+        # [12, 14, 16, 18, 20, 22, 24]
+        # right_arm
+        # [13, 15, 17, 19, 21, 23, 25]
+        # left_hand
+        # [26, 34, 42, 50, 28, 36, 44, 52, 29, 37, 45, 53, 27, 35, 43, 51]
+        # right_hand
+        # [30, 38, 46, 54, 32, 40, 48, 56, 33, 41, 49, 57, 31, 39, 47, 55]
 
         # # setup the finger raycast sensors
         # self.finger_raycast_sensors = [

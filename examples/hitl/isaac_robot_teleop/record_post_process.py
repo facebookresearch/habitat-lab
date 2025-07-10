@@ -211,12 +211,68 @@ def get_robot_joint_poses_for_frame_range(
     Scrapes the robot's joint position vectors from the frame json and produces a numpy array of those vectors.
     Option to save the result as a .npy file.
     """
+    # NOTE: reformatting the pose for hardware deployment:
+    murp_full_pose_converter = [
+        # left_arm
+        12,
+        14,
+        16,
+        18,
+        20,
+        22,
+        24,
+        # left hand
+        26,
+        34,
+        42,
+        50,
+        28,
+        36,
+        44,
+        52,
+        29,
+        37,
+        45,
+        53,
+        27,
+        35,
+        43,
+        51,
+        # right arm
+        13,
+        15,
+        17,
+        19,
+        21,
+        23,
+        25,
+        # right hand
+        30,
+        38,
+        46,
+        54,
+        32,
+        40,
+        48,
+        56,
+        33,
+        41,
+        49,
+        57,
+        31,
+        39,
+        47,
+        55,
+    ]
     joint_poses = []
     for frame in frame_json[start:end]:
         # Assuming joint positions are stored under "robot_state" -> "joint_positions"
         # Adjust the key as needed for your data structure
         joint_positions = frame["robot_state"]["joint_positions"]
-        joint_poses.append(joint_positions)
+        hardware_configuration = [
+            joint_positions[ix] for ix in murp_full_pose_converter
+        ]
+        joint_poses.append(hardware_configuration)
     joint_poses_array = np.array(joint_poses)
     # Save to .npy file
     if save_to is not None:
