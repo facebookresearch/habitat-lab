@@ -19,6 +19,7 @@ import agent
 
 from pathlib import Path
 from PIL import Image
+from tqdm.auto import tqdm
 
 import habitat
 from env import SimpleRLEnv
@@ -73,7 +74,7 @@ def shortest_path_navigation(args):
         if args.verbose:
             print("Environment creation successful")
         
-        for episode in range(len(env.episodes)):
+        for episode in tqdm(range(len(env.episodes))):
             observations, info = env.reset(return_info=True)
             current_scene = env.habitat_env.current_episode.scene_id
 
@@ -221,7 +222,7 @@ def shortest_path_navigation(args):
 
             os.makedirs(dirname, exist_ok=True)
 
-            images_to_video(images, dirname, "trajectory")
+            images_to_video(images, dirname, "trajectory", verbose=False)
             with open(f"{dirname}/distances.pkl", "wb") as f:
                 pickle.dump(distances, f)
             with open(f"{dirname}/actions.pkl", "wb") as f:
