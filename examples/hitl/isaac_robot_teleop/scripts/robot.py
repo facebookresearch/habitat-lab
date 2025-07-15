@@ -489,13 +489,18 @@ class RobotBaseVelController:
         # NOTE: we zero lateral and vertical velocities
         forward_dir = rot.transform_vector(mn.Vector3(1, 0, 0))
         forward_dir[1] = 0
-        desired_linear_vel = forward_dir.normalized() * self.target_linear_vel
-        self.robot._robot.set_linear_velocity(
-            isaac_prim_utils.habitat_to_usd_position(desired_linear_vel)
-        )
 
-        desired_angular_vel = [0, 0, self.target_angular_vel]
-        self.robot._robot.set_angular_velocity(desired_angular_vel)
+        if self.target_linear_vel != 0:
+            desired_linear_vel = (
+                forward_dir.normalized() * self.target_linear_vel
+            )
+            self.robot._robot.set_linear_velocity(
+                isaac_prim_utils.habitat_to_usd_position(desired_linear_vel)
+            )
+
+        if self.target_angular_vel != 0:
+            desired_angular_vel = [0, 0, self.target_angular_vel]
+            self.robot._robot.set_angular_velocity(desired_angular_vel)
 
     def reset(self):
         """
@@ -996,7 +1001,9 @@ class RobotAppWrapper:
 
         self.base_vel_controller.apply(step_size)
 
-        self.fix_base(step_size, base_position, base_orientation)
+        # NOTE: this is a velocity hack to constrain the base position. It results in non-physical behavior, but accurate base positioning
+        # self.fix_base(step_size, base_position, base_orientation)
+
         # NOTE: set the state cache to dirty. Next time a query is made, update it.
         self._body_prim_states_dirty = True
         # TODO: apply robot controller drive actions here
