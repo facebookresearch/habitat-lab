@@ -4,9 +4,6 @@ from habitat.core.registry import registry
 from habitat.tasks.nav.nav import NavigationEpisode
 from habitat.tasks.nav.nav import ImageGoalSensor
 
-# Import your original ImageGoalSensor if it's in another file/module
-# from .image_goal_sensor import ImageGoalSensor
-
 @registry.register_sensor(name="ImageGoalSensorV2")
 class ImageGoalSensorV2(ImageGoalSensor):
     """

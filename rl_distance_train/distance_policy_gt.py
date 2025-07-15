@@ -20,9 +20,9 @@ from rl_distance_train.models import TemporalDistanceEncoder
 from typing import Union, List, Dict, Optional, Tuple
 
 @baseline_registry.register_policy
-class TemporalNavPolicy(NetPolicy):
+class GeometricNavPolicy(NetPolicy):
     """
-    Policy using a temporal-distance image-goal encoder and RNN state encoder.
+    Policy using a ground truth geometric distance and RNN state encoder.
     """
     def __init__(
         self,
@@ -31,12 +31,6 @@ class TemporalNavPolicy(NetPolicy):
         hidden_size=512,
         num_recurrent_layers=2,
         rnn_type="GRU",
-        random_crop=False,
-        rgb_color_jitter=0.0,
-        encoder_base="dist_decoder_conf_100max",
-        encoder_mode="dense",
-        freeze_encoder=True,
-        pretrained_weights=None,
         policy_config: "DictConfig" = None,
         **kwargs
     ):
@@ -52,26 +46,14 @@ class TemporalNavPolicy(NetPolicy):
             self.action_distribution_type = "categorical"
 
         # build network and pass to PPO Policy
-        net = TemporalNavNet(
+        net = GeometricDistanceNavNet(
             observation_space=observation_space,
             action_space=action_space,
             hidden_size=hidden_size,
             num_recurrent_layers=num_recurrent_layers,
-            rnn_type=rnn_type,
-            random_crop=random_crop,
-            rgb_color_jitter=rgb_color_jitter,
-            encoder_base=encoder_base,
-            encoder_mode=encoder_mode,
-            freeze_encoder=freeze_encoder)
+            rnn_type=rnn_type)
 
         super().__init__(net, action_space, policy_config=policy_config)
-
-        if pretrained_weights is not None:
-            try:
-                self.load_state_dict(torch.load(pretrained_weights, weights_only=True), strict=False)
-                print('Checkpoint loaded successfully.')
-            except Exception as e:
-                print('Loading checkpoint failed:', e)
 
     @classmethod
     def from_config(
@@ -102,17 +84,11 @@ class TemporalNavPolicy(NetPolicy):
             hidden_size=ppo_cfg.hidden_size,
             num_recurrent_layers=ddppo_cfg.num_recurrent_layers,
             rnn_type=ddppo_cfg.rnn_type,
-            random_crop=getattr(ppo_cfg, 'random_crop', False),
-            rgb_color_jitter=getattr(ppo_cfg, 'rgb_color_jitter', 0.0),
-            encoder_base=getattr(ddppo_cfg, 'encoder_backbone', 'dist_decoder_conf_100max'),
-            encoder_mode=getattr(ddppo_cfg, 'encoder_mode', 'dense'),
-            freeze_encoder=getattr(ddppo_cfg, 'freeze_encoder'),
-            pretrained_weights=getattr(ddppo_cfg, 'pretrained_weights', None),
             policy_config=config.habitat_baselines.rl.policy[agent_name],
         )
 
 
-class TemporalNavNet(Net):
+class GeometricDistanceNavNet(Net):
     """
     Net combining TemporalDistanceEncoder with other sensor embeddings into an RNN.
     """
@@ -123,11 +99,6 @@ class TemporalNavNet(Net):
         hidden_size,
         num_recurrent_layers,
         rnn_type,
-        random_crop,
-        rgb_color_jitter,
-        encoder_base,
-        encoder_mode,
-        freeze_encoder,
     ):
         super().__init__()
         self._hidden_size = hidden_size
@@ -136,28 +107,12 @@ class TemporalNavNet(Net):
         self.prev_action_embedding = nn.Embedding(action_space.n + 1, 32)
         prev_emb_size = 32
 
-        # 2) Joint image-goal encoder
-        self.distance_encoder = TemporalDistanceEncoder(
-            encoder_base=encoder_base,
-            freeze=freeze_encoder,
-            random_crop=random_crop,
-            rgb_color_jitter=rgb_color_jitter,
-            mode=encoder_mode,
-        )
-        joint_dim = self.distance_encoder.output_dim
-        self.joint_fc = nn.Sequential(
-            nn.Linear(joint_dim, hidden_size),
-            nn.ReLU(inplace=True),
-        )
+        # 2) Sensor embeddings
+        rnn_input_size = prev_emb_size
+        assert IntegratedPointGoalGPSAndCompassSensor.cls_uuid in observation_space.spaces
+        self.tgt_emb = nn.Linear(1, 32)
+        rnn_input_size += 32
 
-        # 3) Sensor embeddings
-        rnn_input_size = prev_emb_size + hidden_size
-        if IntegratedPointGoalGPSAndCompassSensor.cls_uuid in observation_space.spaces:
-            inp_dim = observation_space.spaces[
-                IntegratedPointGoalGPSAndCompassSensor.cls_uuid
-            ].shape[0] + 1
-            self.tgt_emb = nn.Linear(inp_dim, 32)
-            rnn_input_size += 32
         if EpisodicGPSSensor.cls_uuid in observation_space.spaces:
             gps_dim = observation_space.spaces[EpisodicGPSSensor.cls_uuid].shape[0]
             self.gps_emb = nn.Linear(gps_dim, 32)
@@ -173,7 +128,7 @@ class TemporalNavNet(Net):
             self.compass_emb = nn.Linear(2, 32)
             rnn_input_size += 32
 
-        # 4) RNN State Encoder
+        # 3) RNN State Encoder
         self.state_encoder = build_rnn_state_encoder(
             rnn_input_size,
             self._hidden_size,
@@ -217,20 +172,12 @@ class TemporalNavNet(Net):
     ) -> Tuple[torch.Tensor, torch.Tensor, Dict[str, torch.Tensor]]:
         features = []
         aux_loss_state = {}
-        # Joint image-goal
-        rgb = observations.get('rgb', None)
-        goal_img = observations.get(ImageGoalSensor.cls_uuid)
-        assert rgb is not None and goal_img is not None, \
-            "Missing 'rgb' or goal image in observations"
-        
-        joint = self.distance_encoder(rgb, goal_img)
-        features.append(self.joint_fc(joint))
+
+        assert IntegratedPointGoalGPSAndCompassSensor.cls_uuid in observations
+        o = observations[IntegratedPointGoalGPSAndCompassSensor.cls_uuid]
+        features.append(self.tgt_emb(o[:, :1]))
 
         # Other sensors
-        if IntegratedPointGoalGPSAndCompassSensor.cls_uuid in observations:
-            o = observations[IntegratedPointGoalGPSAndCompassSensor.cls_uuid]
-            vec = torch.stack([o[:, 0], torch.cos(-o[:, 1]), torch.sin(-o[:, 1])], dim=-1)
-            features.append(self.tgt_emb(vec))
         if EpisodicGPSSensor.cls_uuid in observations:
             features.append(self.gps_emb(observations[EpisodicGPSSensor.cls_uuid]))
         if HeadingSensor.cls_uuid in observations:
@@ -254,47 +201,3 @@ class TemporalNavNet(Net):
         aux_loss_state["rnn_output"] = h_in
 
         return out, h_out, aux_loss_state
-
-    @staticmethod
-    def save_observation_images(observations, save_root="/cluster/home/lmilikic/tmp_imgs"):
-        import uuid
-        import os
-        from PIL import Image
-        rgb = observations.get('rgb', None)
-        goal_img = observations.get(ImageGoalSensor.cls_uuid, None)
-        assert rgb is not None and goal_img is not None, \
-            "Missing 'rgb' or goal image in observations"
-        
-        # Generate unique dir
-        unique_dir = os.path.join(save_root, str(uuid.uuid4()))
-        os.makedirs(unique_dir, exist_ok=True)
-
-        def tensor_to_pil_img(tensor):
-            # Move to CPU if needed
-            if hasattr(tensor, 'cpu'):
-                tensor = tensor.cpu()
-            np_img = tensor.numpy()
-            # Always take the first image if batch dim exists
-            while np_img.ndim > 3:
-                np_img = np_img[0]
-            # Squeeze any leftover singleton dims
-            np_img = np_img.squeeze()
-            # If shape is (C, H, W), transpose to (H, W, C)
-            if np_img.ndim == 3 and np_img.shape[0] in [1, 3]:
-                np_img = np_img.transpose(1, 2, 0)
-            if np_img.dtype != 'uint8':
-                np_img = np_img.clip(0, 255).astype('uint8')
-            return Image.fromarray(np_img)
-
-
-        # Save RGB image
-        rgb_img = tensor_to_pil_img(rgb)
-        rgb_path = os.path.join(unique_dir, "rgb.png")
-        rgb_img.save(rgb_path)
-
-        # Save Goal image
-        goal_img_pil = tensor_to_pil_img(goal_img)
-        goal_img_path = os.path.join(unique_dir, "goal.png")
-        goal_img_pil.save(goal_img_path)
-
-        print(f"Images saved in {unique_dir}")

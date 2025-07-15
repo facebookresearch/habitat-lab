@@ -12,6 +12,8 @@ defaults:
     - distance_to_goal_reward
   - lab_sensors:
     - pointgoal_with_gps_compass_sensor
+    - compass_sensor
+    - gps_sensor
   - _self_
 
 type: Nav-v0
@@ -19,3 +21,6 @@ end_on_success: True
 reward_measure: "distance_to_goal_reward"
 success_measure: "spl"
 goal_sensor_uuid: pointgoal_with_gps_compass
+measurements:
+  success:
+    success_distance: 1.

@@ -2,7 +2,7 @@
 
 defaults:
   - /habitat: habitat_config_base
-  - /habitat/task: instance_imagenav # pointnav
+  - /habitat/task: pointnav
   - /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: rgbd_agent
   - /habitat/dataset/pointnav: hm3d
   - _self_

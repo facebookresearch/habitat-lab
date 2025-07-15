@@ -6,7 +6,7 @@
 import random
 import sys
 from typing import TYPE_CHECKING
-from rl_distance_train import distance_policy
+from rl_distance_train import distance_policy, dataset, distance_policy_gt
 
 import hydra
 import numpy as np

@@ -35,3 +35,5 @@ habitat:
       allow_sliding: True
   dataset:
     scenes_dir: "/cluster/work/rsl/lmilikic/hm3d"
+
+# hm3d_semantic_v0.2

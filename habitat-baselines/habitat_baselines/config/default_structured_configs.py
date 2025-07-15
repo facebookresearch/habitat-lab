@@ -367,6 +367,7 @@ class DDPPOConfig(HabitatBaselinesBaseConfig):
     # — CUSTOM AUGMENTATIONS —
     encoder_backbone: str = 'dist_decoder_conf_100max'
     encoder_mode: str = 'dense'
+    freeze_encoder: bool = True
 
 
 @dataclass

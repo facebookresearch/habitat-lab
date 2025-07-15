@@ -24,6 +24,9 @@ import pickle
 from torchvision.utils import save_image
 import json
 import random
+import io
+import zipfile
+import av
 
 ## Data Loader
 class DataBuffer(IterableDataset):
@@ -47,41 +50,83 @@ class DataBuffer(IterableDataset):
 
     def _sample(self):        
         # Sample a video from datasource
-        video_paths = glob.glob(f"{self.datapath}/[0-9]*")
+        video_paths = glob.glob(f"{self.datapath}/[0-9]*.zip")
         num_vid = len(video_paths)
 
         video_id = np.random.randint(0, int(num_vid)) 
         vid = f"{video_paths[video_id]}"
 
-        loaded_video, _, _ = torchvision.io.read_video(os.path.join(vid, "trajectory.mp4"), pts_unit='sec', output_format='TCHW')
+        loaded_video, actions, gps_compass = self._read_from_zip(vid)
         loaded_video = loaded_video.to(torch.float32)
         vidlen = len(loaded_video)
 
-        with open(os.path.join(vid, "actions.pkl"), 'rb') as f:
-            actions = torch.tensor(pickle.load(f))
+        gps_list = gps_compass['gps']
+        compass_list = gps_compass['compass']
+
         assert len(actions) == vidlen
+        assert len(actions) == len(gps_list)
+        assert len(actions) == len(compass_list)
         
         traj = []
-        selected_actions = []
-        while len(selected_actions) < self.max_len:
+        episode_gps = []
+        episode_compass = []
+        episode_actions = []
+        while len(episode_actions) < self.max_len:
             if self.deterministic:
                 start_ind = max(0, vidlen - self.max_len)
             else:
                 start_ind = random.randint(0, vidlen - 1)
         
             traj.extend(loaded_video[start_ind:vidlen])
-            selected_actions.extend(actions[start_ind:vidlen])
+            episode_gps.extend(gps_list[start_ind:vidlen])
+            episode_compass.extend(compass_list[start_ind:vidlen])
+            episode_actions.extend(actions[start_ind:vidlen])
 
         traj = torch.stack(traj[:self.max_len])
-        selected_actions = torch.stack(selected_actions[:self.max_len])
+        episode_gps = torch.stack([torch.from_numpy(arr) for arr in episode_gps[:self.max_len]])
+        episode_compass = torch.stack([torch.from_numpy(arr) for arr in episode_compass[:self.max_len]])
+        episode_actions = torch.tensor(episode_actions[:self.max_len])
         goal = loaded_video[-1]
 
         if self.doaug:
             traj = self.aug(traj / 255.0) * 255.0
             goal = self.aug(goal / 255.0) * 255.0            
 
-        return (traj, goal, selected_actions)
+        return (traj, goal, episode_gps, episode_compass, episode_actions)
 
     def __iter__(self):
         while True:
             yield self._sample()
+
+    @staticmethod
+    def _read_from_zip(zip_path: str):
+        """
+        Load 'trajectory.mp4', 'actions.pkl', and 'gps_compass.pkl' from the zip.
+        Returns: (video_tensor, actions, gps_compass)
+        - video_tensor: [T, C, H, W] float32
+        - actions: whatever is stored in actions.pkl
+        - gps_compass: dict with keys 'gps' and 'compass'
+        """
+        with zipfile.ZipFile(zip_path) as zf:
+            mp4_bytes = zf.read("trajectory.mp4")
+            actions_bytes = zf.read("actions.pkl")
+            gps_compass_bytes = zf.read("gps_compass.pkl")
+        
+        # Decode video
+        with io.BytesIO(mp4_bytes) as f:
+            with av.open(f) as container:
+                frames = [
+                    torch.from_numpy(frame.to_ndarray(format='rgb24')).permute(2, 0, 1)
+                    for frame in container.decode(video=0)
+                ]
+        if not frames:
+            raise RuntimeError("No frames found in video")
+        video_tensor = torch.stack(frames).float()  # [T, C, H, W]
+
+        # Unpickle actions
+        actions = pickle.loads(actions_bytes)
+
+        # Unpickle gps_compass dict
+        gps_compass = pickle.loads(gps_compass_bytes)  # should be a dict with keys 'gps' and 'compass'
+
+        return video_tensor, actions, gps_compass

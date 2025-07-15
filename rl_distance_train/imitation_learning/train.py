@@ -15,11 +15,12 @@ from tqdm.auto import tqdm
 from habitat import logger as habitat_logger
 from habitat import Env
 from habitat_baselines.common.baseline_registry import baseline_registry
+from habitat.config import read_write
 
 from rl_distance_train.imitation_learning.data_loader import DataBuffer
-from habitat.tasks.nav.nav import ImageGoalSensor
+from habitat.tasks.nav.nav import ImageGoalSensor, EpisodicGPSSensor, EpisodicCompassSensor
 
-DATA_PATH = "/cluster/scratch/lmilikic/hm3d/episodes/"
+DATA_PATH = "/cluster/work/rsl/lmilikic/hm3d/"
 BATCH_SIZE = 8
 
 # -----------------------------------------------------------------------------
@@ -38,6 +39,9 @@ def setup_logging(log_dir: str):
 
 # -----------------------------------------------------------------------------
 def run_bc(cfg: DictConfig):
+    with read_write(cfg):
+        cfg.habitat.dataset.split = "val"
+
     # 1) Hydra + Python logger + TB
     timestamp = time.strftime("%Y%m%d-%H%M%S")
     out_root  = getattr(cfg, "output_root", os.getcwd())
@@ -56,8 +60,6 @@ def run_bc(cfg: DictConfig):
     with Env(config=cfg.habitat) as tmp_env:
         obs_space = tmp_env.observation_space
         act_space = tmp_env.action_space
-        obs_space.spaces.pop("compass", None)
-        obs_space.spaces.pop("gps",     None)
 
     # 4) policy + model
     policy_cls = baseline_registry.get_policy(
@@ -84,11 +86,11 @@ def run_bc(cfg: DictConfig):
 
     # 6) data loaders
     train_ds = DataBuffer(
-        datapath=os.path.join(DATA_PATH, "train_episodes"),
+        datapath=os.path.join(DATA_PATH, "train_il"),
         doaug=True, normalize_img=True
     )
     val_ds = DataBuffer(
-        datapath=os.path.join(DATA_PATH, "val_episodes"),
+        datapath=os.path.join(DATA_PATH, "train_il"),
         doaug=False, normalize_img=True
     )
     train_loader = iter(DataLoader(train_ds, batch_size=BATCH_SIZE, num_workers=4, pin_memory=True))
@@ -115,10 +117,10 @@ def run_bc(cfg: DictConfig):
     pbar = tqdm(range(1, total_steps+1), desc="BC steps")
     for step in pbar:
         model.train()
-        traj_ims, goal_img, actions = next(train_loader)
+        traj_ims, goal_img, gps_list, compass_list, actions = next(train_loader)
         B, T = actions.shape
 
-        traj_ims, goal_img, actions = [x.to(device) for x in (traj_ims, goal_img, actions)]
+        traj_ims, goal_img, gps_list, compass_list, actions = [x.to(device) for x in (traj_ims, goal_img, gps_list, compass_list, actions)]
 
         # init hidden & prev/masks
         if is_lstm:
@@ -139,6 +141,8 @@ def run_bc(cfg: DictConfig):
             obs = {
                 "rgb": traj_ims[:, t],
                 ImageGoalSensor.cls_uuid: goal_img,
+                EpisodicGPSSensor.cls_uuid: gps_list[:, t],
+                EpisodicCompassSensor.cls_uuid: compass_list[:, t],
             }
             feats, hidden_states, _ = model(obs, hidden_states, prev_actions, masks)
             dist   = policy.action_distribution(feats)
@@ -165,9 +169,9 @@ def run_bc(cfg: DictConfig):
         if step % log_interval == 0:
             model.eval()
             with torch.no_grad():
-                v_traj, v_goal, v_actions = next(val_loader)
+                v_traj, v_goal, v_gps_list, v_compass_list, v_actions = next(val_loader)
                 Bv, Tv = v_actions.shape
-                v_traj, v_goal, v_actions = [x.to(device) for x in (v_traj, v_goal, v_actions)]
+                v_traj, v_goal, v_gps_list, v_compass_list, v_actions = [x.to(device) for x in (v_traj, v_goal, v_gps_list, v_compass_list, v_actions)]
 
                 if is_lstm:
                     vh0 = torch.zeros(Bv, num_layers, hidden_size, device=device)
@@ -185,6 +189,8 @@ def run_bc(cfg: DictConfig):
                     obs = {
                         "rgb": v_traj[:, t],
                         ImageGoalSensor.cls_uuid: v_goal,
+                        EpisodicGPSSensor.cls_uuid: v_gps_list[:, t],
+                        EpisodicCompassSensor.cls_uuid: v_compass_list[:, t],
                     }
                     feats, v_hidden, _ = model(obs, v_hidden, v_prev_actions, v_masks)
                     dist       = policy.action_distribution(feats)
@@ -217,8 +223,8 @@ def run_bc(cfg: DictConfig):
             # save best
             if v_acc > best_acc:
                 best_acc = v_acc
-                ckpt_path = os.path.join(ckpt_dir, "best_dense.pth")
-                torch.save(model.state_dict(), ckpt_path)
+                ckpt_path = os.path.join(ckpt_dir, "model.pth")
+                torch.save(policy.state_dict(), ckpt_path)
                 logger.info(f"→ New best model saved @ {ckpt_path} ({100*best_acc:.2f}%)")
 
     tb_writer.close()
