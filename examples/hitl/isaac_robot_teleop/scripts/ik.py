@@ -30,7 +30,7 @@ def to_ik_pose(
         return None
 
     # apply a corrective rotation to the local frame in order to align the palm
-    r = mn.Quaternion.rotation(-mn.Rad(0), mn.Vector3(0, 0, 1))
+    r = mn.Quaternion.rotation(-mn.Rad(45), mn.Vector3(0, 0, 1))
     q = q * r
 
     R = (
@@ -59,7 +59,7 @@ class DifferentialInverseKinematics:
         if q is not None:
             self.robot.q = q
         return mn.Matrix4(
-            self.robot.fkine(self.robot.q, end=self.robot.links[8]).A
+            (self.robot.fkine(self.robot.q, end=self.robot.links[8])*SE3.Rz(1.047197333)).A
         )
 
     def inverse_kinematics(self, pose, q):
