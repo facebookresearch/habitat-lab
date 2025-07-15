@@ -1004,7 +1004,7 @@ class AppStateIsaacSimViewer(AppStateBase):
                 self.robot.pos_subsets[arm_subset_key].set_cached_pose(
                     pose_name=reset_joint_values,
                     set_motor_targets=True,
-                    set_positions=False,
+                    set_positions=True,
                 )
             self._frame_events.append(FrameEvent.RESET_ARMS_FINGERS)
 
