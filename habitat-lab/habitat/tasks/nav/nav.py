@@ -253,13 +253,17 @@ class ImageGoalSensor(Sensor):
         ]
 
     def _get_pointnav_episode_image_goal(self, episode: NavigationEpisode):
+        goal = episode.goals[0]
         goal_position = np.array(episode.goals[0].position, dtype=np.float32)
-        # to be sure that the rotation is the same for the same episode_id
-        # since the task is currently using pointnav Dataset.
-        seed = abs(hash(episode.episode_id)) % (2**32)
-        rng = np.random.RandomState(seed)
-        angle = rng.uniform(0, 2 * np.pi)
-        source_rotation = [0, np.sin(angle / 2), 0, np.cos(angle / 2)]
+        if hasattr(goal, "rotation") and goal.rotation is not None:
+            source_rotation = goal.rotation
+        else:
+            # to be sure that the rotation is the same for the same episode_id
+            # since the task is currently using pointnav Dataset.
+            seed = abs(hash(episode.episode_id)) % (2**32)
+            rng = np.random.RandomState(seed)
+            angle = rng.uniform(0, 2 * np.pi)
+            source_rotation = [0, np.sin(angle / 2), 0, np.cos(angle / 2)]
         goal_observation = self._sim.get_observations_at(
             position=goal_position.tolist(), rotation=source_rotation
         )
@@ -997,9 +1001,166 @@ class DistanceToGoal(Measure):
             )
             self._metric = distance_to_target
 
+class _ProgressReward(Measure):
+    """Shared machinery for ZER and OVRL rewards (success-aware version)."""
+
+    def __init__(self, sim: Simulator, config: "DictConfig", *args: Any, **kwargs: Any):
+        self._sim = sim
+        self._config = config
+        
+        self.prev_dist: Optional[float] = None
+        
+        # Constant hyper-parameters
+        self.cs = 10.0               # bonus when reaching goal
+        self.ca = 5.0               # extra bonus if within angle threshold
+        self.rg = 1.0               # goal radius
+        self.theta_g = np.deg2rad(25.0)
+        self.gamma = 0.01           # step cost
+
+        super().__init__()
+
+    # ---------------------------------------------------------------------
+    # Mandatory Habitat overrides
+    # ---------------------------------------------------------------------
+
+    def _check_success(self, task: EmbodiedTask, dist: float) -> bool:
+        return bool(task.measurements.measures[Success.cls_uuid].get_metric())
+
+    def _get_dist(self, task: EmbodiedTask) -> float:
+        return task.measurements.measures[DistanceToGoal.cls_uuid].get_metric()
+
+    def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
+        task.measurements.check_measure_dependencies(
+            self.uuid, [DistanceToGoal.cls_uuid, Success.cls_uuid]
+        )
+        self.prev_dist = task.measurements.measures[
+            DistanceToGoal.cls_uuid
+        ].get_metric()
+        self._update(episode, task)
+
+    def update_metric(self, episode, task: EmbodiedTask, *args: Any, **kwargs: Any):
+        self._update(episode, task)
+
+    # ---------------------------------------------------------------------
+    # Internal helper ------------------------------------------------------
+    # ---------------------------------------------------------------------
+
+    def _heading_error(
+        self,
+        agent_pos: np.ndarray,
+        agent_rot,
+        goal_pos: np.ndarray,
+    ) -> float:
+        """Unsigned heading error (radians) between the agent forward (−Z) and the
+        goal vector, computed with Habitat's `quaternion_rotate_vector` utility."""
+        from habitat.utils.geometry_utils import quaternion_rotate_vector
+
+        forward_world = quaternion_rotate_vector(agent_rot, np.array([0.0, 0.0, -1.0]))
+        goal_vec = goal_pos - agent_pos
+
+        # Project both to horizontal plane
+        forward_world[1] = 0.0
+        goal_vec[1] = 0.0
+        if np.linalg.norm(goal_vec) < 1e-6:
+            return 0.0
+
+        forward_world /= np.linalg.norm(forward_world) + 1e-9
+        goal_vec /= np.linalg.norm(goal_vec) + 1e-9
+
+        cosang = float(np.clip(np.dot(forward_world, goal_vec), -1.0, 1.0))
+        return float(np.arccos(cosang))
+
+    def _update(self, episode, task: EmbodiedTask):
+        dist = self._get_dist(task)
+        agent_state = self._sim.get_agent_state()
+        core = self._reward_core(dist, agent_state, episode)
+        reward = core - self.gamma
+
+        # Manual success detection via helper method
+        if self._check_success(task, dist):
+            # theta = self._heading_error(
+            #     agent_state.position,
+            #     agent_state.rotation,
+            #     np.array(episode.goals[0].position, dtype=np.float32),
+            # )
+            reward += self.cs
+            # if theta < self.theta_g:
+            #     reward += self.ca
+
+        self._metric = reward
+
+    def _reward_core(self, dist: float, agent_state, episode):
+        """Child classes must implement this."""
+        raise NotImplementedError
+
+# @registry.register_measure
+# class DistanceToGoalReward(Measure):
+#     """
+#     The measure calculates a reward based on the distance towards the goal.
+#     The reward is `- (new_distance - previous_distance)` i.e. the
+#     decrease of distance to the goal.
+#     """
+
+#     cls_uuid: str = "distance_to_goal_reward"
+
+#     def __init__(
+#         self, sim: Simulator, config: "DictConfig", *args: Any, **kwargs: Any
+#     ):
+#         self._sim = sim
+#         self._config = config
+#         self._previous_distance: Optional[float] = None
+#         super().__init__()
+
+#     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+#         return self.cls_uuid
+
+#     def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
+#         task.measurements.check_measure_dependencies(
+#             self.uuid, [DistanceToGoal.cls_uuid]
+#         )
+#         self._previous_distance = task.measurements.measures[
+#             DistanceToGoal.cls_uuid
+#         ].get_metric()
+#         self.update_metric(episode=episode, task=task, *args, **kwargs)  # type: ignore
+
+#     def update_metric(
+#         self, episode, task: EmbodiedTask, *args: Any, **kwargs: Any
+#     ):
+#         distance_to_target = task.measurements.measures[
+#             DistanceToGoal.cls_uuid
+#         ].get_metric()
+#         self._metric = -(distance_to_target - self._previous_distance)
+#         self._previous_distance = distance_to_target
+
+
+# @registry.register_measure
+# class DistanceToGoalReward(_ProgressReward):
+#     """
+#     The measure calculates a reward based on the distance towards the goal.
+#     The reward is `- (new_distance - previous_distance)` i.e. the
+#     decrease of distance to the goal.
+#     """
+
+#     cls_uuid: str = "distance_to_goal_reward"
+
+#     def __init__(self, *args: Any, **kwargs: Any):
+#         self.prev_theta: Optional[float] = None
+#         super().__init__(*args, **kwargs)
+
+#     def _get_uuid(self, *args: Any, **kwargs: Any):
+#         return self.cls_uuid
+
+#     def _reward_core(self, dist: float, agent_state, episode):
+#         theta = self._heading_error(agent_state.position, agent_state.rotation, np.array(episode.goals[0].position, dtype=np.float32))
+#         dd = 0.0 if self.prev_dist is None else (self.prev_dist - dist)
+#         dt = 0.0 if self.prev_theta is None else (self.prev_theta - theta)
+#         reward = dd + (dt if dist < self.rg else 0.0)
+#         self.prev_dist, self.prev_theta = dist, theta
+#         return reward
+
 
 @registry.register_measure
-class DistanceToGoalReward(Measure):
+class DistanceToGoalReward(_ProgressReward):
     """
     The measure calculates a reward based on the distance towards the goal.
     The reward is `- (new_distance - previous_distance)` i.e. the
@@ -1008,34 +1169,18 @@ class DistanceToGoalReward(Measure):
 
     cls_uuid: str = "distance_to_goal_reward"
 
-    def __init__(
-        self, sim: Simulator, config: "DictConfig", *args: Any, **kwargs: Any
-    ):
-        self._sim = sim
-        self._config = config
-        self._previous_distance: Optional[float] = None
-        super().__init__()
+    def __init__(self, *args: Any, **kwargs: Any):
+        self.prev_theta: Optional[float] = None
+        super().__init__(*args, **kwargs)
 
-    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+    def _get_uuid(self, *args: Any, **kwargs: Any):
         return self.cls_uuid
 
-    def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
-        task.measurements.check_measure_dependencies(
-            self.uuid, [DistanceToGoal.cls_uuid]
-        )
-        self._previous_distance = task.measurements.measures[
-            DistanceToGoal.cls_uuid
-        ].get_metric()
-        self.update_metric(episode=episode, task=task, *args, **kwargs)  # type: ignore
-
-    def update_metric(
-        self, episode, task: EmbodiedTask, *args: Any, **kwargs: Any
-    ):
-        distance_to_target = task.measurements.measures[
-            DistanceToGoal.cls_uuid
-        ].get_metric()
-        self._metric = -(distance_to_target - self._previous_distance)
-        self._previous_distance = distance_to_target
+    def _reward_core(self, dist: float, agent_state, episode):
+        dd = 0.0 if self.prev_dist is None else (self.prev_dist - dist)
+        reward = dd
+        self.prev_dist, self.prev_theta = dist, 0
+        return reward
 
 
 class NavigationMovementAgentAction(SimulatorTaskAction):
