@@ -7,6 +7,7 @@ import math
 import copy
 import habitat.utils.geometry_utils as geo_utils
 import imageio
+import zipfile
 
 import torch
 import torchvision.transforms as T
@@ -24,9 +25,18 @@ from vip import load_vip
 from vint_train.models.vint.vint import ViNT
 
 
+def zip_directory(src_dir: str, dst_zip: str) -> None:
+    """Zip entire directory with *no* compression (ZIP_STORED)."""
+    with zipfile.ZipFile(dst_zip, "w", compression=zipfile.ZIP_STORED) as zf:
+        for root, _, files in os.walk(src_dir):
+            for f in files:
+                abs_path = os.path.join(root, f)
+                rel_path = os.path.relpath(abs_path, start=src_dir)
+                zf.write(abs_path, arcname=rel_path)
+
+
 def transform_rgb_bgr(image):
     return image[:, :, [2, 1, 0]]
-
 
 def quaternion_to_yaw(quat):
     """
@@ -291,12 +301,14 @@ class ImageDescriber:
         self.prompt_template = prompt_template
         self.processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-large")
         self.model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-large").to(self.device)
+        self.model.eval()
     
+    @torch.no_grad()
     def describe_image(self, image, label, max_length=150):
         prompt = self.prompt_template.format(label=label)
         inputs = self.processor(image, prompt, return_tensors="pt").to(self.device)
         
-        output = self.model.generate(**inputs, max_length=max_length, early_stopping=True)
+        output = self.model.generate(**inputs, max_length=max_length)
         
         # Full generated tokens including prompt and new text
         generated_text = self.processor.decode(output[0], skip_special_tokens=True)

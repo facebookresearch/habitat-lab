@@ -12,10 +12,12 @@ import random
 import pickle
 import torch
 import matplotlib.pyplot as plt
+import zipfile
 
 import utils
 import agent
 
+from pathlib import Path
 from PIL import Image
 
 import habitat
@@ -27,7 +29,9 @@ from habitat.utils.visualizations.utils import images_to_video
 from habitat.utils.geometry_utils import quaternion_to_list
 from habitat.config import read_write
 
-from utils import draw_top_down_map, load_embedding, animate_episode
+from utils import draw_top_down_map, load_embedding, animate_episode, zip_directory
+
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 MIN_STEPS_TO_SAVE = 15
 
@@ -145,14 +149,21 @@ def shortest_path_navigation(args):
             if args.verbose:
                 print("Agent stepping around inside environment.")
 
-            images, actions, distances, views = [], [], [], []
+            images, actions, distances, gps_list, compass_list, views = [], [], [], [], [], []
             while not env.habitat_env.episode_over:
                 best_action = follower.get_next_action(env.habitat_env.current_episode.goals[0].position)
                 if best_action is None:
                     break
                 
-                images.append(observations["rgb"])
-                distances.append(observations["pointgoal_with_gps_compass"][0])
+                try:
+                    images.append(observations["rgb"])
+                    distances.append(observations["pointgoal_with_gps_compass"][0])
+                    gps_list.append(list(observations['gps']))
+                    compass_list.append(list(observations['compass']))
+                except Exception as e:
+                    print("Missing one of the required lab sensors (rgb, pointgoal_with_gps_compass, gps, compass):", e)
+                    raise e
+
                 actions.append(best_action)
 
                 if args.eval_model is not None:
@@ -192,100 +203,105 @@ def shortest_path_navigation(args):
             
             assert len(images) == len(distances)
             assert len(images) == len(actions)
-            if len(images) >= MIN_STEPS_TO_SAVE:
-                if args.save_per_scene:
-                    dirname = os.path.join(args.save_dir, current_scene.split("/")[-1].split(".")[0], f"%0{len(str(len(env.episodes)))}d" % episode)
-                else:
-                    dirname = os.path.join(args.save_dir, f"%0{len(str(len(env.episodes)))}d" % episode)
+            if len(images) < MIN_STEPS_TO_SAVE:
+                continue
+            
+            episode_id = f"%0{len(str(len(env.episodes)))}d" % episode
+            scene_root = (
+                Path(args.save_dir)
+                / (current_scene.split("/")[-1].split(".")[0] if args.save_per_scene else "")
+            )
+            out_dir = scene_root / episode_id
+            out_dir.mkdir(parents=True, exist_ok=True)
+
+            if args.save_per_scene:
+                dirname = os.path.join(args.save_dir, current_scene.split("/")[-1].split(".")[0], episode_id)
+            else:
+                dirname = os.path.join(args.save_dir, episode_id)
+
+            os.makedirs(dirname, exist_ok=True)
+
+            images_to_video(images, dirname, "trajectory")
+            with open(f"{dirname}/distances.pkl", "wb") as f:
+                pickle.dump(distances, f)
+            with open(f"{dirname}/actions.pkl", "wb") as f:
+                pickle.dump(actions, f)
+            with open(f"{dirname}/gps_compass.pkl", "wb") as f:
+                pickle.dump({'gps': gps_list, 'compass': compass_list}, f)
+            with open(f"{dirname}/goal_category.txt", "w") as f:
+                f.write(goal_category + '\n')
+                f.write(goal_description)
+
+            if args.every_view:
+                with open(f"{dirname}/views.pkl", "wb") as f:
+                    pickle.dump(views, f)
+
+            if args.eval_model:
+                model, transform = load_embedding(args.eval_model)
+                model.eval()
+                batch = torch.stack([transform(Image.fromarray(f)) for f in images]).to('cuda')
+                if args.eval_model in ('vip', 'r3m'):
+                    batch = batch * 255
+
+                with torch.no_grad():
+                    if args.eval_model.startswith(('dist_decoder_conf')):
+                        goal = batch[-1:].repeat(len(batch), 1, 1, 1)
+                        pred_distances, conf = model(batch, goal)
+                        pred_distances = pred_distances.cpu().numpy()
+                        conf = conf.cpu().numpy()
+                    elif args.eval_model.startswith(('one_scene_decoder', 'dist_decoder',
+                                                'one_scene_quasi', 'quasi')):
+                        goal = batch[-1:].repeat(len(batch), 1, 1, 1)
+                        pred_distances = model(batch, goal).cpu().numpy().squeeze()
+                    elif args.eval_model.startswith('vint'):
+                        context = getattr(model, 'context_size', None) \
+                                or getattr(model.module, 'context_size', None)
+                        N = batch.shape[0]
+                        obs_list, goal_list, past_list = [], [], []
+                        final_frame = batch[-1].unsqueeze(0)
+
+                        for i in range(N):
+                            obs_list.append(batch[i])
+                            goal_list.append(final_frame[0])
+
+                            if i >= context:
+                                past = batch[i-context:i]
+                            else:
+                                n_pad = context - i
+                                pads = batch[0:1].repeat(n_pad, 1, 1, 1)
+                                past = torch.cat([pads, batch[0:i]], dim=0) if i > 0 else pads
+                            past_list.append(past)
+
+                        obs_imgs  = torch.stack(obs_list,  dim=0)
+                        goal_imgs = torch.stack(goal_list, dim=0)
+                        past_imgs = torch.stack(past_list, dim=0)
+
+                        pred_distances = model(obs_imgs, goal_imgs, past_imgs)
+                        pred_distances = pred_distances.cpu().numpy()
+                    else:
+                        emb = model(batch).cpu().numpy()
+                        goal = emb[-1]
+                        pred_distances = np.linalg.norm(emb - goal, axis=1)
                 
-                if os.path.exists(dirname):
-                    shutil.rmtree(dirname)
-                os.makedirs(dirname)
+                out_gif = os.path.join(dirname, f"model_eval.gif")
+                animate_episode(
+                    frames=images,
+                    maps=maps,
+                    geo_distances=distances,
+                    pred_distances=pred_distances,
+                    goal_frame=images[-1],
+                    out_video=os.path.join(dirname, "model_eval.mp4"),
+                    max_len=args.max_len,
+                    fps=10,
+                )
+                if args.verbose:
+                    print(f"Saved 4-panel animation to {out_gif}")
 
-                images_to_video(images, dirname, "trajectory")
-                with open(f"{dirname}/distances.pkl", "wb") as f:
-                    pickle.dump(distances, f)
-                with open(f"{dirname}/actions.pkl", "wb") as f:
-                    pickle.dump(actions, f)
-                with open(f"{dirname}/goal_category.txt", "w") as f:
-                    f.write(goal_category + '\n')
-                    f.write(goal_description)
-
-                if goal_image is not None:
-                    fig = plt.figure(frameon=False)
-                    plt.imshow(goal_image, aspect='auto')
-                    plt.axis('off') # No axes, ticks, or labels
-
-                    # Save exactly what's inside the figure, with no extra whitespace
-                    plt.savefig(f"{dirname}/goal_image.png", bbox_inches='tight', pad_inches=0)
-                    plt.close()
-
-                if args.every_view:
-                    with open(f"{dirname}/views.pkl", "wb") as f:
-                        pickle.dump(views, f)
-
-                if args.eval_model:
-                    model, transform = load_embedding(args.eval_model)
-                    model.eval()
-                    batch = torch.stack([transform(Image.fromarray(f)) for f in images]).to('cuda')
-                    if args.eval_model in ('vip', 'r3m'):
-                        batch = batch * 255
-
-                    with torch.no_grad():
-                        if args.eval_model.startswith(('dist_decoder_conf')):
-                            goal = batch[-1:].repeat(len(batch), 1, 1, 1)
-                            pred_distances, conf = model(batch, goal)
-                            pred_distances = pred_distances.cpu().numpy()
-                            conf = conf.cpu().numpy()
-                        elif args.eval_model.startswith(('one_scene_decoder', 'dist_decoder',
-                                                    'one_scene_quasi', 'quasi')):
-                            goal = batch[-1:].repeat(len(batch), 1, 1, 1)
-                            pred_distances = model(batch, goal).cpu().numpy().squeeze()
-                        elif args.eval_model.startswith('vint'):
-                            context = getattr(model, 'context_size', None) \
-                                    or getattr(model.module, 'context_size', None)
-                            N = batch.shape[0]
-                            obs_list, goal_list, past_list = [], [], []
-                            final_frame = batch[-1].unsqueeze(0)
-
-                            for i in range(N):
-                                obs_list.append(batch[i])
-                                goal_list.append(final_frame[0])
-
-                                if i >= context:
-                                    past = batch[i-context:i]
-                                else:
-                                    n_pad = context - i
-                                    pads = batch[0:1].repeat(n_pad, 1, 1, 1)
-                                    past = torch.cat([pads, batch[0:i]], dim=0) if i > 0 else pads
-                                past_list.append(past)
-
-                            obs_imgs  = torch.stack(obs_list,  dim=0)
-                            goal_imgs = torch.stack(goal_list, dim=0)
-                            past_imgs = torch.stack(past_list, dim=0)
-
-                            pred_distances = model(obs_imgs, goal_imgs, past_imgs)
-                            pred_distances = pred_distances.cpu().numpy()
-                        else:
-                            emb = model(batch).cpu().numpy()
-                            goal = emb[-1]
-                            pred_distances = np.linalg.norm(emb - goal, axis=1)
-
-                    
-                    out_gif = os.path.join(dirname, f"model_eval.gif")
-                    animate_episode(
-                        frames=images,
-                        maps=maps,
-                        geo_distances=distances,
-                        pred_distances=pred_distances,
-                        goal_frame=images[-1],
-                        out_video=os.path.join(dirname, "model_eval.mp4"),
-                        max_len=args.max_len,
-                        fps=10,
-                    )
-                    if args.verbose:
-                        print(f"Saved 4-panel animation to {out_gif}")
-
+            # ─── zip & cleanup if flag on ──────────────────────────────────────
+            if args.zip:
+                zip_path = f"{dirname}.zip"
+                zip_directory(dirname, zip_path)
+                shutil.rmtree(dirname)        # remove the original folder
 
             if args.verbose:
                 print("Episode finished")
@@ -305,6 +321,7 @@ if __name__ == "__main__":
     parser.add_argument("--describe-goal", action="store_true", default=False)
     parser.add_argument("--eval-model", type=str, default=None)
     parser.add_argument("--max-len", type=int, default=100, help="Max frames to animate")
+    parser.add_argument("--zip", action="store_true", help="Zip each episode folder and delete the folder.")
     parser.add_argument("--verbose", action="store_true", default=False)
     args = parser.parse_args()
 
