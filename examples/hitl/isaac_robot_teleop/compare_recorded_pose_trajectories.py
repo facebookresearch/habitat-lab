@@ -29,7 +29,9 @@ def compare_pose_trajectories(t1: np.ndarray, t2: np.ndarray):
     max_error: float = np.max(errors)
     max_error_idx = np.argmax(errors)
     print(f"errors = {errors}")
-    print(f"max error {max_error} at index {max_error_idx} = {t1[0]-t2[0]}")
+    print(
+        f"max error {max_error} at index {max_error_idx} = {t1[max_error_idx]-t2[max_error_idx]}"
+    )
     print(f"frame 0 error = {t1[0]-t2[0]} -> {np.linalg.norm(t1[0] - t2[0])}")
     return errors
 
