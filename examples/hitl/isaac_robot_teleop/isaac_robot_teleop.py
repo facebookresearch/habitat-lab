@@ -19,7 +19,6 @@ from habitat_hitl.core.ui_elements import HorizontalAlignment
 from habitat_hitl.core.user_mask import Mask
 
 original_flags = sys.getdlopenflags()
-import magnum
 
 import habitat_sim  # noqa: F401
 
@@ -205,11 +204,6 @@ class AppStateIsaacSimViewer(AppStateBase):
         self.xr_origin_rotation = mn.Quaternion()
         self.xr_origin_yaw_offset: float = -mn.math.pi / 2.0
         self.dof_editor: "DoFEditor" = None
-        self._ik: DifferentialInverseKinematics = (
-            DifferentialInverseKinematics(ee_cartesian_velocity_limit= self._app_cfg.ik.ee_cartesian_velocity_limit,
-                                          ee_orientation_velocity_limit= self._app_cfg.ik.ee_orientation_velocity_limit,
-                                          lower_alpha_bound= self._app_cfg.ik.lower_alpha_bound)
-        )
         # a flag to indicate the robot base is moving in order to prevent the arm from lag skipping on stale XR frames.
         self._moving = False
         if app_data is None:
@@ -374,6 +368,12 @@ class AppStateIsaacSimViewer(AppStateBase):
         self._isaac_rom.post_reset()
 
         self.load_robot()
+
+        self._ik: DifferentialInverseKinematics = DifferentialInverseKinematics(
+            ee_cartesian_velocity_limit=self.robot.robot_cfg.ik.ee_cartesian_velocity_limit,
+            ee_orientation_velocity_limit=self.robot.robot_cfg.ik.ee_orientation_velocity_limit,
+            lower_alpha_bound=self.robot.robot_cfg.ik.lower_alpha_bound,
+        )
 
         # load episode contents
         if self.episode is not None:
@@ -856,9 +856,9 @@ class AppStateIsaacSimViewer(AppStateBase):
         """
         gui_input = self._app_service.gui_input
         y_speed = 0.02
-        if gui_input.get_key_down(KeyCode.Z):
+        if gui_input.get_key(KeyCode.Z):
             self._cursor_pos.y -= y_speed
-        if gui_input.get_key_down(KeyCode.X):
+        if gui_input.get_key(KeyCode.X):
             self._cursor_pos.y += y_speed
 
         xz_forward = self._camera_helper.get_xz_forward()
@@ -1686,7 +1686,9 @@ class AppStateIsaacSimViewer(AppStateBase):
         self._sync_xr_user_to_robot_cursor()
 
         self._camera_helper.update(self._cursor_pos, dt)
-        self._cam_transform = self._camera_helper.get_cam_transform()
+        self._cam_transform: mn.Matrix4 = (
+            self._camera_helper.get_cam_transform()
+        )
         post_sim_update_dict["cam_transform"] = self._cam_transform
 
         if self.in_replay_mode:
