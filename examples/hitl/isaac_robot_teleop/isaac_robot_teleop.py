@@ -206,7 +206,9 @@ class AppStateIsaacSimViewer(AppStateBase):
         self.xr_origin_yaw_offset: float = -mn.math.pi / 2.0
         self.dof_editor: "DoFEditor" = None
         self._ik: DifferentialInverseKinematics = (
-            DifferentialInverseKinematics()
+            DifferentialInverseKinematics(ee_cartesian_velocity_limit= self._app_cfg.ik.ee_cartesian_velocity_limit,
+                                          ee_orientation_velocity_limit= self._app_cfg.ik.ee_orientation_velocity_limit,
+                                          lower_alpha_bound= self._app_cfg.ik.lower_alpha_bound)
         )
         # a flag to indicate the robot base is moving in order to prevent the arm from lag skipping on stale XR frames.
         self._moving = False
