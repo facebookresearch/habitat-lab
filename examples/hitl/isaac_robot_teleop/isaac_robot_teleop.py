@@ -20,6 +20,11 @@ from habitat_hitl.core.user_mask import Mask
 
 original_flags = sys.getdlopenflags()
 
+# NOTE: we must import magnum and then habitat here
+import magnum  # noqa: F401
+
+import habitat_sim  # noqa: F401
+
 sys.setdlopenflags(original_flags)
 
 import hydra
