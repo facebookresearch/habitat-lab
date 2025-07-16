@@ -999,15 +999,11 @@ class AppStateIsaacSimViewer(AppStateBase):
 
         if left.get_button_down(XRButton.TWO):
             print("Resetting Robot Joint Positions")
-            for reset_joint_values, arm_subset_key in [
-                ("right_arm_in", "right_arm"),
-                ("left_arm_in", "left_arm"),
-            ]:
-                self.robot.pos_subsets[arm_subset_key].set_cached_pose(
-                    pose_name=reset_joint_values,
-                    set_motor_targets=True,
-                    set_positions=True,
-                )
+            self.robot.pos_subsets["full"].set_cached_pose(
+                pose_name="initial",
+                set_motor_targets=True,
+                set_positions=True,
+            )
             self._frame_events.append(FrameEvent.RESET_ARMS_FINGERS)
 
         if left.get_button_up(XRButton.TWO):
