@@ -3,8 +3,7 @@
 #This config file can be hot-reloaded with 'T' to quickly change robot settings
 
 #global robot settings
-# urdf: "data/hab_murp/murp_tmr_franka/franka_with_hand_v2.urdf"
-usd: "data/usd/robots/franka_with_hand_v2.1.usda"
+usd: "data/usd/robots/franka_with_hand_v2_3.usda"
 #NOTE: this is used to construct a prim path within the world
 robot_prim_path_name: "Murp"
 
@@ -98,6 +97,9 @@ configuration_subsets:
             "joint_14_0",
             "joint_15_0"
         ]
+  #drive wheels
+  left_wheel: ["l_wheel_joint"]
+  right_wheel: ["r_wheel_joint"]
 
 link_subsets:
   #link ixs for finger tips on each hand
