@@ -1172,13 +1172,22 @@ class RobotAppWrapper:
         """
         Applies velocities to constrain the robot base state.
         """
-
+        self.damp_robot_vel(0.9)
         self.fix_base_height_via_linear_vel_z(
             step_size, base_position, base_orientation
         )
         self.fix_base_orientation_via_angular_vel(
             step_size, base_position, base_orientation
         )
+
+    def damp_robot_vel(self, damping_factor: float):
+        """
+        Applies a damping reduction to the robot's base velocity.
+        """
+        cur_ang_vel = self._robot.get_angular_velocity()
+        self._robot.set_angular_velocity(cur_ang_vel * damping_factor)
+        cur_lin_vel = self._robot.get_linear_velocity()
+        self._robot.set_linear_velocity(cur_lin_vel * damping_factor)
 
     def fix_base_orientation_via_angular_vel(
         self, step_size, base_position, base_orientation
