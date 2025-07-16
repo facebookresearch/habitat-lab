@@ -127,6 +127,25 @@ class ConfigurationSubset:
             joint_indices=self.joint_ixs,
         )
 
+    def set_velocities(self, velocities: List[float]) -> None:
+        """
+        Set the instantaneous joint velocities for this configuration subset.
+        """
+        self._robot._robot.set_joint_velocities(
+            velocities=np.array(velocities),
+            joint_indices=self.joint_ixs,
+        )
+
+    def set_motor_velocities(self, velocities: List[float]) -> None:
+        """
+        Sets target motor velocities for this configuration subset.
+        """
+        action = ArticulationAction(
+            joint_velocities=np.array(velocities),
+            joint_indices=self.joint_ixs,
+        )
+        self._robot._robot.apply_action(action)
+
     def set_motor_pos_from_full(
         self, all_joint_pos_targets: List[float]
     ) -> None:
@@ -649,6 +668,8 @@ class RobotAppWrapper:
         self.ground_to_base_offset = self.robot_cfg.ground_to_base_offset
         # TODO: configure the base controller from settings yaml
         self.base_vel_controller = RobotBaseVelController(self)
+        # if true, use the velocity based base constraint control, otherwise fully dynamic
+        self.do_vel_fix_base = True
         # datastructure to aggregate the results of contact callbacks in a queryable format
         self.contact_state: Dict[Any, Any] = {}
         self._in_contact = False
@@ -1002,7 +1023,8 @@ class RobotAppWrapper:
         self.base_vel_controller.apply(step_size)
 
         # NOTE: this is a velocity hack to constrain the base position. It results in non-physical behavior, but accurate base positioning
-        # self.fix_base(step_size, base_position, base_orientation)
+        if self.do_vel_fix_base:
+            self.fix_base(step_size, base_position, base_orientation)
 
         # NOTE: set the state cache to dirty. Next time a query is made, update it.
         self._body_prim_states_dirty = True
@@ -1052,6 +1074,8 @@ class RobotAppWrapper:
 
         self._robot.set_world_pose(pos, rot)
         self.base_vel_controller.reset()
+        self._robot.set_linear_velocity(np.zeros(3))
+        self._robot.set_angular_velocity(np.zeros(3))
 
     def get_root_pose(
         self, convention: str = "hab"
