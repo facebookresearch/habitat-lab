@@ -856,9 +856,9 @@ class AppStateIsaacSimViewer(AppStateBase):
         """
         gui_input = self._app_service.gui_input
         y_speed = 0.02
-        if gui_input.get_key_down(KeyCode.Z):
+        if gui_input.get_key(KeyCode.Z):
             self._cursor_pos.y -= y_speed
-        if gui_input.get_key_down(KeyCode.X):
+        if gui_input.get_key(KeyCode.X):
             self._cursor_pos.y += y_speed
 
         xz_forward = self._camera_helper.get_xz_forward()
