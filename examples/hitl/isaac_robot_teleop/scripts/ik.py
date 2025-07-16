@@ -45,8 +45,15 @@ def to_ik_pose(
 
 
 class DifferentialInverseKinematics:
-    def __init__(self):
+    def __init__(self, ee_cartesian_velocity_limit=0.65, ee_orientation_velocity_limit=1.0, lower_alpha_bound=-0.25):
         self.robot = rtb.models.Panda()
+        self.ee_cartesian_velocity_limit = ee_cartesian_velocity_limit
+        self.ee_orientation_velocity_limit = ee_orientation_velocity_limit
+        self.lower_alpha_bound = lower_alpha_bound
+        
+        print(self.lower_alpha_bound)
+        print(self.ee_cartesian_velocity_limit)
+        print(self.ee_orientation_velocity_limit)
 
         # Change epsilon to change weightage of secondary task
         # 0 to have no secondary tasks
@@ -74,6 +81,33 @@ class DifferentialInverseKinematics:
             self.robot.fkine(self.robot.q, end=self.robot.links[8]), pose, 5
         )
 
+       
+
+        translational_velocity = v[:3]
+        if np.linalg.norm(translational_velocity) > self.ee_cartesian_velocity_limit:
+            scale_value = np.linalg.norm(translational_velocity) 
+            translational_velocity = (
+                translational_velocity
+                / scale_value
+                * self.ee_cartesian_velocity_limit
+            )
+            v[:3] = translational_velocity
+
+        
+        rotational_velocity = v[3:]
+        if np.any(np.abs(rotational_velocity) > self.ee_orientation_velocity_limit):
+            rotational_velocity = (
+                rotational_velocity
+                / max(np.abs(rotational_velocity))
+                * self.ee_orientation_velocity_limit
+            )
+            v[3:] = rotational_velocity
+
+        
+        return self._solve_mathematical_program(jacobian, v, 0.11)
+
+
+    def _solve_mathematical_program(self, jacobian, v, lower_alpha_bound):
         # Create a MathematicalProgram
         prog = MathematicalProgram()
 
@@ -82,7 +116,7 @@ class DifferentialInverseKinematics:
 
         max_qd = [2.1750, 2.1750, 2.1750, 2.1750, 2.61, 2.61, 2.61]
 
-        max_q = [2.7437, 1.7837, 2.9007, -0.1518, 2.8065, 4.5169, 3.0159]
+        max_q = [2.7437, 1.7837, 2.9007, -0.3818, 2.8065, 4.5169, 3.0159]
         min_q = [-2.7437, -1.7837, -2.9007, -2.9, -2.8065, 0.5445, -3.0159]
 
         # max_qdd = [15, 7.5, 10, 12.5, 15, 20, 20]
@@ -114,7 +148,10 @@ class DifferentialInverseKinematics:
         alpha = prog.NewContinuousVariables(6, "alpha")
         prog.AddCost(-sum(alpha))
         for i in range(6):
-            prog.AddLinearConstraint(alpha[i] >= 0.01)
+            if i< 3:
+                prog.AddLinearConstraint(alpha[i] >= 0.01)
+            else:
+                prog.AddLinearConstraint(alpha[i] >= lower_alpha_bound)
             prog.AddLinearConstraint(alpha[i] <= 1)
             prog.AddLinearConstraint(alpha[i] * v[i] == (jacobian @ qd)[i])
 
@@ -122,5 +159,14 @@ class DifferentialInverseKinematics:
         if result.is_success():
             return result.GetSolution(qd) / 30 + self.robot.q
         else:
-            print("Inverse kinematics failed")
-            return self.robot.q
+            if lower_alpha_bound == self.lower_alpha_bound:
+                print("Failed to solve IK")
+                return self.robot.q
+            else:
+                lower_alpha_bound = lower_alpha_bound - 0.05
+                if lower_alpha_bound < self.lower_alpha_bound:
+                    lower_alpha_bound = self.lower_alpha_bound
+
+                return self._solve_mathematical_program(
+                    jacobian, v, lower_alpha_bound
+                )
