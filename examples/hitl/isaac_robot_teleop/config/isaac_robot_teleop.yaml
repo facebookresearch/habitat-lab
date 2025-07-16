@@ -67,18 +67,6 @@ isaac_robot_teleop:
   stage_dynamic_friction: 10
   stage_restitution: 0
 
-  # parameters for IK solver
-  ik:
-    #m/s abs magnitude of end-effector cartesian velocity max limit
-    ee_cartesian_velocity_limit: 0.65 
-
-    #rad/sec abs magnitude of maximum end-effector rotational velocity limit for each component.
-    ee_orientation_velocity_limit: 1.0
-
-    # lower bound of alpha in the ik solver. Negative values may cause drift.
-    # Values should be less than 1. Higher values result in stricter trajectory enforcement.
-    lower_alpha_bound: -0.25
-
 
 defaults:
   # Load default parameters for the HITL framework. See
