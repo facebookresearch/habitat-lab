@@ -59,12 +59,12 @@ isaac_robot_teleop:
 
   #physx configuration settings
   #applied to all rigid objects added to the scene (e.g. from Episodes)
-  object_static_friction: 20
-  object_dynamic_friction: 20
+  object_static_friction: 1000
+  object_dynamic_friction: 1000
   object_restitution: 0
   #applied to the contents of the scene (architecture, furniture, etc...)
-  stage_static_friction: 10
-  stage_dynamic_friction: 10
+  stage_static_friction: 1000
+  stage_dynamic_friction: 1000
   stage_restitution: 0
 
 defaults:

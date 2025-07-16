@@ -70,8 +70,18 @@ if TYPE_CHECKING:
     )
     from scripts.DoFeditor import DoFEditor
 
-# unfortunately we can't import this earlier
-# import habitat_sim  # isort:skip
+
+def check_all_frictions(root_prim):
+    print("checking all prims for friction")
+    from pxr import Usd, UsdPhysics
+
+    for prim in Usd.PrimRange(root_prim):
+        if prim.HasAPI(UsdPhysics.MaterialAPI):
+            prim_name = str(prim.GetPath())
+            material = UsdPhysics.MaterialAPI(prim)
+            print(
+                f"{prim_name} has friction = {material.GetDynamicFrictionAttr().Get()}"
+            )
 
 
 def bind_physics_material_to_hierarchy(
@@ -86,7 +96,7 @@ def bind_physics_material_to_hierarchy(
     Recursively sets the friction properties of a prim and its child subtree to a uniform friction and restitution.
     """
 
-    from pxr import UsdPhysics, UsdShade
+    from pxr import Sdf, UsdPhysics, UsdShade
 
     # Isaac 4.5.0 mostly still supports our outdated 4.2.0-style imports but this one fails
     try:
@@ -118,11 +128,25 @@ def bind_physics_material_to_hierarchy(
         materialPurpose="physics",
     )
 
-    material = UsdPhysics.MaterialAPI(root_prim)
+    # physx_material_api = PhysxSchema.PhysxPhysicsMaterialAPI.Apply(root_prim)
+    material = UsdPhysics.MaterialAPI.Apply(root_prim)
+    mat_prim = material.GetPrim()
+
+    friction_combine_attr = mat_prim.GetAttribute(
+        "physxMaterial:frictionCombineMode"
+    )
+    if not friction_combine_attr:
+        friction_combine_attr = mat_prim.CreateAttribute(
+            "physxMaterial:frictionCombineMode", Sdf.ValueTypeNames.Token
+        )
+    friction_combine_attr.Set("min")  # Assuming "average" is a valid token
+    # print(friction_combine_attr)
+    # breakpoint()
 
     # Set friction
     material.CreateStaticFrictionAttr().Set(static_friction)
     material.CreateDynamicFrictionAttr().Set(dynamic_friction)
+    material.CreateRestitutionAttr().Set(restitution)
 
 
 def remove_stage_mesh_contact_sensors(root_prim):
@@ -353,7 +377,7 @@ class AppStateIsaacSimViewer(AppStateBase):
         self._pick_target_rigid_object_idx = None
 
         stage = self._isaac_wrapper.service.world.stage
-        self.root_prim = stage.GetPrimAtPath("/World")
+        self.root_prim = stage.GetPrimAtPath("/World/test_scene")
 
         # physics properties for the stage and furniture
         bind_physics_material_to_hierarchy(
@@ -364,6 +388,7 @@ class AppStateIsaacSimViewer(AppStateBase):
             dynamic_friction=self._app_cfg.stage_dynamic_friction,
             restitution=self._app_cfg.stage_restitution,
         )
+
         # setup the stage contact sensors
         create_stage_mesh_contact_sensors(root_prim=self.root_prim)
 
@@ -680,14 +705,62 @@ class AppStateIsaacSimViewer(AppStateBase):
 
         stage = self._isaac_wrapper.service.world.stage
         robot_root_prim = stage.GetPrimAtPath(self.robot._robot_prim_path)
-        bind_physics_material_to_hierarchy(
-            stage=stage,
-            root_prim=robot_root_prim,
-            material_name="robot_physics_properties_material",
-            static_friction=self.robot.robot_cfg.link_static_friction,
-            dynamic_friction=self.robot.robot_cfg.link_dynamic_friction,
-            restitution=self.robot.robot_cfg.link_restitution,
-        )
+
+        from pxr import Sdf, Usd, UsdPhysics
+
+        # set caster wheel friction very low to prevent sticking
+        for prim in Usd.PrimRange(robot_root_prim):
+            prim_name = str(prim.GetPath())
+            if "collisions" not in prim_name:
+                continue
+
+            material = UsdPhysics.MaterialAPI(prim)
+            mat_prim = material.GetPrim()
+
+            if "caster" in prim_name:
+                friction_combine_attr = mat_prim.GetAttribute(
+                    "physxMaterial:frictionCombineMode"
+                )
+                if not friction_combine_attr:
+                    friction_combine_attr = mat_prim.CreateAttribute(
+                        "physxMaterial:frictionCombineMode",
+                        Sdf.ValueTypeNames.Token,
+                    )
+                friction_combine_attr.Set(
+                    "min"
+                )  # Assuming "average" is a valid token
+                print(f"setting friction to zero for {prim_name}")
+
+                bind_physics_material_to_hierarchy(
+                    stage=stage,
+                    root_prim=prim,
+                    material_name="robot_physics_properties_material",
+                    static_friction=0,
+                    dynamic_friction=0,
+                    restitution=self.robot.robot_cfg.link_restitution,
+                )
+
+            elif "wheel" in prim_name:
+                print(f"setting wheel friction to 1000 for {prim_name}")
+                bind_physics_material_to_hierarchy(
+                    stage=stage,
+                    root_prim=prim,
+                    material_name="robot_physics_properties_material",
+                    static_friction=1000,
+                    dynamic_friction=1000,
+                    restitution=self.robot.robot_cfg.link_restitution,
+                )
+
+            else:
+                print(f"setting link friction for {prim_name}")
+                bind_physics_material_to_hierarchy(
+                    stage=stage,
+                    root_prim=prim,
+                    material_name="robot_physics_properties_material",
+                    static_friction=self.robot.robot_cfg.link_static_friction,
+                    dynamic_friction=self.robot.robot_cfg.link_dynamic_friction,
+                    restitution=self.robot.robot_cfg.link_restitution,
+                )
 
     def sample_valid_robot_base_state(self, reset_objects=True):
         """
@@ -854,9 +927,9 @@ class AppStateIsaacSimViewer(AppStateBase):
         """
         gui_input = self._app_service.gui_input
         y_speed = 0.02
-        if gui_input.get_key_down(KeyCode.Z):
+        if gui_input.get_key(KeyCode.Z):
             self._cursor_pos.y -= y_speed
-        if gui_input.get_key_down(KeyCode.X):
+        if gui_input.get_key(KeyCode.X):
             self._cursor_pos.y += y_speed
 
         xz_forward = self._camera_helper.get_xz_forward()
@@ -997,15 +1070,11 @@ class AppStateIsaacSimViewer(AppStateBase):
 
         if left.get_button_down(XRButton.TWO):
             print("Resetting Robot Joint Positions")
-            for reset_joint_values, arm_subset_key in [
-                ("right_arm_in", "right_arm"),
-                ("left_arm_in", "left_arm"),
-            ]:
-                self.robot.pos_subsets[arm_subset_key].set_cached_pose(
-                    pose_name=reset_joint_values,
-                    set_motor_targets=True,
-                    set_positions=True,
-                )
+            self.robot.pos_subsets["full"].set_cached_pose(
+                pose_name="initial",
+                set_motor_targets=True,
+                set_positions=True,
+            )
             self._frame_events.append(FrameEvent.RESET_ARMS_FINGERS)
 
         if left.get_button_up(XRButton.TWO):
@@ -1285,6 +1354,8 @@ class AppStateIsaacSimViewer(AppStateBase):
             self.robot.base_vel_controller.track_waypoints = False
             self.robot.base_vel_controller.target_angular_vel = -ang_speed
             # self.robot.base_rot -= 0.1
+        if gui_input.get_key_down(KeyCode.U):
+            self.robot.do_vel_fix_base = not self.robot.do_vel_fix_base
 
         # end base velocity control with keyboard
         #####################################################################
@@ -1630,20 +1701,25 @@ class AppStateIsaacSimViewer(AppStateBase):
             # ro.linear_velocity = mn.Vector3(0,1,0)
             # ro.angular_velocity = mn.Vector3(0,1,0)
 
-            force_mag = 200.0
-            import carb
+            check_all_frictions(self.root_prim)
+            check_all_frictions(self.robot.robot_prim)
+            for obj in self._rigid_objects:
+                check_all_frictions(obj._prim)
 
-            # instead of hit_normal_usd, consider dir_usd
-            force_vec = carb.Float3(
-                hit_normal_usd[0] * force_mag,
-                hit_normal_usd[1] * force_mag,
-                hit_normal_usd[2] * force_mag,
-            )
-            from omni.physx import get_physx_interface
+            # force_mag = 200.0
+            # import carb
 
-            get_physx_interface().apply_force_at_pos(
-                body_name, force_vec, hit_pos_usd
-            )
+            # # instead of hit_normal_usd, consider dir_usd
+            # force_vec = carb.Float3(
+            #     hit_normal_usd[0] * force_mag,
+            #     hit_normal_usd[1] * force_mag,
+            #     hit_normal_usd[2] * force_mag,
+            # )
+            # from omni.physx import get_physx_interface
+
+            # get_physx_interface().apply_force_at_pos(
+            #     body_name, force_vec, hit_pos_usd
+            # )
 
     # def debug_draw_hands(self):
     #     """

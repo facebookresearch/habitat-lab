@@ -127,6 +127,25 @@ class ConfigurationSubset:
             joint_indices=self.joint_ixs,
         )
 
+    def set_velocities(self, velocities: List[float]) -> None:
+        """
+        Set the instantaneous joint velocities for this configuration subset.
+        """
+        self._robot._robot.set_joint_velocities(
+            velocities=np.array(velocities),
+            joint_indices=self.joint_ixs,
+        )
+
+    def set_motor_velocities(self, velocities: List[float]) -> None:
+        """
+        Sets target motor velocities for this configuration subset.
+        """
+        action = ArticulationAction(
+            joint_velocities=np.array(velocities),
+            joint_indices=self.joint_ixs,
+        )
+        self._robot._robot.apply_action(action)
+
     def set_motor_pos_from_full(
         self, all_joint_pos_targets: List[float]
     ) -> None:
@@ -490,17 +509,51 @@ class RobotBaseVelController:
         forward_dir = rot.transform_vector(mn.Vector3(1, 0, 0))
         forward_dir[1] = 0
 
+        right_wheel_vel = 0
+        left_wheel_vel = 0
+        if self.target_angular_vel != 0:
+            right_wheel_vel -= (
+                self.target_angular_vel / self.max_angular_speed
+            ) * 20
+            left_wheel_vel += (
+                self.target_angular_vel / self.max_angular_speed
+            ) * 20
+
+            cur_angular_vel = self.robot._robot.get_angular_velocity()
+            if abs(cur_angular_vel[2]) < abs(self.target_angular_vel):
+                angular_nudge = 0.05
+                if self.target_angular_vel < 0:
+                    angular_nudge *= -1
+                cur_angular_vel[2] += angular_nudge
+                self.robot._robot.set_angular_velocity(cur_angular_vel)
+
         if self.target_linear_vel != 0:
+            right_wheel_vel += (
+                self.target_linear_vel / self.max_linear_speed
+            ) * 20
+            left_wheel_vel += (
+                self.target_linear_vel / self.max_linear_speed
+            ) * 20
+
             desired_linear_vel = (
                 forward_dir.normalized() * self.target_linear_vel
             )
-            self.robot._robot.set_linear_velocity(
-                isaac_prim_utils.habitat_to_usd_position(desired_linear_vel)
+            cur_linear_vel = mn.Vector3(
+                *isaac_prim_utils.usd_to_habitat_position(
+                    self.robot._robot.get_linear_velocity()
+                )
             )
+            if cur_linear_vel.length() < desired_linear_vel.length():
+                helping_nudge = forward_dir.normalized() * 0.02
+                if self.target_linear_vel < 0:
+                    helping_nudge = helping_nudge * -1
+                self.robot._robot.set_linear_velocity(
+                    isaac_prim_utils.habitat_to_usd_position(
+                        cur_linear_vel + helping_nudge
+                    )
+                )
 
-        if self.target_angular_vel != 0:
-            desired_angular_vel = [0, 0, self.target_angular_vel]
-            self.robot._robot.set_angular_velocity(desired_angular_vel)
+        self.robot.wheel_differential_drive(right_wheel_vel, left_wheel_vel)
 
     def reset(self):
         """
@@ -592,15 +645,33 @@ class RobotAppWrapper:
             # joint vel max
             if prim.HasAPI(PhysxSchema.PhysxJointAPI):
                 joint_api = PhysxSchema.PhysxJointAPI(prim)
+                # print(dir(joint_api))
+                # breakpoint()
                 joint_api.GetMaxJointVelocityAttr().Set(
                     self.robot_cfg.max_joint_velocity
                 )
+                joint_api.GetJointFrictionAttr().Set(0)
 
             # drivers
             if prim.HasAPI(UsdPhysics.DriveAPI):
+                prim_name = str(prim.GetPath())
+
+                is_drive_wheel = "wheel" in prim_name
+                is_passive_wheel = "caster" in prim_name
+
                 # Access the existing DriveAPI
                 drive_api = UsdPhysics.DriveAPI(prim, "angular")
-                if drive_api:
+                if drive_api and is_drive_wheel:
+                    # drive wheels
+                    drive_api.GetStiffnessAttr().Set(0)  # no position gain
+                    drive_api.GetMaxForceAttr().Set(10000000)
+                    drive_api.GetDampingAttr().Set(10000000)
+                elif drive_api and is_passive_wheel:
+                    # NOTE: these wheels are passive, so set pos and vel gains to 0
+                    drive_api.GetStiffnessAttr().Set(0)
+                    drive_api.GetDampingAttr().Set(0)
+                elif drive_api:
+                    # standard joints
                     # Modify drive parameters
                     drive_api.GetStiffnessAttr().Set(
                         self.robot_cfg.angular_drive_stiffness
@@ -614,6 +685,7 @@ class RobotAppWrapper:
 
                 drive_api = UsdPhysics.DriveAPI(prim, "linear")
                 if drive_api:
+                    # this is a prismatic joint
                     drive_api = UsdPhysics.DriveAPI.Get(prim, "linear")
                     drive_api.GetStiffnessAttr().Set(
                         self.robot_cfg.linear_drive_stiffness
@@ -649,6 +721,7 @@ class RobotAppWrapper:
         self.ground_to_base_offset = self.robot_cfg.ground_to_base_offset
         # TODO: configure the base controller from settings yaml
         self.base_vel_controller = RobotBaseVelController(self)
+        self.do_vel_fix_base = False
         # datastructure to aggregate the results of contact callbacks in a queryable format
         self.contact_state: Dict[Any, Any] = {}
         self._in_contact = False
@@ -1002,7 +1075,8 @@ class RobotAppWrapper:
         self.base_vel_controller.apply(step_size)
 
         # NOTE: this is a velocity hack to constrain the base position. It results in non-physical behavior, but accurate base positioning
-        # self.fix_base(step_size, base_position, base_orientation)
+        if self.do_vel_fix_base:
+            self.fix_base(step_size, base_position, base_orientation)
 
         # NOTE: set the state cache to dirty. Next time a query is made, update it.
         self._body_prim_states_dirty = True
@@ -1052,6 +1126,8 @@ class RobotAppWrapper:
 
         self._robot.set_world_pose(pos, rot)
         self.base_vel_controller.reset()
+        self._robot.set_linear_velocity(np.zeros(3))
+        self._robot.set_angular_velocity(np.zeros(3))
 
     def get_root_pose(
         self, convention: str = "hab"
@@ -1120,6 +1196,35 @@ class RobotAppWrapper:
             mn.Rad(-mn.math.pi / 2.0), mn.Vector3(1, 0, 0)
         )
         self.set_root_pose(rot=rot)
+
+    def wheel_forward(self, wheel_vel: float):
+        """
+        Set equivalent differential drive commands for both wheels to move forward/back.
+        """
+        left_wheel_subset = self.pos_subsets["left_wheel"]
+        right_wheel_subset = self.pos_subsets["right_wheel"]
+        left_wheel_subset.set_motor_velocities([wheel_vel])
+        right_wheel_subset.set_motor_velocities([wheel_vel])
+
+    def wheel_turn_right(self, wheel_vel: float):
+        """
+        Turn in place w/ differential drive velocities.
+        """
+        left_wheel_subset = self.pos_subsets["left_wheel"]
+        right_wheel_subset = self.pos_subsets["right_wheel"]
+        left_wheel_subset.set_motor_velocities([-wheel_vel])
+        right_wheel_subset.set_motor_velocities([wheel_vel])
+
+    def wheel_differential_drive(
+        self, right_wheel_vel: float, left_wheel_vel: float
+    ):
+        """
+        Set custom differential drive velocities for each wheel.
+        """
+        left_wheel_subset = self.pos_subsets["left_wheel"]
+        right_wheel_subset = self.pos_subsets["right_wheel"]
+        left_wheel_subset.set_motor_velocities([right_wheel_vel])
+        right_wheel_subset.set_motor_velocities([left_wheel_vel])
 
     def set_cached_pose(
         self,

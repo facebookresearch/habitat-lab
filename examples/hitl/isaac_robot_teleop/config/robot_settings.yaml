@@ -17,16 +17,16 @@ ground_to_base_offset: -0.05
 viewpoint_offset: [0.25,0,1.1]
 
 #link physical properties
-link_static_friction: 10
-link_dynamic_friction: 10
+link_static_friction: 1000
+link_dynamic_friction: 1000
 link_restitution: 0
 
 #joint motor settings
 create_joint_motors: True
-max_joint_velocity: 200
+max_joint_velocity: 100
 angular_drive_stiffness: 100 #position gain
 angular_drive_damping: 1 #velocity gain
-angular_drive_max_force: 5000 #max force/torque
+angular_drive_max_force: 100 #max force/torque
 linear_drive_stiffness: 1000 #position gain
 angular_damping: 1
 linear_damping: 5
