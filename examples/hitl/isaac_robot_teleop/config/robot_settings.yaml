@@ -125,9 +125,6 @@ link_subsets:
   #arm_pivot_links (the "shoulder" of the robot from which maximum linear reach can be computed)
   left_arm_pivot: ["left_fr3_link2"]
   right_arm_pivot: ["right_fr3_link2"]
-  #drive wheels
-  left_wheel: ["l_wheel_link"]
-  right_wheel: ["r_wheel_link"]
 
 
 
