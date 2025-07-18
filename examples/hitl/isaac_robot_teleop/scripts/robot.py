@@ -765,11 +765,6 @@ class RobotAppWrapper:
             set_motor_targets=True,
         )
 
-        # clamp to joint limits
-        # self.clamp_joints_to_limits()
-        # self.clamp_motor_targets_to_limits()
-        # self.init_ik()
-
         # add the physics callback which constrains the base position via velocity
         # NOTE: this function will be called internally before each isaac step
         self._isaac_service.world.add_physics_callback(
@@ -1511,6 +1506,16 @@ class RobotAppWrapper:
                     color=mn.Color3(0, 0.75, 0),  # green
                     normal=global_axis,
                 )
+
+    def print_joint_limits(self):
+        """
+        Get the joints limits of each dof.
+        """
+        limits = self._robot.dof_properties
+        lower_limit = limits["lower"]
+        upper_limit = limits["upper"]
+        print(list(lower_limit))
+        print(list(upper_limit))
 
 
 def unit_test_robot(robot: RobotAppWrapper):
