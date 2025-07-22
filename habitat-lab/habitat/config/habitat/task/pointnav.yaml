@@ -10,6 +10,7 @@ defaults:
     - success
     - spl
     - distance_to_goal_reward
+    - num_steps
   - lab_sensors:
     - pointgoal_with_gps_compass_sensor
     - compass_sensor
@@ -24,3 +25,10 @@ goal_sensor_uuid: pointgoal_with_gps_compass
 measurements:
   success:
     success_distance: 1.
+lab_sensors:
+  pointgoal_with_gps_compass_sensor:
+    noise_enabled: True
+    noise_sigma: 0.50
+    noise_alpha: 0.99
+    noise_spike_prob: 0.10
+    noise_spike_scale: 2.2

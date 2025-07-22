@@ -824,7 +824,7 @@ class PPOTrainer(BaseRLTrainer):
         if self.config.habitat_baselines.eval.should_load_ckpt:
             # map_location="cpu" is almost always better than mapping to a CUDA device.
             ckpt_dict = self.load_checkpoint(
-                checkpoint_path, map_location="cpu"
+                checkpoint_path, map_location="cpu", weights_only=False
             )
             step_id = ckpt_dict["extra_state"]["step"]
             logger.info(f"Loaded checkpoint trained for {step_id} steps")

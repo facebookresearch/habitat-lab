@@ -312,8 +312,30 @@ class IntegratedPointGoalGPSAndCompassSensor(PointGoalSensor):
     """
     cls_uuid: str = "pointgoal_with_gps_compass"
 
+    def __init__(
+        self, sim: Simulator, config: "DictConfig", *args: Any, **kwargs: Any
+    ):
+        # Per-env noise state (key: episode_id or agent_id)
+        self._noise_state = dict()
+        # Noise Hyperparameters
+        self._noise_enabled = getattr(config, "noise_enabled", False)
+        self._sigma = getattr(config, "noise_sigma", 0.10)
+        self._alpha = getattr(config, "noise_alpha", 0.90)
+        self._spike_prob = getattr(config, "noise_spike_prob", 0.05)
+        self._spike_scale = getattr(config, "noise_spike_scale", 2.0)
+
+        super().__init__(sim, config, *args, **kwargs)
+
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return self.cls_uuid
+
+    def _update_noise(self, prev_noise):
+        # Ornstein-Uhlenbeck process (OU noise)
+        eps = np.random.randn() * self._sigma
+        new_noise = self._alpha * prev_noise + eps
+        if np.random.rand() < self._spike_prob:
+            new_noise += np.random.randn() * self._spike_scale
+        return new_noise
 
     def get_observation(
         self, observations, episode, *args: Any, **kwargs: Any
@@ -323,9 +345,35 @@ class IntegratedPointGoalGPSAndCompassSensor(PointGoalSensor):
         rotation_world_agent = agent_state.rotation
         goal_position = np.array(episode.goals[0].position, dtype=np.float32)
 
-        return self._compute_pointgoal(
+        pointgoal =  self._compute_pointgoal(
             agent_position, rotation_world_agent, goal_position
         )
+
+        if not self._noise_enabled:
+            return pointgoal
+
+        d = pointgoal[0]
+        if d < 1.5:
+            return pointgoal
+
+        if len(self._noise_state) > 100_000:
+            recent_keys = list(self._noise_state.keys())[-10_000:]
+            self._noise_state = {k: v for k, v in self._noise_state.items() if k in recent_keys}
+
+        episode_id = episode.episode_id
+        if episode_id not in self._noise_state:
+            self._noise_state[episode_id] = 0.0
+
+        num_steps = kwargs['task'].measurements.measures["num_steps"].get_metric()
+        if num_steps == 0:
+            self._noise_state[episode_id] = 0.0
+
+        prev_noise = self._noise_state[episode_id]
+        noise = self._update_noise(prev_noise)
+        self._noise_state[episode_id] = noise
+        pointgoal[0] = max(d + noise, 0.0)
+
+        return pointgoal
 
 
 @registry.register_sensor
