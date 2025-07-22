@@ -8,10 +8,11 @@ defaults:
 
 habitat:
   environment:
-    max_episode_steps: 500
+    max_episode_steps: 1000
   simulator:
     turn_angle: 30
-    forward_step_size: 0.25 
+    forward_step_size: 0.25
+    # scene_dataset: "/cluster/work/rsl/lmilikic/hm3d/hm3d_annotated_basis.scene_dataset_config.json"
     agents:
       main_agent:
         sim_sensors:
@@ -22,3 +23,4 @@ habitat:
 
   dataset:
     scenes_dir: "/cluster/work/rsl/lmilikic/gibson"
+    # scenes_dir: "/cluster/work/rsl/lmilikic/hm3d"

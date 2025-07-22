@@ -13,6 +13,8 @@ defaults:
       - top_down_map
   - lab_sensors:
       - imagegoal_sensor
+      - compass_sensor
+      - gps_sensor
       - pointgoal_with_gps_compass_sensor
   - _self_
 

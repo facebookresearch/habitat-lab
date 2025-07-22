@@ -10,8 +10,6 @@ defaults:
       - success
       - spl
       - distance_to_goal_reward
-      # - orientation_to_goal
-      # - ovrl_reward
   - lab_sensors:
       - imagegoal_sensor
       - compass_sensor
