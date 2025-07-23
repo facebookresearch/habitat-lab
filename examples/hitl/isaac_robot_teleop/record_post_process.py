@@ -21,13 +21,46 @@ from tqdm import tqdm
 from scripts.frame_recorder import FrameEvent
 
 # NOTE: use known version days to split sessions by expected features or contents
+# NOTE: pilot is v0.0.1 and v0.0.2
+# NOTE: pre-versioning, post-pilot is v0.0.3 (no verification of content at this point)
 version_days = {
-    "v0.1": (datetime.date(2025, 6, 10), "task prompts and bug fixes"),
-    "v0.2": (
+    "0.0.1": (datetime.date(2025, 6, 10), "task prompts and bug fixes"),
+    "0.0.2": (
         datetime.date(2025, 6, 17),
         "collision detection and IK clamping",
     ),
+    "0.0.3": (
+        datetime.date(2025, 7, 17),
+        "after post-pilot feature pause collection resumes, before explicit versioning.",
+    ),
+    "0.1.0": (
+        datetime.date(2025, 7, 24),
+        "start of explicit versioning, from here code is versioned.",
+    ),
 }
+
+
+def compare_version(version: str, compare_to_version: str) -> int:
+    """
+    Compares two version strings and returns whether the first is newer(1), same(0) or older(-1).
+    Assumes semantic versioning: https://semver.org/
+    I.e. "<major>.<minor>.<patch>"
+    """
+    for v_level in range(3):
+        ver = version.split(".")[v_level]
+        compare_to_ver = compare_to_version.split(".")[v_level]
+        if ver > compare_to_ver:
+            # first version is newer at this level
+            return 1
+        elif ver == compare_to_ver:
+            # this level is the same
+            continue
+        else:
+            # second version is newer at this level
+            return -1
+    # all equal, so same version
+    return 0
+
 
 # format of the strings changed mid-pilot, so we'll need to merge data
 rollout_dir_format = "timestamp_first"
@@ -96,6 +129,15 @@ def load_json_gz(file_path: str) -> Dict[Any, Any]:
     """
     with gzip.open(file_path, "rt") as f:
         return json.load(f)
+
+
+def save_json_gz(json_data: Dict[str, Any], filename: str) -> None:
+    """
+    Save a Dict into a .json.gz file.
+    """
+    assert filename.endswith(".json.gz")
+    with gzip.open(filename, "wt", encoding="utf-8") as f:
+        json.dump(json_data, f)
 
 
 def convert_timestamp(timestamp: int) -> datetime.datetime:
@@ -446,7 +488,19 @@ def get_sessions_by_version_range(
             ).date()
         else:
             raise ValueError()
-        if (
+        if session_day >= version_days["0.1.0"][0]:
+            # after explicit versioning we look for the "app_version" in the episodes
+            session_json = load_json_gz(
+                os.path.join(session_dir, "session.json.gz")
+            )
+            app_version = session_json["episodes"]["0"]["app_version"]
+            if (
+                compare_version(app_version, start_version) >= 0
+                and compare_version(app_version, end_version) <= 0
+            ):
+                # this session version is in-range
+                matching_sessions.append(session_dir)
+        elif (
             session_day >= start_version_date
             and session_day <= end_version_date
         ):
@@ -523,8 +577,8 @@ def process_record_stats(
         session_day = datetime.datetime.today().date()
     else:
         for s_dir in session_dirs:
-            session_day = convert_timestamp(int(s_dir.split("_")[-1])).date()
-            user = s_dir.split("_")[-2]
+            session_day = convert_timestamp(int(s_dir.split("_")[0])).date()
+            user = s_dir.split("_")[-1]
             users[user] += 1
             session_days[session_day].append(s_dir)
 

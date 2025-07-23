@@ -65,15 +65,15 @@ from scripts.xr_pose_adapter import XRPose, XRPoseAdapter
 # path to this example app directory
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
-
 if TYPE_CHECKING:
     from habitat.isaac_sim.isaac_rigid_object_manager import (
         IsaacRigidObjectWrapper,
     )
     from scripts.DoFeditor import DoFEditor
 
-# unfortunately we can't import this earlier
-# import habitat_sim  # isort:skip
+# NOTE: assume versions prior to July 24th 2025 are "0.0.x"
+# this version should be bumped with every functional change which may want to be later discriminated.
+APP_VERSION = "0.1.0"
 
 
 def bind_physics_material_to_hierarchy(
@@ -1897,6 +1897,7 @@ class AppStateIsaacSimViewer(AppStateBase):
             scene_id=episode.scene_id,
             dataset=episode.scene_dataset_config,
             episode_info=episode.info,
+            app_version=APP_VERSION,
         )
 
     def on_exit(self):

@@ -61,6 +61,8 @@ class EpisodeRecord:
     # NOTE: this flag is intended to indicate that the episode in question has a blocking issue and the task is therefore impossible
     content_bug_flagged: bool
     frame_count: int
+    # the version of isaac_robot_teleop.py code which was used to collect this episode
+    app_version: str
 
 
 @dataclass
@@ -134,6 +136,7 @@ class SessionRecorder:
         scene_id: str,
         dataset: str,
         episode_info: Optional[Dict[str, Any]],
+        app_version: str,
     ):
         """
         Signal that an episode has started.
@@ -152,6 +155,7 @@ class SessionRecorder:
                 task_percent_complete=0.0,
                 content_bug_flagged=False,
                 frame_count=0,
+                app_version=app_version,
             )
         )
         self.frames.append([])
