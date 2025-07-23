@@ -514,6 +514,7 @@ def process_record_stats(
     start_version: str = None,
     end_version: str = None,
     is_local_dir: bool = False,
+    do_not_process_frames: bool = False,
 ) -> None:
     """
     Process a directory containing teleop session records and compute statistics.
@@ -523,10 +524,27 @@ def process_record_stats(
     :param start_version: (optional) The first app version to include in stats calculations.
     :param end_version: (optional) The last app version to include in stats calculations.
     :param is_local_dir: If true, assume the records are cached locally from mock deployment run.
+    :param do_not_process_frames: If true, don't process per-frame data to speed up the overall iteration time.
     """
 
     # create the output directory
     os.makedirs(out_dir, exist_ok=True)
+    record_out_file = os.path.join(out_dir, "hitl_teleop_record.json")
+    # record the stats to a json file
+    record_json = {
+        "data_dir": data_dir,
+        "start_version": start_version,
+        "end_version": end_version,
+        "report_timestamp": str(datetime.date.today()),
+        "num_completed_episodes": 0,
+        "num_reported_successful_episodes": 0,
+        "num_reported_failed_episodes": 0,
+        "num_reported_content_bugs": 0,
+        # relative path to the "data_dir"
+        "reported_successful_episode_paths": [],
+        "reported_failed_episode_paths": [],
+        "reported_content_bug_episode_paths": [],
+    }
 
     # collect all sessions
     session_dirs = []
@@ -590,55 +608,124 @@ def process_record_stats(
     print("\nSessions per user:")
     pprint.pprint(users)
 
-    # get all the episodes from the sessions
-    session_episodes = [
-        os.path.join(data_dir, s_dir, ep)
-        for s_dir in session_dirs
-        for ep in get_episodes_from_session(os.path.join(data_dir, s_dir))
-    ]
-    pprint.pprint(session_episodes)
     # count the number of trials for each episode and sort on failures/successes
-    fail_eps = []
-    success_eps = []
+    fail_ep_paths = []
+    success_ep_paths = []
+    content_bug_ep_paths = []
     ep_counts: defaultdict = defaultdict(int)
-    frame_count_sum = 0
 
-    # NOTE: do all the stats processing for the episodes here
-    print(f"Processing {len(session_episodes)} episode records ...")
-    for ep_path in tqdm(session_episodes):
-        ep_index = int(ep_path.split("/")[-1].split(".json.gz")[0])
-        ep_counts[ep_index] += 1
+    if do_not_process_frames:
+        # quick path were all data is parsed from the session metadata headers and individual episode files are not opened.
+        for session_dir_name in tqdm(session_dirs):
+            session_dir = os.path.join(data_dir, session_dir_name)
+            session_json = load_json_gz(
+                os.path.join(session_dir, "session.json.gz")
+            )
+            for ep_header_json in session_json["episodes"]:
+                ep_id = int(ep_header_json["episode_id"])
+                ep_finished = ep_header_json["finished"]
+                if not ep_finished:
+                    continue
+                ep_counts[ep_id] += 1
+                ep_path = os.path.join(session_dir, f"{ep_id}.json.gz")
+                content_bug = ep_header_json.get("content_bug_flagged", False)
+                if content_bug:
+                    content_bug_ep_paths.append(ep_path)
+                success = ep_header_json["task_percent_complete"] > 0.0
+                if success:
+                    success_ep_paths.append(ep_path)
+                else:
+                    fail_ep_paths.append(ep_path)
 
-        # get the record dict from JSON
-        ep_json = load_json_gz(ep_path)
+    else:
+        # get all the episodes from the sessions
+        session_episodes = [
+            os.path.join(data_dir, s_dir, ep)
+            for s_dir in session_dirs
+            for ep in get_episodes_from_session(os.path.join(data_dir, s_dir))
+        ]
+        pprint.pprint(session_episodes)
+        frame_count_sum = 0
+        # NOTE: do all the stats processing for the episodes here
+        print(f"Processing {len(session_episodes)} episode records ...")
+        for ep_path in tqdm(session_episodes):
+            ep_index = int(ep_path.split("/")[-1].split(".json.gz")[0])
 
-        good_first_frame = get_good_first_ep_frame(ep_json["frames"])
-        print(f"    good first frame = {good_first_frame}")
+            # get the record dict from JSON
+            ep_json = load_json_gz(ep_path)
 
-        interesting_frames = (
-            int(ep_json["episode"]["frame_count"]) - good_first_frame
-        )
-        frame_count_sum += interesting_frames
+            # if the episode didn't finish, don't count it
+            ep_finished = ep_json["episode"]["finished"]
+            if not ep_finished:
+                continue
 
-        # success sorting
-        success = get_ep_success(ep_json)
-        if success:
-            success_eps.append(ep_path)
-        else:
-            fail_eps.append(ep_path)
+            ep_counts[ep_index] += 1
 
-    avg_frames = frame_count_sum / len(session_episodes)
+            # if a content bug was reported, log it and move on
+            content_bug = ep_json["episode"].get("content_bug_flagged", False)
+            if content_bug:
+                content_bug_ep_paths.append(ep_path)
+                continue
+
+            good_first_frame = get_good_first_ep_frame(ep_json["frames"])
+            print(f"    good first frame = {good_first_frame}")
+
+            interesting_frames = (
+                int(ep_json["episode"]["frame_count"]) - good_first_frame
+            )
+            frame_count_sum += interesting_frames
+
+            # success sorting
+            success = get_ep_success(ep_json)
+            if success:
+                success_ep_paths.append(ep_path)
+            else:
+                fail_ep_paths.append(ep_path)
+
+    num_completed_episodes = len(success_ep_paths) + len(fail_ep_paths)
+
     # print("Episode frequency:")
     # pprint.pprint(ep_counts)
     print("Successful Episodes:")
-    pprint.pprint(success_eps)
+    pprint.pprint(success_ep_paths)
 
-    print(f"Successful: {len(success_eps)}")
-    print(f"Failed: {len(fail_eps)}")
-    print(f"Success rate: {len(success_eps)/len(session_episodes)}")
-    print(f"Frames: total={frame_count_sum}, avg={avg_frames}")
+    print(f"Successful: {len(success_ep_paths)}")
+    print(f"Failed: {len(fail_ep_paths)}")
+    print(f"Content Bugs: {len(content_bug_ep_paths)}")
+    # get success vs. failure rate, but don't count content bugs
+    print(f"Success rate: {len(success_ep_paths)/num_completed_episodes}")
+
+    if not do_not_process_frames:
+        avg_frames = frame_count_sum / num_completed_episodes
+        print(f"Frames: total={frame_count_sum}, avg={avg_frames}")
+
+    # record and save the stats json
+    record_json["num_completed_episodes"] = num_completed_episodes
+    record_json["num_reported_successful_episodes"] = len(success_ep_paths)
+    record_json["num_reported_failed_episodes"] = len(fail_ep_paths)
+    record_json["num_reported_content_bugs"] = len(content_bug_ep_paths)
+
+    record_json["reported_successful_episode_paths"] = [
+        os.path.relpath(ep_path, data_dir) for ep_path in success_ep_paths
+    ]
+    record_json["reported_failed_episode_paths"] = [
+        os.path.relpath(ep_path, data_dir) for ep_path in fail_ep_paths
+    ]
+    record_json["reported_content_bug_episode_paths"] = [
+        os.path.relpath(ep_path, data_dir) for ep_path in content_bug_ep_paths
+    ]
+
+    with open(record_out_file, "wt", encoding="utf-8") as f:
+        json.dump(record_json, f)
+    print(f"Wrote data to {record_out_file}")
 
 
+####################################################
+# for quick basic stats run:
+# python examples/hitl/isaac_robot_teleop/record_post_process.py --session-records-dir <my_dir> --start-version 0.1.0 --quick
+# for stats on local headless execution run:
+# python examples/hitl/isaac_robot_teleop/record_post_process.py --session-records-dir "hitl_output_18000" --local
+####################################################
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         "Read and process a directory containing teleop session records and compute statistics."
@@ -647,10 +734,18 @@ if __name__ == "__main__":
         "--session-records-dir",
         type=str,
     )
-    parser.add_argument("--out-dir", type=str, default="record_stats_out/")
+    parser.add_argument(
+        "--out-dir", type=str, default="hitl_teleop_record_stats_out/"
+    )
     parser.add_argument("--start-version", type=str, default=None)
     parser.add_argument("--end-version", type=str, default=None)
     parser.add_argument("--local", action="store_true", default=False)
+    parser.add_argument(
+        "--quick",
+        action="store_true",
+        default=False,
+        help="If passed, don't process the frame json data, instead only look at the metadata headers. Much faster, but no per-frame data like events.",
+    )
     args = parser.parse_args()
 
     process_record_stats(
@@ -659,6 +754,8 @@ if __name__ == "__main__":
         start_version=args.start_version,
         end_version=args.end_version,
         is_local_dir=args.local,
+        do_not_process_frames=args.quick,
     )
 
+    # NOTE: this function is meant to print the robot's joint limits re-organized into hardware vector format.
     # get_robot_joint_limits_for_hardware()
