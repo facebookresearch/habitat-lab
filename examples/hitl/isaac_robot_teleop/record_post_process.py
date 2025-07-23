@@ -139,7 +139,7 @@ def get_event_frames(
     event_indices = []
     key_string = str(e)
     for ix, frame_data in enumerate(ep_frames_json):
-        if key_string in frame_data["events"]:
+        if key_string in frame_data.get("events", []):
             event_indices.append(ix)
     return event_indices
 
