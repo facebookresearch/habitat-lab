@@ -1,0 +1,106 @@
+import os
+import subprocess
+import threading
+import time
+
+from tqdm import tqdm
+
+
+def capture_window(window_id, x, y, width, height, output_file, stop_event):
+    cmd = [
+        "ffmpeg",
+        "-f",
+        "x11grab",
+        "-framerate",
+        "30",
+        "-video_size",
+        f"{width}x{height}",
+        "-i",
+        f":0.0+{x},{y}",
+        output_file,
+    ]
+    process = subprocess.Popen(cmd)
+    stop_event.wait()
+    process.terminate()
+    process.wait()
+
+
+def get_window_geometry(window_id):
+    cmd = ["xwininfo", "-id", window_id]
+    output = subprocess.check_output(cmd).decode()
+    geometry = {}
+    for line in output.splitlines():
+        if "Absolute upper-left X:" in line:
+            geometry["x"] = int(line.split(":")[1].strip())
+        elif "Absolute upper-left Y:" in line:
+            geometry["y"] = int(line.split(":")[1].strip())
+        elif "Width:" in line:
+            geometry["width"] = int(line.split(":")[1].strip())
+        elif "Height:" in line:
+            geometry["height"] = int(line.split(":")[1].strip())
+    return geometry
+
+
+def get_window_id(process):
+    # Wait for the window to appear
+    time.sleep(5)
+    cmd = ["xdotool", "search", "--onlyvisible", "--pid", str(process.pid)]
+    window_id = subprocess.check_output(cmd).decode().strip()
+    return window_id
+
+
+# define the range of episodes to consider and details from that batch
+episode_dataset = (
+    "data/datasets/hitl_teleop_episodes_single_region_scenes.json.gz"
+)
+session_dir = "../../../Downloads/download/isaac_robot_teleop/"
+# TODO: read this from a teleop record file
+episode_filepaths = [
+    "1752951016_1109/12.json.gz",
+    "1753051963_9840/1.json.gz",
+    "1753051963_9840/0.json.gz",
+]
+
+script_template = "examples/hitl/isaac_robot_teleop/isaac_robot_teleop.py"
+
+for ep_fp in tqdm(episode_filepaths):
+    full_ep_fp = os.path.join(session_dir, ep_fp)
+    video_prefix = ep_fp.replace("/", "_").split(".")[0]
+
+    cmd = [
+        "python",
+        script_template,
+        "--config-name",
+        "replay_episode_record",
+        f"isaac_robot_teleop.episode_dataset={episode_dataset}",
+        f"isaac_robot_teleop.episode_record_filepath={full_ep_fp}",
+    ]
+
+    print(f"Running: {' '.join(cmd)}")
+    process = subprocess.Popen(cmd)
+
+    window_id = get_window_id(process)
+    geometry = get_window_geometry(window_id)
+    output_file = (
+        f"hitl_teleop_record_stats_out/video/capture_{video_prefix}.mp4"
+    )
+
+    stop_event = threading.Event()
+    capture_thread = threading.Thread(
+        target=capture_window,
+        args=(
+            window_id,
+            geometry["x"],
+            geometry["y"],
+            geometry["width"],
+            geometry["height"],
+            output_file,
+            stop_event,
+        ),
+    )
+    capture_thread.start()
+
+    # Wait for the process to finish
+    process.wait()
+    stop_event.set()
+    capture_thread.join()

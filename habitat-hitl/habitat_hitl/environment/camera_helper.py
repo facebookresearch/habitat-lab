@@ -144,6 +144,22 @@ class CameraHelper:
             self._eye_pos, self._lookat_pos, mn.Vector3(0, 1, 0)
         )
 
+    def update_absolute(self, look_at, look_from, look_up=None):
+        """
+        Places the camera in absolute world frame at look_from, looking at look_at, assuming up is look_up.
+        """
+
+        if look_up is None:
+            # pick a valid "up" vector.
+            look_dir = look_at - look_from
+            look_up = (
+                mn.Vector3(0, 1.0, 0)
+                if look_dir[0] != 0 or look_dir[2] != 0
+                else mn.Vector3(1.0, 0, 0)
+            )
+
+        self._cam_transform = mn.Matrix4.look_at(look_from, look_at, look_up)
+
     def get_xz_forward(self):
         assert self._cam_transform
         forward_dir = self._cam_transform.transform_vector(

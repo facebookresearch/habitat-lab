@@ -353,6 +353,7 @@ class FrameRecorder:
     def load_episode_record_json_gz(self, filepath: str) -> None:
         """
         Loads the serialized frame data from within an episode record (i.e. a crowd sourced session's data file)
+        NOTE: returns the task prompt
         """
 
         with gzip.open(filepath, "rt") as f:
@@ -360,6 +361,6 @@ class FrameRecorder:
             self.frame_data = replay_data["frames"]
             # TODO: not necessary in long term, but needed for pilot
             self.respace_frames()
-            print(
-                f"Task Prompt: {replay_data['episode']['episode_info']['task_prompt']}"
-            )
+            task_prompt = replay_data["episode"]["episode_info"]["task_prompt"]
+            print(f"Task Prompt: {task_prompt}")
+            return task_prompt

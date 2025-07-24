@@ -189,6 +189,12 @@ class AppStateIsaacSimViewer(AppStateBase):
             hasattr(self._app_cfg, "replay_mode")
             and self._app_cfg.replay_mode == True
         )
+        # multiplier on playback speed
+        self.replay_playback_speed = (
+            self._app_cfg.replay_speed
+            if hasattr(self._app_cfg, "replay_speed")
+            else 1.0
+        )
 
         self._camera_helper = CameraHelper(
             self._app_service.hitl_config, self._app_service.gui_input
@@ -263,9 +269,16 @@ class AppStateIsaacSimViewer(AppStateBase):
                 load_json_gz,
             )
 
+            if hasattr(self._app_cfg, "cam_zoom_distance"):
+                self._camera_helper.cam_zoom_dist = (
+                    self._app_cfg.cam_zoom_distance
+                )
+
             # Setup from the episode record
-            self._frame_recorder.load_episode_record_json_gz(
-                self._app_cfg.episode_record_filepath
+            self.task_prompt = (
+                self._frame_recorder.load_episode_record_json_gz(
+                    self._app_cfg.episode_record_filepath
+                )
             )
             self._frame_recorder.replaying = True
             good_start_frame = 0
@@ -425,6 +438,9 @@ class AppStateIsaacSimViewer(AppStateBase):
         # this tracks the relative time from start_time
         self._timer = 0.0
 
+        self.record_video = self._app_cfg.record_video
+        self.prev_replay_frame = 0
+
     def load_semantic_scene(self, scene_descriptor: str) -> None:
         """
         Side-loads the semantic metadata from a JSON file to import region logic.
@@ -519,7 +535,8 @@ class AppStateIsaacSimViewer(AppStateBase):
         if self.episode.language_instruction != "":
             # load the episode's language prompt if not empty
             self.task_prompt = self.episode.language_instruction
-        else:
+        elif self.task_prompt == "":
+            # NOTE: when replaying, this is already set to None or a valid string
             self.task_prompt = self.generate_contrived_prompt()
 
         # NOTE: this is where the states are set
@@ -809,13 +826,14 @@ class AppStateIsaacSimViewer(AppStateBase):
 
     def _get_status_text(self):
         status_str = ""
-        cursor_pos = self._cursor_pos
-        status_str += (
-            f"({cursor_pos.x:.1f}, {cursor_pos.y:.1f}, {cursor_pos.z:.1f})\n"
-        )
+        # cursor_pos = self._cursor_pos
+        # status_str += (
+        #    f"({cursor_pos.x:.1f}, {cursor_pos.y:.1f}, {cursor_pos.z:.1f})\n"
+        # )
         if self._recent_mouse_ray_hit_info:
             status_str += self._recent_mouse_ray_hit_info["rigidBody"] + "\n"
-        status_str += f"base rot: {self.robot.base_rot} \n"
+        # status_str += f"base rot: {self.robot.base_rot} \n"
+        status_str += f"Task Prompt: {self.task_prompt}\n"
         status_str += f"time: {self._timer}\n"
         status_str += f"robot in contact: {self.robot.in_contact}\n"
         if self._frame_recorder.replaying:
@@ -826,7 +844,8 @@ class AppStateIsaacSimViewer(AppStateBase):
                     self._frame_recorder._start_frame
                 ]["t"]
             )
-            status_str += f"Replaying {self._frame_recorder.replay_time:.2f} from range [{start_time:.2f}, {self._frame_recorder.frame_data[-1]['t']:.2f}]-\n"
+            status_str += f"Replaying {self._frame_recorder.replay_time:.2f} from range [{start_time:.2f}, {self._frame_recorder.frame_data[-1]['t']:.2f}]\n"
+            status_str += f"Replay Speed: {'-' if self.reverse_replay else ''}{self.replay_playback_speed}x"
         elif self._frame_recorder.recording:
             status_str += (
                 f"-RECORDING FRAMES ({len(self._frame_recorder.frame_data)})-"
@@ -838,19 +857,35 @@ class AppStateIsaacSimViewer(AppStateBase):
         if self._hide_gui:
             return
 
-        controls_str = self._get_controls_text()
-        if len(controls_str) > 0:
-            self._app_service.text_drawer.add_text(
-                controls_str, TextOnScreenAlignment.TOP_LEFT
+        if self.in_replay_mode:
+            status_str = ""
+            start_time = (
+                self._frame_recorder.frame_data[0]["t"]
+                if self._frame_recorder._start_frame is None
+                else self._frame_recorder.frame_data[
+                    self._frame_recorder._start_frame
+                ]["t"]
             )
+            status_str += f"Task Prompt: {self.task_prompt}\n"
+            status_str += f"Replaying {self._frame_recorder.replay_time:.2f} from range [{start_time:.2f}, {self._frame_recorder.frame_data[-1]['t']:.2f}]-\n"
+            status_str += f"Replay Speed: {'-' if self.reverse_replay else ''}{self.replay_playback_speed}x"
+            self._app_service.text_drawer.add_text(
+                status_str, TextOnScreenAlignment.TOP_LEFT
+            )
+        else:
+            controls_str = self._get_controls_text()
+            if len(controls_str) > 0:
+                self._app_service.text_drawer.add_text(
+                    controls_str, TextOnScreenAlignment.TOP_LEFT
+                )
 
-        status_str = self._get_status_text()
-        if len(status_str) > 0:
-            self._app_service.text_drawer.add_text(
-                status_str,
-                TextOnScreenAlignment.TOP_CENTER,
-                text_delta_x=-120,
-            )
+            status_str = self._get_status_text()
+            if len(status_str) > 0:
+                self._app_service.text_drawer.add_text(
+                    status_str,
+                    TextOnScreenAlignment.TOP_CENTER,
+                    text_delta_x=-120,
+                )
 
     def _update_cursor_pos(self):
         """
@@ -1420,13 +1455,17 @@ class AppStateIsaacSimViewer(AppStateBase):
             print(f"Reverse Replay = {self.reverse_replay}")
 
         if gui_input.get_key_down(KeyCode.B):
-            self._frame_recorder.save_json()
+            # self._frame_recorder.save_json()
+            self.replay_playback_speed *= 2
 
         if gui_input.get_key_down(KeyCode.V):
-            self._frame_recorder.load_json()
-            self._frame_recorder.replaying = True
-            self._timer = self._frame_recorder.frame_data[0]["t"]
-            self._start_time = time.time() - self._timer
+            self.replay_playback_speed /= 2
+            if self.replay_playback_speed < 0.25:
+                self.replay_playback_speed = 0.25
+            # self._frame_recorder.load_json()
+            # self._frame_recorder.replaying = True
+            # self._timer = self._frame_recorder.frame_data[0]["t"]
+            # self._start_time = time.time() - self._timer
             # NOTE: would be nice to turn physics subsets off, but this disables the robot state updates for some reason
             # self.set_physics_paused(True)
 
@@ -1688,7 +1727,20 @@ class AppStateIsaacSimViewer(AppStateBase):
         self.update_isaac(post_sim_update_dict)
         self._sync_xr_user_to_robot_cursor()
 
-        self._camera_helper.update(self._cursor_pos, dt)
+        if self.in_replay_mode:
+            robot_orientation = self.robot.get_root_pose()[1]
+            offset = (
+                mn.Vector3(-1.0, 0, 1.25).normalized()
+                * self._camera_helper.cam_zoom_dist
+            )
+            robot_cam_offset = robot_orientation.transform_vector(offset)
+            self._camera_helper.update_absolute(
+                look_at=self._cursor_pos,
+                look_from=self._cursor_pos + robot_cam_offset,
+            )
+        else:
+            self._camera_helper.update(self._cursor_pos, dt)
+
         self._cam_transform: mn.Matrix4 = (
             self._camera_helper.get_cam_transform()
         )
@@ -1826,13 +1878,24 @@ class AppStateIsaacSimViewer(AppStateBase):
         self._update_help_text()
         self._timer = time.time() - self._start_time
 
+        self.prev_replay_frame = self._frame_recorder.replay_frame
         if not self.pause_replay:
             r = -1 if self.reverse_replay else 1
             self._frame_recorder.update(
-                self._frame_recorder.replay_time + dt * r,
+                self._frame_recorder.replay_time
+                + dt * r * self.replay_playback_speed,
                 [str(e) for e in self._frame_events],
             )
             self._frame_events = []
+
+        # NOTE: we assume that when using "record_video", we don't want to reverse play or loop
+        if (
+            self.in_replay_mode
+            and self.record_video
+            and self._frame_recorder.replay_frame < self.prev_replay_frame
+        ):
+            # we've reached the looping point and should exit
+            post_sim_update_dict["application_exit"] = True
 
         # record state trajectory frames in the session object for cloud serialization
         if self._session is not None:

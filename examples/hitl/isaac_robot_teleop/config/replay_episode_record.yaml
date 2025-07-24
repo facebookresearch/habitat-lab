@@ -23,8 +23,8 @@ habitat_hitl:
 
   window:
     title: "IsaacSim Robot Teleop Viewer"
-    width: 1920
-    height: 1080
+    width: 960
+    height: 540
     display_font_size: 24
   ######################
 
@@ -43,6 +43,9 @@ isaac_robot_teleop:
   ######################
   # Settings relevant for episode replay only
   replay_mode: True
+  replay_speed: 4
+  #if true, looping is off and video is recorded from 3rd person perspective
+  record_video: True
   # The episode record's .json.gz file
 
   #NOTE: the local output directory
@@ -60,6 +63,8 @@ isaac_robot_teleop:
   draw_debug_shapes: True
   camera_move_speed: 0.1
   lock_pc_camera_to_robot: True
+  lock_orientation_to_robot: True
+  cam_zoom_distance: 1.0
   #optionally force the initial state of the robot (will be snapped to namvmesh)
   #NOTE: these values initialize in the kitchen for scene 103997403_171030405
   #initial_robot_position: [-11.4, 0, -3.2]
