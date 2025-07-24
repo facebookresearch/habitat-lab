@@ -54,7 +54,7 @@ isaac_robot_teleop:
 
   # OR initialize by episode. These will take precedent when provided
   #episode_dataset: "data/datasets/hitl_teleop_episodes.json.gz"
-  episode_dataset: "data/datasets/hitl_teleop_episodes_single_region_scenes.json.gz"
+  episode_dataset: "data/datasets/hitl_teleop_episodes_220.json.gz"
   episode_index: 11
 
   #physx configuration settings
