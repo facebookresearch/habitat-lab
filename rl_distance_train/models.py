@@ -27,10 +27,12 @@ class TemporalDistanceEncoder(nn.Module):
         rgb_color_jitter: float = 0.,
         random_crop: bool = False,
         mode: str = "dense",
+        distance_scale=1.0,
     ):
         super().__init__()
         assert mode in ("dense", "sparse"), "mode must be 'dense' or 'sparse'"
         self.mode = mode
+        self.distance_scale = distance_scale
 
         # 1) load the pretrained Distance+Confidence model
         dm = load_distance_model(modelid=encoder_base)
@@ -115,12 +117,14 @@ class TemporalDistanceEncoder(nn.Module):
         # Base model forward pass
         if return_last_hidden_state:
             dist, conf, last_hidden = output
+            dist = dist / self.distance_scale
             # dist,conf: [B], last_hidden: [B, embed_dim]
             dist = dist.unsqueeze(1)  # → [B,1]
             conf = conf.unsqueeze(1)  # → [B,1]
             out = torch.cat([last_hidden, dist, conf], dim=1)
         else:
             dist, conf = output
+            dist = dist / self.distance_scale
             out = torch.cat([
                 dist.unsqueeze(1),  # [B,1]
                 conf.unsqueeze(1)   # [B,1]

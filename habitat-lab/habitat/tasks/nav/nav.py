@@ -315,8 +315,10 @@ class IntegratedPointGoalGPSAndCompassSensor(PointGoalSensor):
     def __init__(
         self, sim: Simulator, config: "DictConfig", *args: Any, **kwargs: Any
     ):
+        self._distance_norm = getattr(config, "distance_norm", 1.0)
         # Per-env noise state (key: episode_id or agent_id)
         self._noise_state = dict()
+
         # Noise Hyperparameters
         self._noise_enabled = getattr(config, "noise_enabled", False)
         self._sigma = getattr(config, "noise_sigma", 0.10)
@@ -324,17 +326,24 @@ class IntegratedPointGoalGPSAndCompassSensor(PointGoalSensor):
         self._spike_prob = getattr(config, "noise_spike_prob", 0.05)
         self._spike_scale = getattr(config, "noise_spike_scale", 2.0)
 
+        # Confidence Hyperparameters
+        self._return_confidence = getattr(config, "return_confidence", False)
+        self._confidence_coef = getattr(config, "confidence_coef", 0.25)
+        self._confidence_sigma = getattr(config, "confidence_sigma", 0.15)
+        self._confidence_alpha = getattr(config, "confidence_alpha", 0.20)
+
         super().__init__(sim, config, *args, **kwargs)
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return self.cls_uuid
 
-    def _update_noise(self, prev_noise):
+    @staticmethod
+    def _update_noise(prev_noise, sigma, alpha, spike_prob, spike_scale):
         # Ornstein-Uhlenbeck process (OU noise)
-        eps = np.random.randn() * self._sigma
-        new_noise = self._alpha * prev_noise + eps
-        if np.random.rand() < self._spike_prob:
-            new_noise += np.random.randn() * self._spike_scale
+        eps = np.random.randn() * sigma
+        new_noise = alpha * prev_noise + eps
+        if np.random.rand() < spike_prob:
+            new_noise += np.random.randn() * spike_scale
         return new_noise
 
     def get_observation(
@@ -348,12 +357,9 @@ class IntegratedPointGoalGPSAndCompassSensor(PointGoalSensor):
         pointgoal =  self._compute_pointgoal(
             agent_position, rotation_world_agent, goal_position
         )
-
+        
         if not self._noise_enabled:
-            return pointgoal
-
-        d = pointgoal[0]
-        if d < 1.5:
+            pointgoal[0] = pointgoal[0] / self._distance_norm
             return pointgoal
 
         if len(self._noise_state) > 100_000:
@@ -361,17 +367,36 @@ class IntegratedPointGoalGPSAndCompassSensor(PointGoalSensor):
             self._noise_state = {k: v for k, v in self._noise_state.items() if k in recent_keys}
 
         episode_id = episode.episode_id
-        if episode_id not in self._noise_state:
-            self._noise_state[episode_id] = 0.0
-
         num_steps = kwargs['task'].measurements.measures["num_steps"].get_metric()
-        if num_steps == 0:
-            self._noise_state[episode_id] = 0.0
+        if (episode_id not in self._noise_state) or (num_steps == 0):
+            self._noise_state[episode_id] = (0.0, 0.0)
 
-        prev_noise = self._noise_state[episode_id]
-        noise = self._update_noise(prev_noise)
-        self._noise_state[episode_id] = noise
-        pointgoal[0] = max(d + noise, 0.0)
+        # get noise state
+        prev_noise, prev_conf_noise = self._noise_state[episode_id]
+        
+        # add noise to the distance
+        d = pointgoal[0]
+        noise = self._update_noise(prev_noise, self._sigma, self._alpha, self._spike_prob, self._spike_scale)
+        if d < 1.01:
+            noise = np.sign(noise) * np.clip(np.abs(noise), a_min=0, a_max=d/4)
+        elif d < 2:
+            noise = np.sign(noise) * np.clip(np.abs(noise), a_min=0, a_max=d/1.1)
+        else:
+            noise = np.clip(noise, a_min=-(d/1.3), a_max=None)
+        noisy_d = max(d + noise, 0.0)
+
+        # get confidence add noise 
+        confidence = np.exp(-self._confidence_coef * np.abs(noise))
+        conf_noise = self._update_noise(prev_conf_noise, self._confidence_sigma, self._confidence_alpha, 0, 0)
+        if d > 2:
+            confidence += conf_noise
+        confidence = float(np.clip(confidence, 0, 1))
+
+        self._noise_state[episode_id] = (noise, conf_noise)
+
+        pointgoal[0] = noisy_d / self._distance_norm
+        if self._return_confidence:
+            pointgoal[1] = confidence
 
         return pointgoal
 

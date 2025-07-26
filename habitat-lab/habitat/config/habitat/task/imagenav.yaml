@@ -22,3 +22,6 @@ type: Nav-v0
 end_on_success: True
 reward_measure: "distance_to_goal_reward"
 success_measure: "spl"
+measurements:
+  success:
+    success_distance: 1.

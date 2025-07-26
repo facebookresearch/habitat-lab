@@ -368,6 +368,8 @@ class DDPPOConfig(HabitatBaselinesBaseConfig):
     encoder_backbone: str = 'dist_decoder_conf_100max'
     encoder_mode: str = 'dense'
     freeze_encoder: bool = True
+    use_confidence: bool = False
+    distance_scale: float = 1.0
 
 
 @dataclass

@@ -27,8 +27,15 @@ measurements:
     success_distance: 1.
 lab_sensors:
   pointgoal_with_gps_compass_sensor:
+    distance_norm: 6.5
+    # noise
     noise_enabled: True
-    noise_sigma: 0.50
+    noise_sigma: 0.60
     noise_alpha: 0.99
     noise_spike_prob: 0.10
-    noise_spike_scale: 2.2
+    noise_spike_scale: 2.5
+    # conf
+    return_confidence: True
+    confidence_coef: 0.25
+    confidence_sigma: 0.25
+    confidence_alpha: 0.50

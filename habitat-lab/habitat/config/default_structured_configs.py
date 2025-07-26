@@ -396,11 +396,20 @@ class PointGoalWithGPSCompassSensorConfig(PointGoalSensorConfig):
     """
 
     type: str = "PointGoalWithGPSCompassSensor"
+    distance_norm: float = 1.0
+
+    # Noise parameters
     noise_enabled: bool = False
     noise_sigma: float = 0.10
     noise_alpha: float = 0.90
     noise_spike_prob: float = 0.05
     noise_spike_scale: float = 2.0
+
+    # Confidence parameters
+    return_confidence: bool = False
+    confidence_coef: float = 0.25
+    confidence_sigma: float = 0.15
+    confidence_alpha: float = 0.20
 
 @dataclass
 class HumanoidDetectorSensorConfig(LabSensorConfig):

@@ -31,6 +31,7 @@ class GeometricNavPolicy(NetPolicy):
         hidden_size=512,
         num_recurrent_layers=2,
         rnn_type="GRU",
+        use_confidence=False,
         policy_config: "DictConfig" = None,
         **kwargs
     ):
@@ -51,7 +52,8 @@ class GeometricNavPolicy(NetPolicy):
             action_space=action_space,
             hidden_size=hidden_size,
             num_recurrent_layers=num_recurrent_layers,
-            rnn_type=rnn_type)
+            rnn_type=rnn_type,
+            use_confidence=use_confidence)
 
         super().__init__(net, action_space, policy_config=policy_config)
 
@@ -84,6 +86,7 @@ class GeometricNavPolicy(NetPolicy):
             hidden_size=ppo_cfg.hidden_size,
             num_recurrent_layers=ddppo_cfg.num_recurrent_layers,
             rnn_type=ddppo_cfg.rnn_type,
+            use_confidence=getattr(config, "use_confidence", False),
             policy_config=config.habitat_baselines.rl.policy[agent_name],
         )
 
@@ -99,9 +102,11 @@ class GeometricDistanceNavNet(Net):
         hidden_size,
         num_recurrent_layers,
         rnn_type,
+        use_confidence,
     ):
         super().__init__()
         self._hidden_size = hidden_size
+        self.use_confidence = use_confidence
 
         # 1) Previous action embedding
         self.prev_action_embedding = nn.Embedding(action_space.n + 1, 32)
@@ -110,7 +115,10 @@ class GeometricDistanceNavNet(Net):
         # 2) Sensor embeddings
         rnn_input_size = prev_emb_size
         assert IntegratedPointGoalGPSAndCompassSensor.cls_uuid in observation_space.spaces
-        self.tgt_emb = nn.Linear(1, 32)
+        if self.use_confidence:
+            self.tgt_emb = nn.Linear(2, 32)
+        else:
+            self.tgt_emb = nn.Linear(1, 32)
         rnn_input_size += 32
 
         if EpisodicGPSSensor.cls_uuid in observation_space.spaces:
@@ -175,7 +183,10 @@ class GeometricDistanceNavNet(Net):
 
         assert IntegratedPointGoalGPSAndCompassSensor.cls_uuid in observations
         o = observations[IntegratedPointGoalGPSAndCompassSensor.cls_uuid]
-        features.append(self.tgt_emb(o[:, :1]))
+        if self.use_confidence:
+            features.append(self.tgt_emb(o[:, :2]))
+        else:
+            features.append(self.tgt_emb(o[:, :1]))
 
         # Other sensors
         if EpisodicGPSSensor.cls_uuid in observations:
