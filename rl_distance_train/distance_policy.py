@@ -220,7 +220,7 @@ class TemporalDistanceNavNet(Net):
         aux_loss_state = {}
         # Joint image-goal
         rgb = observations.get('rgb', None)
-        goal_img = observations.get(ImageGoalSensor.cls_uuid)
+        goal_img = observations.get(ImageGoalSensor.cls_uuid, None)
         assert rgb is not None and goal_img is not None, \
             "Missing 'rgb' or goal image in observations"
         

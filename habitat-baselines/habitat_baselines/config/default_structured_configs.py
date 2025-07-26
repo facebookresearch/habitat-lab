@@ -370,6 +370,7 @@ class DDPPOConfig(HabitatBaselinesBaseConfig):
     freeze_encoder: bool = True
     use_confidence: bool = False
     distance_scale: float = 1.0
+    use_vision: bool = False
 
 
 @dataclass
