@@ -438,7 +438,11 @@ class AppStateIsaacSimViewer(AppStateBase):
         # this tracks the relative time from start_time
         self._timer = 0.0
 
-        self.record_video = self._app_cfg.record_video
+        self.record_video = (
+            self._app_cfg.record_video
+            if hasattr(self._app_cfg, "record_video")
+            else False
+        )
         self.prev_replay_frame = 0
 
     def load_semantic_scene(self, scene_descriptor: str) -> None:

@@ -1,3 +1,4 @@
+import json
 import os
 import subprocess
 import threading
@@ -54,12 +55,20 @@ episode_dataset = (
     "data/datasets/hitl_teleop_episodes_single_region_scenes.json.gz"
 )
 session_dir = "../../../Downloads/download/isaac_robot_teleop/"
-# TODO: read this from a teleop record file
+
+# NOTE: manually set the episode filepaths here
 episode_filepaths = [
     "1752951016_1109/12.json.gz",
     "1753051963_9840/1.json.gz",
     "1753051963_9840/0.json.gz",
 ]
+
+# NOTE: or load a teleop record file
+teleop_record_filepath = "hitl_teleop_record_stats_out/hitl_teleop_record.json"
+with open(teleop_record_filepath, "rt") as f:
+    teleop_record_json = json.load(f)
+    episode_filepaths = teleop_record_json["reported_successful_episode_paths"]
+
 
 script_template = "examples/hitl/isaac_robot_teleop/isaac_robot_teleop.py"
 
@@ -74,6 +83,11 @@ for ep_fp in tqdm(episode_filepaths):
         "replay_episode_record",
         f"isaac_robot_teleop.episode_dataset={episode_dataset}",
         f"isaac_robot_teleop.episode_record_filepath={full_ep_fp}",
+        f"isaac_robot_teleop.replay_speed={4}",
+        # NOTE: the following are set in the yaml but added here for ease of edit
+        # f"isaac_robot_teleop.record_video=True",
+        # f"isaac_robot_teleop.cam_zoom_distance=1.0",
+        # f"isaac_robot_teleop.lock_orientation_to_robot=True",
     ]
 
     print(f"Running: {' '.join(cmd)}")

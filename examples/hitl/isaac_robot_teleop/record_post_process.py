@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import argparse
+import csv
 import datetime
 import gzip
 import json
@@ -612,6 +613,8 @@ def process_record_stats(
     fail_ep_paths = []
     success_ep_paths = []
     content_bug_ep_paths = []
+    # dict mapping ep paths to task prompt strings, episode id, scene_id
+    ep_data = {}
     ep_counts: defaultdict = defaultdict(int)
 
     if do_not_process_frames:
@@ -628,6 +631,15 @@ def process_record_stats(
                     continue
                 ep_counts[ep_id] += 1
                 ep_path = os.path.join(session_dir, f"{ep_id}.json.gz")
+
+                # record info from the episode json for csv export
+                ep_data[ep_path] = {
+                    "task_prompt": ep_header_json["episode_info"][
+                        "task_prompt"
+                    ],
+                    "scene_id": ep_header_json["scene_id"],
+                }
+
                 content_bug = ep_header_json.get("content_bug_flagged", False)
                 if content_bug:
                     content_bug_ep_paths.append(ep_path)
@@ -718,6 +730,23 @@ def process_record_stats(
     with open(record_out_file, "wt", encoding="utf-8") as f:
         json.dump(record_json, f)
     print(f"Wrote data to {record_out_file}")
+
+    # write a csv file with rows for each trajectory
+    csv_out_file = os.path.join(out_dir, "successful_episodes.csv")
+    with open(csv_out_file, "w", newline="", encoding="utf-8") as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(["task_id"])
+        for ep_path in success_ep_paths:
+            dir_split_ep_path = ep_path.split("/")
+            short_ep_path = dir_split_ep_path[-2] + "/" + dir_split_ep_path[-1]
+            writer.writerow(
+                [
+                    short_ep_path.split(".")[0],
+                    ep_data[ep_path]["task_prompt"],
+                    ep_data[ep_path]["scene_id"],
+                ]
+            )
+    print(f"Wrote successful episode paths to {csv_out_file}")
 
 
 ####################################################
