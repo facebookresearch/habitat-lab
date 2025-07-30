@@ -4,8 +4,10 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from __future__ import annotations
+
 import math
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any
 
 import magnum as mn
 
@@ -49,19 +51,19 @@ class RemoteClientState:
         self._gui_drawer = gui_drawer
         self._users = users
 
-        self._new_connection_records: List[ConnectionRecord] = []
+        self._new_connection_records: list[ConnectionRecord] = []
 
         self._on_client_connected = Event()
         self._on_client_disconnected = Event()
 
         # TODO: Handle UI in a different class.
-        self._pressed_ui_buttons: List[Set[str]] = []
-        self._textboxes: List[Dict[str, str]] = []
+        self._pressed_ui_buttons: list[set[str]] = []
+        self._textboxes: list[dict[str, str]] = []
 
-        self._gui_inputs: List[GuiInput] = []
+        self._gui_inputs: list[GuiInput] = []
         self._xr_inputs: list[XRInput] = []
-        self._client_state_history: List[List[ClientState]] = []
-        self._receive_rate_trackers: List[AverageRateTracker] = []
+        self._client_state_history: list[list[ClientState]] = []
+        self._receive_rate_trackers: list[AverageRateTracker] = []
         for _ in range(users.max_user_count):
             self._gui_inputs.append(GuiInput())
             self._xr_inputs.append(XRInput())
@@ -70,7 +72,7 @@ class RemoteClientState:
             self._pressed_ui_buttons.append(set())
             self._textboxes.append({})
 
-        self._client_loading: List[bool] = [False] * users.max_user_count
+        self._client_loading: list[bool] = [False] * users.max_user_count
 
         # TODO: Temporary coupling.
         #       ClientHelper lifetime is directly coupled with RemoteClientState.
@@ -98,7 +100,7 @@ class RemoteClientState:
         """Get the GuiInput for a specified user index."""
         return self._gui_inputs[user_index]
 
-    def get_gui_inputs(self) -> List[GuiInput]:
+    def get_gui_inputs(self) -> list[GuiInput]:
         """Get a list of all GuiInputs indexed by user index."""
         return self._gui_inputs
 
@@ -133,7 +135,7 @@ class RemoteClientState:
         """Frequency at which client states are read."""
         return 1 / 60
 
-    def pop_recent_server_keyframe_id(self, user_index: int) -> Optional[int]:
+    def pop_recent_server_keyframe_id(self, user_index: int) -> int | None:
         """
         Removes and returns ("pops") the recentServerKeyframeId included in the latest client state.
 
@@ -152,7 +154,7 @@ class RemoteClientState:
 
     def get_recent_client_state_by_history_index(
         self, user_index: int, history_index: int
-    ) -> Optional[ClientState]:
+    ) -> ClientState | None:
         assert history_index >= 0
         if history_index >= len(self._client_state_history[user_index]):
             return None
@@ -161,7 +163,7 @@ class RemoteClientState:
 
     def get_head_pose(
         self, user_index: int, history_index: int = 0
-    ) -> Optional[Tuple[mn.Vector3, mn.Quaternion]]:
+    ) -> tuple[mn.Vector3 | None, mn.Quaternion | None]:
         """
         Get the latest head transform.
         Beware that this is in agent-space. Agents are flipped 180 degrees on the y-axis such as their z-axis faces forward.
@@ -192,7 +194,7 @@ class RemoteClientState:
 
     def get_hand_pose(
         self, user_index: int, hand_idx: int, history_index: int = 0
-    ) -> Optional[Tuple[mn.Vector3, mn.Quaternion]]:
+    ) -> tuple[mn.Vector3 | None, mn.Quaternion | None]:
         """
         Get the latest hand transforms.
         Beware that this is in agent-space. Agents are flipped 180 degrees on the y-axis such as their z-axis faces forward.
@@ -225,12 +227,12 @@ class RemoteClientState:
         return pos, rot_quat
 
     def _group_client_states_by_user_index(
-        self, client_states: List[ClientState]
-    ) -> List[List[ClientState]]:
+        self, client_states: list[ClientState]
+    ) -> list[list[ClientState]]:
         """
         Group a list of client states by user index.
         """
-        output: List[List[ClientState]] = []
+        output: list[list[ClientState]] = []
         for _ in range(self._users.max_user_count):
             output.append([])
 
@@ -241,7 +243,7 @@ class RemoteClientState:
         return output
 
     def _update_input_state(
-        self, all_client_states: List[List[ClientState]]
+        self, all_client_states: list[list[ClientState]]
     ) -> None:
         """Update mouse/keyboard input based on new client states."""
         if len(all_client_states) == 0 or len(self._gui_inputs) == 0:
@@ -256,7 +258,7 @@ class RemoteClientState:
                 continue
             gui_input = self._gui_inputs[user_index]
             mouse_scroll_offset: float = 0.0
-            relative_mouse_position: List[int] = [0, 0]
+            relative_mouse_position: list[int] = [0, 0]
 
             for client_state in client_states:
                 # UI element events.
@@ -299,7 +301,7 @@ class RemoteClientState:
                         gui_input._mouse_button_up.add(MouseButton(button))
 
                     if "scrollDelta" in mouse_json:
-                        delta: List[Any] = mouse_json["scrollDelta"]
+                        delta: list[Any] = mouse_json["scrollDelta"]
                         if len(delta) == 2:
                             mouse_scroll_offset += (
                                 delta[0]
@@ -308,14 +310,14 @@ class RemoteClientState:
                             )
 
                     if "mousePositionDelta" in mouse_json:
-                        pos_delta: List[Any] = mouse_json["mousePositionDelta"]
+                        pos_delta: list[Any] = mouse_json["mousePositionDelta"]
                         if len(pos_delta) == 2:
                             relative_mouse_position[0] += pos_delta[0]
                             relative_mouse_position[1] += pos_delta[1]
 
                     if "rayOrigin" in mouse_json:
-                        ray_origin: List[float] = mouse_json["rayOrigin"]
-                        ray_direction: List[float] = mouse_json["rayDirection"]
+                        ray_origin: list[float] = mouse_json["rayOrigin"]
+                        ray_direction: list[float] = mouse_json["rayDirection"]
                         if len(ray_origin) == 3 and len(ray_direction) == 3:
                             ray = Ray()
                             ray.origin = mn.Vector3(
@@ -406,14 +408,13 @@ class RemoteClientState:
 
             # Update other inputs from the latest data.
             last_client_state = client_states[-1]
+            xr = last_client_state.get("xr", None)
+            if xr is not None:
+                for i in range(len(xr_input.controllers)):
+                    ctrl_input = xr_input.controllers[i]
+                    ctrl_input._buttons_held.clear()
+                    ctrl_input._buttons_touched.clear()
 
-            for i in range(len(xr_input.controllers)):
-                ctrl_input = xr_input.controllers[i]
-                ctrl_input._buttons_held.clear()
-                ctrl_input._buttons_touched.clear()
-
-                xr = last_client_state.get("xr", None)
-                if xr is not None:
                     controllers = xr.get("controllers", [])
                     if len(controllers) == len(xr_input.controllers):
                         ctrl = controllers[i]
@@ -437,6 +438,20 @@ class RemoteClientState:
                             "inHand", False
                         )
 
+                hands = xr.get("hands", [])
+                for hand_idx in range(len(hands)):
+                    hand = hands[hand_idx]
+                    hand_input = xr_input.hands[hand_idx]
+                    positions = hand.get("bonePositions", [])
+                    rotations = hand.get("boneRotations", [])
+                    hand_input.update_hand_pose(positions, rotations)
+
+                    hand_input._is_tracked = hand.get("isTracked", False)
+                    hand_input._is_data_high_confidence = hand.get(
+                        "isDataHighConfidence", False
+                    )
+                    hand_input._is_data_valid = hand.get("isDataValid", False)
+
     def _debug_visualize_client(self) -> None:
         """Visualize the received VR inputs (head and hands)."""
         if not self._gui_drawer:
@@ -444,6 +459,9 @@ class RemoteClientState:
 
         server_only = Mask.NONE  # Render on the server only.
         avatar_color = mn.Color3(0.3, 1, 0.3)
+        color0 = avatar_color
+        color1 = mn.Color4(avatar_color.r, avatar_color.g, avatar_color.b, 0)
+        size = 0.5
 
         for user_index in self._users.indices(Mask.ALL):
             pos, rot_quat = self.get_head_pose(user_index)
@@ -452,11 +470,6 @@ class RemoteClientState:
                 self._gui_drawer.push_transform(
                     trans, destination_mask=server_only
                 )
-                color0 = avatar_color
-                color1 = mn.Color4(
-                    avatar_color.r, avatar_color.g, avatar_color.b, 0
-                )
-                size = 0.5
 
                 # Draw a frustum (forward is flipped (z+))
                 self._gui_drawer.draw_transformed_line(
@@ -516,7 +529,7 @@ class RemoteClientState:
     def _clean_disconnected_user_history(
         self,
         disconnection_record: DisconnectionRecord,
-        all_client_states: List[List[ClientState]],
+        all_client_states: list[list[ClientState]],
     ) -> None:
         """
         Clear history by connection id. Done after a client disconnect.
@@ -569,7 +582,7 @@ class RemoteClientState:
 
         self._debug_visualize_client()
 
-    def get_new_connection_records(self) -> List[ConnectionRecord]:
+    def get_new_connection_records(self) -> list[ConnectionRecord]:
         return self._new_connection_records
 
     def on_frame_end(self) -> None:
@@ -578,7 +591,7 @@ class RemoteClientState:
             self._xr_inputs[user_index].reset(reset_continuous_input=False)
             self._pressed_ui_buttons[user_index].clear()
             self._textboxes[user_index].clear()
-        self._new_connection_records = None
+        self._new_connection_records.clear()
 
     def clear_history(self, user_mask=Mask.ALL) -> None:
         for user_index in self._users.indices(user_mask):
