@@ -91,6 +91,31 @@ class MouseButton(IntEnum, metaclass=MouseButtonMetaEnum):
     # fmt: on
 
 
+class XRButtonMetaEnum(EnumMeta):
+    keycode_value_cache: Set[int] = None
+
+    # Override 'in' keyword to check whether the specified integer exists in 'MouseButton'.
+    def __contains__(cls, value) -> bool:
+        if XRButtonMetaEnum.keycode_value_cache == None:
+            XRButtonMetaEnum.keycode_value_cache = set(XRButton)
+        return value in XRButtonMetaEnum.keycode_value_cache
+
+
+class XRButton(IntEnum, metaclass=XRButtonMetaEnum):
+    """
+    XR buttons available to control habitat-hitl.
+    """
+
+    # fmt: off
+    START                   = 0x01
+    ONE                     = 0x02
+    TWO                     = 0x03
+    PRIMARY_HAND_TRIGGER    = 0x04
+    PRIMARY_INDEX_TRIGGER   = 0x05
+    PRIMARY_THUMBSTICK      = 0x06
+    # fmt: on
+
+
 # On headless systems, we may be unable to import magnum.platform.glfw.Application.
 try:
     from magnum.platform.glfw import Application

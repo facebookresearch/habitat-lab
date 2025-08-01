@@ -216,10 +216,14 @@ def decimate(
     )
 
     # And ... done!
-    converter.end_file()
-    importer.close()
+    close()
 
     return (total_source_tris, total_target_tris, total_simplified_tris)
+
+
+def close():
+    converter.end_file()
+    importer.close()
 
 
 def main():
