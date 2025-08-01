@@ -61,6 +61,7 @@ from scripts.frame_recorder import FrameEvent, FrameRecorder
 from scripts.ik import DifferentialInverseKinematics, to_ik_pose
 from scripts.utils import LERP, debug_draw_axis
 from scripts.xr_pose_adapter import XRPose, XRPoseAdapter
+from scripts.osmm import MCMC_Subprocess, get_osmm_arrows, get_movement_feasability_vector
 
 # path to this example app directory
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -444,6 +445,10 @@ class AppStateIsaacSimViewer(AppStateBase):
             else False
         )
         self.prev_replay_frame = 0
+
+        self._MCMC = MCMC_Subprocess()
+        self.xr_pose_right = None
+        self.xr_pose_left = None
 
     def load_semantic_scene(self, scene_descriptor: str) -> None:
         """
@@ -1104,45 +1109,50 @@ class AppStateIsaacSimViewer(AppStateBase):
                 (right, "right_arm_base", "right_arm_pivot", "right_arm"),
                 (left, "left_arm_base", "left_arm_pivot", "left_arm"),
             ]:
-                if xrcontroller.get_hand_trigger() > 0:
-                    arm_base_link = self.robot.link_subsets[
-                        base_link_key
-                    ].link_ixs[0]
-                    (
-                        arm_base_positions,
-                        arm_base_rotations,
-                    ) = self.robot.get_link_world_poses(
-                        indices=[arm_base_link]
+                
+                arm_base_link = self.robot.link_subsets[
+                    base_link_key
+                ].link_ixs[0]
+                (
+                    arm_base_positions,
+                    arm_base_rotations,
+                ) = self.robot.get_link_world_poses(
+                    indices=[arm_base_link]
+                )
+                arm_base_transform = mn.Matrix4.from_(
+                    arm_base_rotations[0].to_matrix(),
+                    arm_base_positions[0],
+                )
+                xr_pose_in_robot_frame = (
+                    self.xr_pose_adapter.xr_pose_transformed(
+                        global_xr_pose,
+                        arm_base_transform.inverted(),
                     )
-                    arm_base_transform = mn.Matrix4.from_(
-                        arm_base_rotations[0].to_matrix(),
-                        arm_base_positions[0],
-                    )
-                    xr_pose_in_robot_frame = (
-                        self.xr_pose_adapter.xr_pose_transformed(
-                            global_xr_pose,
-                            arm_base_transform.inverted(),
-                        )
-                    )
-                    arm_joint_subset = self.robot.pos_subsets[arm_subset_key]
+                )
+                arm_joint_subset = self.robot.pos_subsets[arm_subset_key]
 
-                    cur_arm_pose = arm_joint_subset.get_motor_pos()
+                cur_arm_pose = arm_joint_subset.get_motor_pos()
 
-                    # # TODO: a bit hacky way to get the correct hand here
+                # # TODO: a bit hacky way to get the correct hand here
+                xr_pose = (
+                    xr_pose_in_robot_frame.pos_left,
+                    xr_pose_in_robot_frame.rot_left,
+                )
+                ee_pos_global = global_xr_pose.pos_left
+                # ee_rot_global = global_xr_pose.rot_left
+                if "right" in base_link_key:
                     xr_pose = (
-                        xr_pose_in_robot_frame.pos_left,
-                        xr_pose_in_robot_frame.rot_left,
+                        xr_pose_in_robot_frame.pos_right,
+                        xr_pose_in_robot_frame.rot_right,
                     )
-                    ee_pos_global = global_xr_pose.pos_left
-                    # ee_rot_global = global_xr_pose.rot_left
-                    if "right" in base_link_key:
-                        xr_pose = (
-                            xr_pose_in_robot_frame.pos_right,
-                            xr_pose_in_robot_frame.rot_right,
-                        )
-                        ee_pos_global = global_xr_pose.pos_right
-                        # ee_rot_global = global_xr_pose.rot_right
+                    ee_pos_global = global_xr_pose.pos_right
+                    # ee_rot_global = global_xr_pose.rot_right
+                    self.xr_pose_right = mn.Matrix4(to_ik_pose(xr_pose).A)
 
+                else:
+                    self.xr_pose_left = mn.Matrix4(to_ik_pose(xr_pose).A)
+
+                if xrcontroller.get_hand_trigger() > 0:
                     # NOTE: this code block implements explicit interpolation limit for XR pose targets
                     # cur_ef_T = arm_base_transform.__matmul__(
                     #     self._ik.get_ee_T(q=cur_arm_pose)
@@ -1719,6 +1729,76 @@ class AppStateIsaacSimViewer(AppStateBase):
     #                 pos, pos + finger_normal * finger_offset_dist, color
     #             )
 
+    def draw_osmm_arrows(self):
+        """
+        Draw Operational Space Mobility Metric Arrows.
+        """
+        dblr = self._app_service.gui_drawer
+
+        rot_angle = mn.Quaternion.rotation( mn.Rad(np.pi/2 - self.robot.base_rot), mn.Vector3(0, -1, 0))
+        rot_angle_reverse = mn.Quaternion.rotation( mn.Rad(np.pi/2 - self.robot.base_rot), mn.Vector3(0, 1, 0))
+
+
+        for arm in [ "right_arm", "left_arm"]:
+
+            arm_base_link = self.robot.link_subsets[
+                            arm + "_base"
+                        ].link_ixs[0]
+            (
+                arm_base_positions,
+                arm_base_rotations,
+            ) = self.robot.get_link_world_poses(
+                indices=[arm_base_link]
+            )
+
+            arm_base_transform = mn.Matrix4.from_(
+                            arm_base_rotations[0].to_matrix(),
+                            arm_base_positions[0],
+                        )
+
+            
+            arm_joint_subset = self.robot.pos_subsets[arm]
+
+            cur_arm_pose = arm_joint_subset.get_motor_pos()
+
+            self._MCMC.set_seed(np.array(cur_arm_pose), arm=arm)
+
+
+            ee_transform = arm_base_transform.__matmul__(self._ik.get_ee_T(cur_arm_pose))
+
+            if arm == "left_arm":
+                basis_vectors = self._MCMC.left_basis_vectors
+            else:
+                basis_vectors = self._MCMC.right_basis_vectors
+            
+            
+            osmm_arrows = get_osmm_arrows(basis_vectors, rot_angle)
+
+            for vec, color in osmm_arrows:
+                dblr.draw_transformed_line(ee_transform.translation,
+                    ee_transform.translation + vec, color)
+            
+
+            if arm == "right_arm" and self.xr_pose_right is not None:
+                xr_translation_in_arm_frame = arm_base_transform.__matmul__(self.xr_pose_right).translation - ee_transform.translation
+                movement_feasability = get_movement_feasability_vector(xr_translation_in_arm_frame, basis_vectors, rot_angle_reverse)
+            elif arm == "left_arm" and self.xr_pose_left is not None:
+                xr_translation_in_arm_frame = arm_base_transform.__matmul__(self.xr_pose_left).translation - ee_transform.translation
+                movement_feasability = get_movement_feasability_vector(xr_translation_in_arm_frame, basis_vectors, rot_angle_reverse)
+            else:
+                movement_feasability = None
+
+
+            if movement_feasability is not None:
+
+                dblr.draw_transformed_line(ee_transform.translation,
+                        ee_transform.translation + movement_feasability[0], movement_feasability[1])
+                
+        
+        self._MCMC.update_basis()
+
+    
+    
     def sim_update(self, dt, post_sim_update_dict):
         self._sps_tracker.increment()
 
@@ -1771,6 +1851,7 @@ class AppStateIsaacSimViewer(AppStateBase):
                     self._cam_transform.translation,
                 )
         self.highlight_added_objects()
+        self.draw_osmm_arrows()
 
         if self._view_task_prompt:
             if self.episode is not None:
