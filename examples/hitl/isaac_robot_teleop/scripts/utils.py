@@ -106,8 +106,8 @@ def get_basis_vectors_lengths(positions):
     z_minus = []
 
     normalization_factors = [0,0,0,0,0,0] # [x+, x-, y+, y-, z+, z-]
-    norm_threshold = 0.06  # Threshold to ignore small vectors
-    position_threshold = 0.03
+    norm_threshold = 0.07  # Threshold to ignore small vectors
+    position_threshold = 0.05
 
     for position in positions:
         norm = np.linalg.norm(position)
@@ -146,19 +146,18 @@ def get_basis_vectors_lengths(positions):
             normalization_factors[2] = normalization_factors[2] + norm
 
 
-    if len(x_plus) == 0: x_plus = [0.0]
-    if len(y_plus) == 0: y_plus = [0.0]
-    if len(z_plus) == 0: z_plus = [0.0]
-    if len(x_minus) == 0: x_minus = [0.0]
-    if len(y_minus) == 0: y_minus = [0.0]
-    if len(z_minus) == 0: z_minus = [0.0]
+    if len(x_plus) <= 1: x_plus, normalization_factors[0] = [0.0], 1.0
+    if len(y_plus) <= 1: y_plus, normalization_factors[1] = [0.0], 1.0
+    if len(z_plus) <= 1: z_plus, normalization_factors[2] = [0.0], 1.0
+    if len(x_minus) <= 1: x_minus, normalization_factors[3] = [0.0], 1.0
+    if len(y_minus) <= 1: y_minus, normalization_factors[4] = [0.0], 1.0
+    if len(z_minus) <= 1: z_minus, normalization_factors[5] = [0.0], 1.0
 
-    
 
     summary = np.array([
-        np.sum(x_plus)/normalization_factors[0], np.sum(x_minus)/normalization_factors[1],
-        np.sum(y_plus)/normalization_factors[2], np.sum(y_minus)/normalization_factors[3],
-        np.sum(z_plus)/normalization_factors[4], np.sum(z_minus)/normalization_factors[5]
+        np.sum(x_plus)/normalization_factors[0], np.sum(y_plus)/normalization_factors[1],
+        np.sum(z_plus)/normalization_factors[2], np.sum(x_minus)/normalization_factors[3],
+        np.sum(y_minus)/normalization_factors[4], np.sum(z_minus)/normalization_factors[5]
     ])
 
     return summary
