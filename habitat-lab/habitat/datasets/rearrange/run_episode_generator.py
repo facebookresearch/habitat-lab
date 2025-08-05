@@ -95,8 +95,10 @@ class RearrangeEpisodeGeneratorConfig:
                 "excluded_object_substrings": [],
                 "included_receptacle_substrings": [""],
                 "excluded_receptacle_substrings": [],
-                # NOTE: for PARTNR compatability. If False, cull all "within" set receptacles for exposed surfaces only
+                # NOTE: for PARTNR compatibility. If False, cull all "within" set receptacles for exposed surfaces only
                 "include_within": True,
+                # NOTE: for Isaac compatibility. If True, cull all receptacles with negative scale.
+                "cull_negative_scale": True,
                 # NOTE: The "comment" key is intended for notes and descriptions and not consumed by the generator.
                 "comment": "The empty substrings act like wildcards, selecting all receptacles for all objects.",
             },
@@ -116,7 +118,7 @@ class RearrangeEpisodeGeneratorConfig:
     # TODO: This default is a bit ugly, but we must use ConfigNodes and define all options to directly nest dicts with yacs|yaml...
     scene_sampler: SceneSamplerConfig = SceneSamplerConfig()
 
-    # Specify name of receptacle and maximum # of placemenets in
+    # Specify name of receptacle and maximum # of placements in
     # receptacle. To allow only two objects in the chair, specify:
     # - ["receptacle_aabb_Chr1_Top1_frl_apartment_chair_01", 2]
     max_objects_per_receptacle: List[Any] = field(default_factory=list)
@@ -160,7 +162,7 @@ class RearrangeEpisodeGeneratorConfig:
     # {"name":str, "type:str", "params":{})
     # - uniform target sampler params:
     # {"object_samplers":[str], "receptacle_sets":[str], "num_samples":[min, max], "orientation_sampling":str)
-    # NOTE: random instances are chosen from the specified, previously excecuted object sampler up to the maximum number specified in params.
+    # NOTE: random instances are chosen from the specified, previously executed object sampler up to the maximum number specified in params.
     # NOTE: previous samplers referenced must have: combined minimum samples >= minimum requested targets
     # NOTE: "orientation_sampling" options: "none", "up", "all"
     # NOTE: (optional) "constrain_to_largest_nav_island" (default False): if True, valid placements must snap to the largest navmesh island

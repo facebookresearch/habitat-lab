@@ -7,6 +7,7 @@
         included_substrings:
           - "104348133_171513054_8"
 
+
         excluded_substrings:
           - "NONE"
           - "102344193_5" #small laundry room
@@ -65,22 +66,23 @@
 
 
     object_sets:
-      - name: "ycb"
+      - name: "soup_can"
         included_substrings:
-          - "002_master_chef_can"
-          - "003_cracker_box"
-          - "004_sugar_box"
           - "005_tomato_soup_can"
-          - "007_tuna_fish_can"
-          - "008_pudding_box"
-          - "010_potted_meat_can"
-          - "024_bowl"
+          #- "002_master_chef_can"
+          #- "003_cracker_box"
+          #- "004_sugar_box"
+          #- "007_tuna_fish_can"
+          #- "010_potted_meat_can"
+          #- "024_bowl"
+
         excluded_substrings: []
     receptacle_sets:
-      - name: "all_exposed"
+      - name: "countertop"
         include_within: False
+        cull_negative_scale: True
         included_object_substrings:
-          - ""
+          - "96160d32939e3ef146bb30d72d232fc6ac0d1493" #countertop AOs are both instances of this object
         excluded_object_substrings: []
         included_receptacle_substrings:
           - ""
@@ -92,21 +94,35 @@
         - hitl
 
     object_samplers:
-    - name: single_region
+    - name: countertop
       type: uniform
       params:
         object_sets:
-        - ycb
+        - soup_can
         receptacle_sets:
-        - all_exposed
+        - countertop
         #NOTE: specifies that all spawned objects should be in the same region
-        single_region: True
+        single_region: False
         num_samples:
-        - 6
-        - 10
+        - 1
+        - 1
         orientation_sampling: up
-        nav_to_min_distance: 0.8
+        nav_to_min_distance: 0.6
         constrain_to_largest_nav_island: False
+    
+    object_target_samplers:
+    - name: "countertop_target"
+      type: "uniform"
+      params:
+        object_samplers: ["countertop"]
+        receptacle_sets: ["countertop"]
+        num_samples: [1, 1]
+        orientation_sampling: "up"
+        nav_to_min_distance: 0.6
+
+    max_objects_per_receptacle:
+    - ["96160d32939e3ef146bb30d72d232fc6ac0d1493_:0001|Kitchen_Cabinet0016_countertop_receptacle_mesh.0000", 1]
+    - ["96160d32939e3ef146bb30d72d232fc6ac0d1493_:0000|Kitchen_Cabinet0016_countertop_receptacle_mesh.0000", 1]
 
     correct_unstable_results: True
 

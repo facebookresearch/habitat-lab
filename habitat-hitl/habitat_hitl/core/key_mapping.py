@@ -66,6 +66,11 @@ class KeyCode(IntEnum, metaclass=KeyCodeMetaEnum):
     ESC     = 0x29
     SPACE   = 0x2C
     TAB     = 0x2B
+    COMMA   = 0x36
+    PERIOD  = 0x37
+    SLASH   = 0x38
+    LEFT_BRACKET  = 0x2F
+    RIGHT_BRACKET  = 0x30
     # fmt: on
 
 
@@ -168,6 +173,11 @@ if magnum_enabled:
         Application.Key.ESC     : KeyCode.ESC   ,
         Application.Key.SPACE   : KeyCode.SPACE ,
         Application.Key.TAB     : KeyCode.TAB   ,
+        Application.Key.COMMA   : KeyCode.COMMA ,
+        Application.Key.PERIOD  : KeyCode.PERIOD,
+        Application.Key.SLASH  : KeyCode.SLASH,
+        Application.Key.LEFT_BRACKET  : KeyCode.LEFT_BRACKET,
+        Application.Key.RIGHT_BRACKET  : KeyCode.RIGHT_BRACKET,
         # fmt: on
     }
 

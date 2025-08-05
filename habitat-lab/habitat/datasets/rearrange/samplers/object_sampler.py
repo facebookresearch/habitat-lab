@@ -304,6 +304,17 @@ class ObjectSampler:
                             logger.info(
                                 f"Culled by tilt: '{receptacle.unique_name}', {gravity_alignment}"
                             )
+                    if (
+                        receptacle_set.cull_negative_scale
+                        and receptacle.parent_object_handle is not None
+                        and not receptacle.is_parent_object_articulated
+                    ):
+                        # if the receptacle is a rigid object, check for negative scale
+                        rec_parent = sutils.get_obj_from_handle(
+                            sim, receptacle.parent_object_handle
+                        )
+                        if min(rec_parent.scale) < 0:
+                            culled = True
                     if not culled:
                         # found a valid receptacle
                         self.receptacle_candidates.append(receptacle)
@@ -465,7 +476,7 @@ class ObjectSampler:
         Sample a single object placement by first sampling a Receptacle candidate, then an object, then attempting to place that object on the Receptacle.
 
         :param sim: The active Simulator instance.
-        :param recep_tracker: The pre-initialized ReceptacleTracker instace containg active ReceptacleSets.
+        :param recep_tracker: The pre-initialized ReceptacleTracker instance containing active ReceptacleSets.
         :param snap_down: Whether or not to use the snap_down utility to place the objects.
         :param dbv: Optionally provide a DebugVisualizer (dbv)
         :param fixed_target_receptacle: Optionally provide a pre-selected Receptacle instead of sampling. For example, when a target object's receptacle is selected in advance.

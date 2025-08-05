@@ -45,12 +45,17 @@ def to_ik_pose(
 
 
 class DifferentialInverseKinematics:
-    def __init__(self, ee_cartesian_velocity_limit=0.65, ee_orientation_velocity_limit=1.0, lower_alpha_bound=-0.25):
+    def __init__(
+        self,
+        ee_cartesian_velocity_limit=0.65,
+        ee_orientation_velocity_limit=1.0,
+        lower_alpha_bound=-0.25,
+    ):
         self.robot = rtb.models.Panda()
         self.ee_cartesian_velocity_limit = ee_cartesian_velocity_limit
         self.ee_orientation_velocity_limit = ee_orientation_velocity_limit
         self.lower_alpha_bound = lower_alpha_bound
-        
+
         print(self.lower_alpha_bound)
         print(self.ee_cartesian_velocity_limit)
         print(self.ee_orientation_velocity_limit)
@@ -66,7 +71,10 @@ class DifferentialInverseKinematics:
         if q is not None:
             self.robot.q = q
         return mn.Matrix4(
-            (self.robot.fkine(self.robot.q, end=self.robot.links[8])*SE3.Rz(1.047197333)).A
+            (
+                self.robot.fkine(self.robot.q, end=self.robot.links[8])
+                * SE3.Rz(1.047197333)
+            ).A
         )
 
     def inverse_kinematics(self, pose, q):
@@ -81,11 +89,12 @@ class DifferentialInverseKinematics:
             self.robot.fkine(self.robot.q, end=self.robot.links[8]), pose, 5
         )
 
-       
-
         translational_velocity = v[:3]
-        if np.linalg.norm(translational_velocity) > self.ee_cartesian_velocity_limit:
-            scale_value = np.linalg.norm(translational_velocity) 
+        if (
+            np.linalg.norm(translational_velocity)
+            > self.ee_cartesian_velocity_limit
+        ):
+            scale_value = np.linalg.norm(translational_velocity)
             translational_velocity = (
                 translational_velocity
                 / scale_value
@@ -93,9 +102,10 @@ class DifferentialInverseKinematics:
             )
             v[:3] = translational_velocity
 
-        
         rotational_velocity = v[3:]
-        if np.any(np.abs(rotational_velocity) > self.ee_orientation_velocity_limit):
+        if np.any(
+            np.abs(rotational_velocity) > self.ee_orientation_velocity_limit
+        ):
             rotational_velocity = (
                 rotational_velocity
                 / max(np.abs(rotational_velocity))
@@ -103,11 +113,13 @@ class DifferentialInverseKinematics:
             )
             v[3:] = rotational_velocity
 
-        
-        return self._solve_mathematical_program(jacobian, v, 0.11)
-
+        return self._solve_mathematical_program(jacobian, v, 0.01)
 
     def _solve_mathematical_program(self, jacobian, v, lower_alpha_bound):
+        """
+        Recursive solver attempts to add slack to alpha at discrete steps of 0.05 units until hitting max.
+        Returns the first valid solution or fails if it hits the lower bound.
+        """
         # Create a MathematicalProgram
         prog = MathematicalProgram()
 
@@ -148,7 +160,7 @@ class DifferentialInverseKinematics:
         alpha = prog.NewContinuousVariables(6, "alpha")
         prog.AddCost(-sum(alpha))
         for i in range(6):
-            if i< 3:
+            if i < 3:
                 prog.AddLinearConstraint(alpha[i] >= 0.01)
             else:
                 prog.AddLinearConstraint(alpha[i] >= lower_alpha_bound)

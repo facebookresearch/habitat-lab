@@ -161,52 +161,60 @@ def habitat_to_usd_rotation(rotation_wxyz: List[float]) -> List[float]:
 
 def set_pose(
     rigid_prim: "RigidPrim",
-    position: List[float],
-    rotation_quat_wxyz: List[float],
+    position_hab: List[float],
+    rotation_quat_wxyz_hab: List[float],
 ):
-    rotation_usd = habitat_to_usd_rotation(rotation_quat_wxyz)
-    pos_usd = habitat_to_usd_position(position)
+    rotation_usd = habitat_to_usd_rotation(rotation_quat_wxyz_hab)
+    pos_usd = habitat_to_usd_position(position_hab)
     rigid_prim.set_world_pose(pos_usd, rotation_usd)
 
 
-def set_translation(prim, translation: List[float]):
-    """Note that accessing a rigid object through USD prim API is not preferred. See RigidPrim."""
-
-    from pxr import Gf, UsdGeom
-
-    xformable = UsdGeom.Xformable(prim)
-
-    translate_op = next(
-        (
-            op
-            for op in xformable.GetOrderedXformOps()
-            if op.GetName() == "xformOp:translate"
-        ),
-        None,
-    )
-    if translate_op is None:
-        translate_op = xformable.AddTranslateOp()
-    translate_op.Set(Gf.Vec3f(*translation))
+def set_translation(rigid_prim: "RigidPrim", translation_usd: List[float]):
+    rigid_prim.set_world_pose(translation_usd, None)
 
 
-def set_rotation(prim, rotation_quat_wxyz: List[float]):
-    from pxr import Gf, UsdGeom
+def set_rotation(rigid_prim: "RigidPrim", rotation_quat_wxyz_usd: List[float]):
+    rigid_prim.set_world_pose(rotation=rotation_quat_wxyz_usd)
 
-    xformable = UsdGeom.Xformable(prim)
 
-    orient_op = next(
-        (
-            op
-            for op in xformable.GetOrderedXformOps()
-            if op.GetName() == "xformOp:orient"
-        ),
-        None,
-    )
-    if orient_op is None:
-        orient_op = xformable.AddOrientOp(
-            precision=UsdGeom.XformOp.PrecisionDouble
-        )
-    orient_op.Set(Gf.Quatd(*rotation_quat_wxyz))
+# def set_translation(prim, translation: List[float]):
+#     """Note that accessing a rigid object through USD prim API is not preferred. See RigidPrim."""
+
+#     from pxr import Gf, UsdGeom
+
+#     xformable = UsdGeom.Xformable(prim)
+
+#     translate_op = next(
+#         (
+#             op
+#             for op in xformable.GetOrderedXformOps()
+#             if op.GetName() == "xformOp:translate"
+#         ),
+#         None,
+#     )
+#     if translate_op is None:
+#         translate_op = xformable.AddTranslateOp()
+#     translate_op.Set(Gf.Vec3f(*translation))
+
+
+# def set_rotation(prim, rotation_quat_wxyz: List[float]):
+#     from pxr import Gf, UsdGeom
+
+#     xformable = UsdGeom.Xformable(prim)
+
+#     orient_op = next(
+#         (
+#             op
+#             for op in xformable.GetOrderedXformOps()
+#             if op.GetName() == "xformOp:orient"
+#         ),
+#         None,
+#     )
+#     if orient_op is None:
+#         orient_op = xformable.AddOrientOp(
+#             precision=UsdGeom.XformOp.PrecisionDouble
+#         )
+#     orient_op.Set(Gf.Quatd(*rotation_quat_wxyz))
 
 
 def get_pos(isaac_prim: "RigidPrim") -> mn.Vector3:
@@ -235,7 +243,7 @@ def get_forward(isaac_prim: "RigidPrim") -> mn.Vector3:
 def get_transformation(isaac_prim: "RigidPrim") -> mn.Matrix4:
     pos_usd, rot_usd = isaac_prim.get_world_pose()
 
-    pos_habitat = mn.Vector3(usd_to_habitat_position(pos_usd))
+    pos_habitat = mn.Vector3(*usd_to_habitat_position(pos_usd))
     rot_habitat = rotation_wxyz_to_magnum_quat(
         usd_to_habitat_rotation(rot_usd)
     )
@@ -245,7 +253,9 @@ def get_transformation(isaac_prim: "RigidPrim") -> mn.Matrix4:
 
 def get_com_world(rigid_prim: "RigidPrim") -> mn.Vector3:
     com_local_usd_array, _ = rigid_prim.get_com()
-    com_local_habitat = mn.Vector3(com_local_usd_array[0])
+    com_local_habitat = mn.Vector3(
+        *usd_to_habitat_position(com_local_usd_array[0])
+    )
     # perf todo: directly use quat and position instead of converting to Matrix4
     transformation = get_transformation(rigid_prim)
     com_world = transformation.transform_point(com_local_habitat)

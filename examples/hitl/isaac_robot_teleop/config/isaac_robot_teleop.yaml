@@ -46,7 +46,12 @@ isaac_robot_teleop:
   #relative paths to the directories containing navmeshes and usd scene files
   usd_scene_path: "../../../data/usd/scenes/"
   navmesh_path: "data/hssd-hab/navmeshes/"
-  scene_name: "108736635_177263256"
+  #scene_name: "103997970_171031287_0" #round table
+  #scene_name: "104348133_171513054_9" #lone counter with stools
+  #scene_name: "104862660_172226844_9" #kitchen with table
+  #scene_name: "106878945_174887058_5" #living room with kitchen counter included
+  #scene_name: "102344193_7" #kitchen with counter (open windows)
+  scene_name: "104348133_171513054_8" #kitchen counter with two halves, 35 inch surface height
 
   #Fremont option
   #scene_name: "fremont_dynamic_alternate_handles"
@@ -54,8 +59,8 @@ isaac_robot_teleop:
 
   # OR initialize by episode. These will take precedent when provided
   #episode_dataset: "data/datasets/hitl_teleop_episodes.json.gz"
-  episode_dataset: "data/datasets/hitl_teleop_episodes_single_region_scenes.json.gz"
-  episode_index: 13
+  episode_dataset: "data/datasets/hitl_teleop_episodes.json.gz"
+  episode_index: 0
 
   #physx configuration settings
   #applied to all rigid objects added to the scene (e.g. from Episodes)

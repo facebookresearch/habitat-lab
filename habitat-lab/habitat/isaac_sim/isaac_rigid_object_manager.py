@@ -42,8 +42,6 @@ class IsaacRigidObjectWrapper:
             isaac_prim_utils.magnum_quat_to_list_wxyz(rotation_quat),
         )
 
-        # todo: consider self._rigid_prim.set_world_pose
-
     @property
     def translation(self) -> mn.Vector3:
         pos_usd, _ = self._rigid_prim.get_world_pose()
@@ -55,7 +53,7 @@ class IsaacRigidObjectWrapper:
         translation_usd = isaac_prim_utils.habitat_to_usd_position(
             [translation.x, translation.y, translation.z]
         )
-        isaac_prim_utils.set_translation(self._prim, translation_usd)
+        self._rigid_prim.set_world_pose(translation_usd, None)
 
     @property
     def rotation(self) -> mn.Quaternion:
@@ -68,7 +66,7 @@ class IsaacRigidObjectWrapper:
         rotation_usd = isaac_prim_utils.habitat_to_usd_rotation(
             isaac_prim_utils.magnum_quat_to_list_wxyz(rotation)
         )
-        isaac_prim_utils.set_rotation(self._prim, rotation_usd)
+        self._rigid_prim.set_world_pose(None, rotation_usd)
 
     # todo: implement angular_velocity and linear_velocity
     @property
@@ -136,6 +134,25 @@ class IsaacRigidObjectWrapper:
         """
         self._rigid_prim.set_angular_velocity(np.array([0.0, 0.0, 0.0]))
         self._rigid_prim.set_linear_velocity(np.array([0.0, 0.0, 0.0]))
+
+    @property
+    def com(self) -> mn.Vector3:
+        """
+        Returns the global center of mass of the object in Habitat coordinate system.
+        """
+        com_local_usd_array, _ = self._rigid_prim.get_com()
+        # NOTE: I'm not sure why this local com is already in Habitat coordinates.
+        com_local_habitat = mn.Vector3(com_local_usd_array[0])
+        com_world = self.transformation.transform_point(com_local_habitat)
+        return com_world
+
+    @com.setter
+    def com(self, pos: mn.Vector3) -> None:
+        """
+        Sets the translation of the object such that the object's global center of mass is coincident with the specified position in Habitat coordinate system.
+        """
+        global_offset = self.translation - self.com
+        self.translation = pos + global_offset
 
 
 class IsaacRigidObjectManager:

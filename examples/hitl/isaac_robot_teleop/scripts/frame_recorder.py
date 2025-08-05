@@ -31,6 +31,10 @@ class FrameEvent(Enum):
     TELEPORT = 3
     # this event indicates a discontinuity in the XR state due to user re-syncing their current state to the robot cursor origin
     SYNC_XR_OFFSET = 4
+    # this event indicates that the robot's base has been control locked and should remain static
+    LOCK_BASE = 4
+    # this event indicates that the robot's base has been unlocked and the robot can move freely
+    UNLOCK_BASE = 5
 
     def __str__(self):
         return self.name.lower()

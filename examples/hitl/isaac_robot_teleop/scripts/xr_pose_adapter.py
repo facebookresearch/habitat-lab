@@ -138,11 +138,95 @@ class XRPose:
         }
         return json_dict
 
+    def draw_timer_circle(
+        self,
+        dblr: DebugLineRender,
+        task_time: float,
+        max_time: float = 20.0,
+        radius: float = 0.2,
+        left_hand: bool = True,
+    ):
+        """
+        Draws a circle with a moving fill line on a hand to indicate the task timer in XR view.
+        NOTE: Assumes this is a global XRPose already.
+        """
+
+        # calculate the angle of the fill line
+        fill_angle = (task_time / max_time) * 2 * mn.math.pi
+
+        hand_pos = self.pos_left if left_hand else self.pos_right
+        hand_rot = self.rot_left if left_hand else self.rot_right
+        circle_normal = hand_rot.transform_vector(mn.Vector3(0.0, 1.0, 0.0))
+
+        # Compute heat map color: green (0) -> yellow (0.5) -> red (1)
+        t = min(max(task_time / max_time, 0.0), 1.0)
+        if t < 0.5:
+            # Green to yellow
+            r = 2 * t
+            g = 1.0
+        else:
+            # Yellow to red
+            r = 1.0
+            g = 1.0 - 2 * (t - 0.5)
+        b = 0.0
+        circle_color = mn.Color4(r, g, b, 1.0)
+
+        # draw the circle
+        dblr.draw_circle(
+            hand_pos,
+            radius,
+            circle_color,
+            32,
+            normal=circle_normal,
+        )
+
+        if task_time > max_time:
+            # draw an X for time exceeded
+            dblr.draw_transformed_line(
+                hand_pos
+                + hand_rot.transform_vector(mn.Vector3(radius, 0.0, 0.0)),
+                hand_pos
+                + hand_rot.transform_vector(mn.Vector3(-radius, 0.0, 0.0)),
+                circle_color,
+                circle_color,
+            )
+            dblr.draw_transformed_line(
+                hand_pos
+                + hand_rot.transform_vector(mn.Vector3(0.0, 0.0, radius)),
+                hand_pos
+                + hand_rot.transform_vector(mn.Vector3(0.0, 0.0, -radius)),
+                circle_color,
+                circle_color,
+            )
+        else:
+            # draw the fill line
+            dblr.draw_transformed_line(
+                hand_pos,
+                hand_pos
+                + hand_rot.transform_vector(
+                    mn.Vector3(
+                        radius * mn.math.cos(mn.Rad(fill_angle)),
+                        0.0,
+                        radius * mn.math.sin(mn.Rad(fill_angle)),
+                    )
+                ),
+                circle_color,
+                circle_color,
+            )
+            dblr.draw_transformed_line(
+                hand_pos,
+                hand_pos + hand_rot.transform_vector(mn.Vector3(radius, 0, 0)),
+                circle_color,
+                circle_color,
+            )
+
     def draw_pose(
         self,
         dblr: DebugLineRender,
         transform: mn.Matrix4 = None,
         head: bool = True,
+        left_hand: bool = True,
+        right_hand: bool = True,
     ):
         """
         Draws the XRPose as axis frames for the head and hands.
@@ -157,15 +241,17 @@ class XRPose:
             )
             debug_draw_axis(dblr, head_transform, scale=0.5)
 
-        left_control_t = mn.Matrix4.from_(
-            (self.rot_left).to_matrix(), self.pos_left
-        )
-        debug_draw_axis(dblr, left_control_t, scale=0.25)
+        if left_hand:
+            left_control_t = mn.Matrix4.from_(
+                (self.rot_left).to_matrix(), self.pos_left
+            )
+            debug_draw_axis(dblr, left_control_t, scale=0.25)
 
-        right_control_t = mn.Matrix4.from_(
-            (self.rot_right).to_matrix(), self.pos_right
-        )
-        debug_draw_axis(dblr, right_control_t, scale=0.25)
+        if right_hand:
+            right_control_t = mn.Matrix4.from_(
+                (self.rot_right).to_matrix(), self.pos_right
+            )
+            debug_draw_axis(dblr, right_control_t, scale=0.25)
 
         if transform is not None:
             dblr.pop_transform()

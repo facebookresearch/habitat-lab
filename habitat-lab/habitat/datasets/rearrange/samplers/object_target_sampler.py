@@ -66,7 +66,7 @@ class ObjectTargetSampler(ObjectSampler):
         new_target_objects = {}
 
         logger.info(
-            f"    Trying to sample {self.target_objects_number} targets from range {self.num_objects}"
+            f"    Trying to sample {self.target_objects_number} targets from range {self.num_objects} w/ snapdown = {snap_down}"
         )
 
         if len(target_receptacles) != len(goal_receptacles):

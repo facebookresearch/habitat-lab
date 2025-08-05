@@ -605,39 +605,18 @@ class RobotAppWrapper:
         if not self.robot_prim.IsValid():
             raise ValueError(f"Prim at {self._robot_prim_path} is not valid.")
 
-        # create joint motors
-        # Traverse only the robot's prim hierarchy
+        # create joint motors from configured settings
+        self.motor_params = {
+            "max_joint_velocity": self.robot_cfg.max_joint_velocity,
+            "angular_drive_stiffness": self.robot_cfg.angular_drive_stiffness,
+            "angular_drive_damping": self.robot_cfg.angular_drive_damping,
+            "angular_drive_max_force": self.robot_cfg.angular_drive_max_force,
+            "linear_drive_stiffness": self.robot_cfg.linear_drive_stiffness,
+        }
+        self.set_motor_params(self.motor_params)
+
+        # create rigid object API
         for prim in Usd.PrimRange(self.robot_prim):
-            # joint vel max
-            if prim.HasAPI(PhysxSchema.PhysxJointAPI):
-                joint_api = PhysxSchema.PhysxJointAPI(prim)
-                joint_api.GetMaxJointVelocityAttr().Set(
-                    self.robot_cfg.max_joint_velocity
-                )
-
-            # drivers
-            if prim.HasAPI(UsdPhysics.DriveAPI):
-                # Access the existing DriveAPI
-                drive_api = UsdPhysics.DriveAPI(prim, "angular")
-                if drive_api:
-                    # Modify drive parameters
-                    drive_api.GetStiffnessAttr().Set(
-                        self.robot_cfg.angular_drive_stiffness
-                    )  # Position gain
-                    drive_api.GetDampingAttr().Set(
-                        self.robot_cfg.angular_drive_damping
-                    )  # Velocity gain
-                    drive_api.GetMaxForceAttr().Set(
-                        self.robot_cfg.angular_drive_max_force
-                    )  # Maximum force/torque
-
-                drive_api = UsdPhysics.DriveAPI(prim, "linear")
-                if drive_api:
-                    drive_api = UsdPhysics.DriveAPI.Get(prim, "linear")
-                    drive_api.GetStiffnessAttr().Set(
-                        self.robot_cfg.linear_drive_stiffness
-                    )  # Example for linear stiffness
-
             if prim.HasAPI(UsdPhysics.RigidBodyAPI):
                 # UsdPhysics.RigidBodyAPI doesn't support damping but PhysxRigidBodyAPI does
                 if prim.HasAPI(PhysxSchema.PhysxRigidBodyAPI):
@@ -660,6 +639,9 @@ class RobotAppWrapper:
         self._robot_controller = self._robot.get_articulation_controller()
         self.approximate_arm_length = self.robot_cfg.approximate_arm_length
 
+        self.right_arm_locked = self.robot_cfg.ik.right_arm_locked
+        self.left_arm_locked = self.robot_cfg.ik.left_arm_locked
+
         # control waypoints for the platform
         # NOTE: should be set from navmesh
         self.target_base_height = 0.1
@@ -670,11 +652,73 @@ class RobotAppWrapper:
         self.base_vel_controller = RobotBaseVelController(self)
         # if true, use the velocity based base constraint control, otherwise fully dynamic
         self.do_vel_fix_base = True
+        self._do_kin_fixed_base = False
+        self.kin_fixed_base_state = None
         # datastructure to aggregate the results of contact callbacks in a queryable format
         self.contact_state: Dict[Any, Any] = {}
         self._in_contact = False
         # NOTE: filtering contacts is relatively expensive so we'll only do so when necessary
         self._contact_sensors_active = True
+
+    @property
+    def do_kin_fixed_base(self) -> bool:
+        return self._do_kin_fixed_base
+
+    @do_kin_fixed_base.setter
+    def do_kin_fixed_base(self, value: bool) -> None:
+        """
+        To set kinematic fixe base we record the current state to maintain.
+        """
+        if value:
+            # self.kin_fixed_base_state = self.get_root_pose()
+            usd_world_pose = self._robot.get_world_pose()
+            _, rot = self.get_root_pose()
+            glob_forward = rot.transform_vector(mn.Vector3(1.0, 0, 0))
+            self.kin_fixed_base_state = (
+                usd_world_pose[0],
+                usd_world_pose[1],
+                glob_forward,
+            )
+            # self.do_vel_fix_base = False
+        # else:
+        # self.do_vel_fix_base = True
+        self._do_kin_fixed_base = value
+
+    def set_motor_params(self, motor_params: Dict[str, Any]) -> None:
+        """
+        Set the motor parameters for the robot using provided settings
+        """
+
+        for prim in Usd.PrimRange(self.robot_prim):
+            # joint vel max
+            if prim.HasAPI(PhysxSchema.PhysxJointAPI):
+                joint_api = PhysxSchema.PhysxJointAPI(prim)
+                joint_api.GetMaxJointVelocityAttr().Set(
+                    motor_params["max_joint_velocity"]
+                )
+
+            # drivers
+            if prim.HasAPI(UsdPhysics.DriveAPI):
+                # Access the existing DriveAPI
+                drive_api = UsdPhysics.DriveAPI(prim, "angular")
+                if drive_api:
+                    # Modify drive parameters
+                    drive_api.GetStiffnessAttr().Set(
+                        motor_params["angular_drive_stiffness"]
+                    )  # Position gain
+                    drive_api.GetDampingAttr().Set(
+                        motor_params["angular_drive_damping"]
+                    )  # Velocity gain
+                    drive_api.GetMaxForceAttr().Set(
+                        motor_params["angular_drive_max_force"]
+                    )  # Maximum force/torque
+
+                drive_api = UsdPhysics.DriveAPI(prim, "linear")
+                if drive_api:
+                    drive_api = UsdPhysics.DriveAPI.Get(prim, "linear")
+                    drive_api.GetStiffnessAttr().Set(
+                        motor_params["linear_drive_stiffness"]
+                    )  # Example for linear stiffness
 
     def get_global_view_offset(self) -> mn.Vector3:
         """
@@ -1018,6 +1062,8 @@ class RobotAppWrapper:
         self.base_vel_controller.apply(step_size)
 
         # NOTE: this is a velocity hack to constrain the base position. It results in non-physical behavior, but accurate base positioning
+        # if self.do_kin_fixed_base:
+        #    self.set_root_pose(self.kin_fixed_base_state[0], self.kin_fixed_base_state[1])
         if self.do_vel_fix_base:
             self.fix_base(step_size, base_position, base_orientation)
 
@@ -1058,16 +1104,19 @@ class RobotAppWrapper:
         """
         Sets the robot's base position and orientation globally.
         """
+        usd_rot = None
+        usd_pos = None
         if rot is not None and convention == "hab":
-            rot = isaac_prim_utils.habitat_to_usd_rotation(
+            usd_rot = isaac_prim_utils.habitat_to_usd_rotation(
                 isaac_prim_utils.magnum_quat_to_list_wxyz(rot)
             )
         if pos is not None and convention == "hab":
-            pos[1] += self.ground_to_base_offset
-            self.target_base_height = pos[1]
-            pos = isaac_prim_utils.habitat_to_usd_position(pos)
+            usd_pos = mn.Vector3(pos)
+            usd_pos[1] += self.ground_to_base_offset
+            self.target_base_height = usd_pos[1]
+            usd_pos = isaac_prim_utils.habitat_to_usd_position(usd_pos)
 
-        self._robot.set_world_pose(pos, rot)
+        self._robot.set_world_pose(usd_pos, usd_rot)
         self.base_vel_controller.reset()
         self._robot.set_linear_velocity(np.zeros(3))
         self._robot.set_angular_velocity(np.zeros(3))
@@ -1082,6 +1131,7 @@ class RobotAppWrapper:
         pos_usd, rot_usd = self._robot.get_world_pose()
         if convention == "hab":
             pos = mn.Vector3(isaac_prim_utils.usd_to_habitat_position(pos_usd))
+            pos[1] -= self.ground_to_base_offset
             rot = isaac_prim_utils.rotation_wxyz_to_magnum_quat(
                 isaac_prim_utils.usd_to_habitat_rotation(rot_usd)
             )
@@ -1172,6 +1222,9 @@ class RobotAppWrapper:
         self.fix_base_height_via_linear_vel_z(
             step_size, base_position, base_orientation
         )
+        # if self.do_kin_fixed_base:
+        #    self._robot.set_world_pose(None, self.kin_fixed_base_state[1])
+        # else:
         self.fix_base_orientation_via_angular_vel(
             step_size, base_position, base_orientation
         )
@@ -1249,15 +1302,39 @@ class RobotAppWrapper:
         # don't change rotation about z
         desired_angular_velocity[2] = curr_angular_velocity[2]
 
+        if self.do_kin_fixed_base:
+            # also control z angle to keep orientation
+            tar_forward = self.kin_fixed_base_state[2]
+            angle_to = self.angle_to(tar_forward)
+            desired_angular_velocity[2] = max(
+                -max_angular_velocity,
+                min(max_angular_velocity, angle_to / step_size),
+            )
+
         self._robot.set_angular_velocity(desired_angular_velocity)
 
     def fix_base_height_via_linear_vel_z(
         self, step_size, base_position, base_orientation
     ):
+        max_linear_vel = 3.0
+        if self.do_kin_fixed_base:
+            vel = [0, 0, 0]
+            for i in range(3):
+                val_cur = base_position[i]
+                val_tar = self.kin_fixed_base_state[0][i]
+                pos_error = val_tar - val_cur
+                desired_linear_vel = pos_error / step_size
+                desired_linear_vel = max(
+                    -max_linear_vel, min(max_linear_vel, desired_linear_vel)
+                )
+                vel[i] = desired_linear_vel
+
+            self._robot.set_linear_velocity(vel)
+            return
+
         curr_linear_velocity = self._robot.get_linear_velocity()
 
         z_target = self.target_base_height
-        max_linear_vel = 3.0
 
         # Extract the vertical position and velocity
         z_current = base_position[2]
@@ -1287,6 +1364,15 @@ class RobotAppWrapper:
         root_pos, root_rot = self.get_root_pose()
         # tform = mn.Matrix4.from_(root_rot.to_matrix(), root_pos)
         # debug_draw_axis(dblr, tform)
+
+        # draw a line in the forward direction of the robot
+        forward_dir = root_rot.transform_vector(mn.Vector3(1.0, 0, 0))
+        dblr.draw_transformed_line(
+            root_pos,
+            root_pos + forward_dir,
+            from_color=mn.Color4(0.0, 1.0, 0.0, 1.0),
+            to_color=mn.Color4(0.0, 1.0, 0.0, 1.0),
+        )
 
         # draw the navmesh circle
         dblr.draw_circle(

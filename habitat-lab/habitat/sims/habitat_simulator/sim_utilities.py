@@ -12,6 +12,7 @@ import numpy as np
 from scipy import spatial
 
 import habitat_sim
+from habitat.core.logging import logger
 from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
 
 if TYPE_CHECKING:
@@ -220,6 +221,7 @@ def bb_ray_prescreen(
     lowest_key_point_height = None
     highest_support_impact: Optional[mn.Vector3] = None
     highest_support_impact_height = None
+    lowest_support_impact_height = None
     highest_support_impact_id = None
     raycast_results = []
     gravity_dir = sim.get_gravity().normalized()
@@ -274,7 +276,13 @@ def bb_ray_prescreen(
                         highest_support_impact = hit_point
                         highest_support_impact_height = support_impact_height
                         highest_support_impact_id = hit.object_id
+                    if (
+                        lowest_support_impact_height is None
+                        or lowest_support_impact_height > support_impact_height
+                    ):
+                        lowest_support_impact_height = support_impact_height
 
+                    # print(f"p {ix} impact at height {support_impact_height:.3f} m")
                 # terminates at the first non-self ray hit
                 break
 
@@ -298,6 +306,14 @@ def bb_ray_prescreen(
         else highest_support_impact
         + gravity_dir * (base_rel_height - margin_offset)
     )
+
+    # relative_impact_height = highest_support_impact_height - lowest_support_impact_height
+    # print(f"relative_impact_height = {relative_impact_height:.3f} m")
+    # if relative_impact_height > 0.1:
+    #     logger.info(
+    #         f"Object {obj.handle} has a large relative impact height of {relative_impact_height:.3f} m. This may indicate an invalid placement."
+    #     )
+    #     surface_snap_point = None
 
     # return list of relative base height, object position for surface snapped point, and ray results details
     return {
@@ -346,7 +362,7 @@ def snap_down(
         ignore_obj_ids = []
 
     bb_ray_prescreen_results = bb_ray_prescreen(
-        sim, obj, support_obj_ids, ignore_obj_ids, check_all_corners=False
+        sim, obj, support_obj_ids, ignore_obj_ids, check_all_corners=True
     )
 
     if bb_ray_prescreen_results["surface_snap_point"] is None:

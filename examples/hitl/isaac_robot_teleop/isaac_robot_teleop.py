@@ -8,8 +8,7 @@ import os
 import random
 import sys
 import time
-from collections import defaultdict
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 import torch  # noqa: F401
 
@@ -167,6 +166,79 @@ def create_stage_mesh_contact_sensors(root_prim):
             # _contactReportAPI.CreateThresholdAttr().Set(0)
 
 
+def get_articulations_states_cache(root_prim) -> Dict[str, List[float]]:
+    """
+    Recursively searches the prim hierarchy to find articulations, caches their joint positions vectors and returns the cache as a dictionary keyed by prim path.
+    """
+    from omni.isaac.core.articulations import Articulation
+    from pxr import Usd, UsdPhysics
+
+    articulation_states = {}
+    prim_range = Usd.PrimRange(root_prim)
+    it = iter(prim_range)
+    for prim in it:
+        if prim.HasAPI(UsdPhysics.ArticulationRootAPI):
+            prim_path = prim.GetPath().pathString
+            articulation = Articulation(prim_path=prim_path)
+            joint_positions = articulation.get_joint_positions()
+            articulation_states[prim_path] = joint_positions
+    return articulation_states
+
+
+def set_articulation_states_from_cache(
+    articulation_state_cache: Dict[str, List[float]]
+) -> None:
+    """
+    Given a map from prim paths to joint states, construct the Articulation API and set the cached states.
+    """
+    from omni.isaac.core.articulations import Articulation
+
+    for prim_path, joint_states in articulation_state_cache.items():
+        articulation = Articulation(prim_path=prim_path)
+        articulation.set_joint_positions(joint_states)
+        articulation.set_joint_velocities(np.zeros(len(joint_states)))
+
+
+def validate_tilt_angle(
+    obj: "IsaacRigidObjectWrapper", max_tilt_angle: float = 0.2
+) -> bool:
+    """
+    Validates that the object is not tilted too much.
+    :param max_tilt_angle: Maximum allowed tilt angle in radians. Computed with dot product of global object "up" (+Z local) and global up (+Y).
+    """
+    if max_tilt_angle > 0.0:
+        # compute the angle between the object up and the global up
+        object_up = obj.transformation.transform_vector(mn.Vector3(0, 0, 1))
+        global_up = mn.Vector3(0, 1, 0)
+        tilt = mn.math.angle(object_up.normalized(), global_up)
+        if float(tilt) > max_tilt_angle:
+            return False
+    return True
+
+
+def validate_target_placement_position(
+    obj: "IsaacRigidObjectWrapper",
+    target_pos: mn.Vector3,
+    max_distance: float = 0.05,
+    horizontal_only: bool = True,
+    max_tilt_angle: float = 0.1,
+) -> bool:
+    """
+    Validates that the placement position of the object satisfies the target requirements.
+    Checks the distance from the object CoM to the target position.
+    Optionally restrict the distance check to horizontal plane only.
+    Returns binary success of the placement.
+    """
+    diff = obj.com - target_pos
+    if horizontal_only:
+        diff.y = 0.0
+    distance = diff.length()
+    if distance > max_distance:
+        return False
+
+    return True
+
+
 class AppStateIsaacSimViewer(AppStateBase):
     """ """
 
@@ -215,6 +287,8 @@ class AppStateIsaacSimViewer(AppStateBase):
         self.dof_editor: "DoFEditor" = None
         # a flag to indicate the robot base is moving in order to prevent the arm from lag skipping on stale XR frames.
         self._moving = False
+        # a flag to lock the robot's base to prevent motion during static tasks
+        self.lock_robot_base = False
         if app_data is None:
             self._isaac_wrapper = IsaacAppWrapper(
                 self._sim,
@@ -237,6 +311,9 @@ class AppStateIsaacSimViewer(AppStateBase):
         self.reverse_replay = False
         self.pause_replay = False
 
+        # tracks the time spent doing the task
+        self._task_timer = 0.0
+        self._max_task_time = 20.0
         # This variable is triggered by the user to indicate finished task
         self._task_finished_signaled = False
         # This value indicates that the task is really finished.
@@ -322,10 +399,10 @@ class AppStateIsaacSimViewer(AppStateBase):
                 ## NO EPISODES LOGIC (defaults)
                 # load the asset from config
                 scene_usd_file = (
-                    usd_scenes_path + self._app_cfg.scene_name + ".usda"
+                    usd_scenes_path + str(self._app_cfg.scene_name) + ".usda"
                 )
                 scene_navmesh_file = (
-                    navmeshes_path + self._app_cfg.scene_name + ".navmesh"
+                    navmeshes_path + str(self._app_cfg.scene_name) + ".navmesh"
                 )
 
         if setup_from_episode:
@@ -356,6 +433,9 @@ class AppStateIsaacSimViewer(AppStateBase):
         )
 
         self._rigid_objects: List["IsaacRigidObjectWrapper"] = []
+        self._object_targets: List[Tuple[str, mn.Matrix4]] = []
+        self._object_initials: List[mn.Vector3] = []
+
         from habitat.isaac_sim.isaac_rigid_object_manager import (
             IsaacRigidObjectManager,
         )
@@ -383,6 +463,11 @@ class AppStateIsaacSimViewer(AppStateBase):
 
         self._isaac_rom.post_reset()
 
+        # cache the state of all non-robot articulated objects in the scene for easy resetting
+        self.initial_articulation_joint_states = (
+            get_articulations_states_cache(self.root_prim)
+        )
+
         self.load_robot()
 
         self._ik: DifferentialInverseKinematics = DifferentialInverseKinematics(
@@ -390,6 +475,8 @@ class AppStateIsaacSimViewer(AppStateBase):
             ee_orientation_velocity_limit=self.robot.robot_cfg.ik.ee_orientation_velocity_limit,
             lower_alpha_bound=self.robot.robot_cfg.ik.lower_alpha_bound,
         )
+        self.motor_param_in_edit = None
+        self.motor_param_edit_magnitude = 1.0
 
         # load episode contents
         if self.episode is not None:
@@ -457,15 +544,16 @@ class AppStateIsaacSimViewer(AppStateBase):
         NOTE: This is a placeholder while episodes are without explicit language instructions.
         NOTE: This could have a semantic element where individual objects are queried and related at runtime to maximize episode re-use.
         """
-        return random.choice(
-            [
-                "Pick any object and place it upright on another surface.",
-                "Stack any two objects.",
-                "Pick any object and place it back upside down.",
-                "Pick any object with one hand \nthen transfer it to the other hand \nwithout setting it down.",
-                "Pick any object twice with different grasps, \nplacing it back on a surface between picks.",
-            ]
-        )
+        return "Pick the target object \nand place it upright \nwithin the target area."
+        # return random.choice(
+        #     [
+        #         "Pick any object and place it upright on another surface.",
+        #         "Stack any two objects.",
+        #         "Pick any object and place it back upside down.",
+        #         "Pick any object with one hand \nthen transfer it to the other hand \nwithout setting it down.",
+        #         "Pick any object twice with different grasps, \nplacing it back on a surface between picks.",
+        #     ]
+        # )
 
     def load_episode_dataset(self, dataset_file: str):
         """
@@ -484,13 +572,13 @@ class AppStateIsaacSimViewer(AppStateBase):
         """
         # NOTE: only loads rigid objects currently
         # TODO: handle initial ao states
-        # TODO: handle targets
         # TODO: handle any additional metadata
 
         # NOTE: assume added objects come from configured "additional_obj_config_paths"
         self.episode_object_ids = []
         # cache any skipped object indices for more skipping later
         self.culled_object_ixs = []
+        self._object_initials = []
         for ix, (obj_config_name, transform) in enumerate(
             self.episode.rigid_objs
         ):
@@ -502,6 +590,7 @@ class AppStateIsaacSimViewer(AppStateBase):
                 ro_t = mn.Matrix4.from_(
                     ro_t.rotation_normalized(), ro_t.translation
                 )
+                self._object_initials.append(ro_t.translation)
             except ValueError as e:
                 print(
                     f"Failed to add object '{obj_config_name}' with error: {e}"
@@ -536,6 +625,22 @@ class AppStateIsaacSimViewer(AppStateBase):
                     f"Object {obj_config_name} not found in paths {self.episode.additional_obj_config_paths}."
                 )
 
+        # load the targets
+        self._object_targets = []
+        for obj_instance_handle, transform in self.episode.targets.items():
+            try:
+                tar_t = mn.Matrix4(
+                    [[transform[j][i] for j in range(4)] for i in range(4)]
+                )
+                tar_t = mn.Matrix4.from_(
+                    tar_t.rotation_normalized(), tar_t.translation
+                )
+                self._object_targets.append((obj_instance_handle, tar_t))
+            except ValueError as e:
+                print(
+                    f"Failed to load target for object '{obj_instance_handle}' with error: {e}"
+                )
+
         if self.episode.language_instruction != "":
             # load the episode's language prompt if not empty
             self.task_prompt = self.episode.language_instruction
@@ -564,7 +669,7 @@ class AppStateIsaacSimViewer(AppStateBase):
                 ro_t = mn.Matrix4.from_(
                     ro_t.rotation_normalized(), ro_t.translation
                 )
-                # NOTE: this transform corrects for isaac's different coordinate system
+                # NOTE: this transform corrects for isaac's different internal coordinate system
                 isaac_correction = mn.Matrix4.from_(
                     mn.Quaternion.rotation(
                         -mn.Deg(90), mn.Vector3.x_axis()
@@ -573,7 +678,15 @@ class AppStateIsaacSimViewer(AppStateBase):
                 )
                 ro_t = ro_t @ isaac_correction
 
-                ro.transformation = ro_t
+                ro.rotation = mn.Quaternion.from_matrix(
+                    ro_t.rotation_normalized()
+                )
+                ro.com = self._object_initials[ix]
+                # ro.translation = self._object_initials[ix]
+                # ro.transformation = mn.Matrix4.identity_init()
+                # ro.com = ro.com
+                # ro.com = self._object_targets[0][1].translation
+
                 # NOTE: reset velocity after teleport to increase stability
                 ro.clear_dynamics()
             else:
@@ -619,7 +732,7 @@ class AppStateIsaacSimViewer(AppStateBase):
                 restitution=restitution,
             )
 
-    def highlight_added_objects(self):
+    def highlight_added_objects(self, draw_targets: bool = True):
         """
         Uses debug drawing to highlight rigid objects with a circle.
         """
@@ -630,7 +743,7 @@ class AppStateIsaacSimViewer(AppStateBase):
         # ro_ids = [ro.object_id for ro in self._rigid_objects]
         # self._app_service._gui_drawer._client_message_manager.draw_object_outline(
         #    priority=1,
-        #    color=mn.Color4(0.8, 0.8, 0.1, 0.8), #yellow
+        #    color=list(mn.Color4(0.8, 0.8, 0.1, 0.8)), #yellow
         #    line_width=8.0,
         #    object_ids=ro_ids,
         #    destination_mask=Mask.ALL,
@@ -639,13 +752,24 @@ class AppStateIsaacSimViewer(AppStateBase):
         # TODO: replace circles with client highlights
         for ro in self._rigid_objects:
             dblr.draw_circle(
-                ro.translation,
+                ro.com,
                 0.15,
                 mn.Color4(0.7, 0.7, 0.3, 1.0),
-                normal=(
-                    self._cam_transform.translation - ro.translation
-                ).normalized(),
+                normal=(self._cam_transform.translation - ro.com).normalized(),
             )
+            # draw lines to debug the CoM vs. translation of the object
+            # dblr.draw_transformed_line(
+            #     ro.translation,
+            #     self.robot.get_root_pose()[0],
+            #     mn.Color4(0.7, 0.7, 0.3, 1.0),
+            #     mn.Color4(0.7, 0.7, 0.3, 1.0),
+            # )
+            # dblr.draw_transformed_line(
+            #     ro.translation,
+            #     ro.com,
+            #     mn.Color4(0.1, 0.7, 0.3, 1.0),
+            #     mn.Color4(0.9, 0.7, 0.3, 1.0),
+            # )
             # test linear vel by showing it here
             # dblr.draw_transformed_line(
             #    ro.translation,
@@ -669,6 +793,57 @@ class AppStateIsaacSimViewer(AppStateBase):
             #         ro.translation+start_from+go_to*ang_vel[axis],
             #         color
             #     )
+
+        if draw_targets:
+            # TODO: should be able to draw multiple targets with distinctions for different objects.
+            # NOTE: currently draws all targets in the same color
+            for ix, (_obj_instance_handle, target_transform) in enumerate(
+                self._object_targets
+            ):
+                placement_success = validate_target_placement_position(
+                    self._rigid_objects[ix],
+                    target_transform.translation,
+                    max_distance=0.05,
+                    horizontal_only=True,
+                )
+                if placement_success:
+                    target_color = mn.Color4.green()
+                else:
+                    target_color = mn.Color4.yellow()
+
+                tilt_success = validate_tilt_angle(self._rigid_objects[ix])
+                if tilt_success:
+                    tilt_target_color = mn.Color4.green()
+                else:
+                    tilt_target_color = mn.Color4.red()
+
+                dblr.draw_transformed_line(
+                    self._rigid_objects[ix].com,
+                    self._rigid_objects[ix].com
+                    + self._rigid_objects[ix].transformation.transform_vector(
+                        mn.Vector3(0, 0, 1)
+                    )
+                    * 0.25,
+                    tilt_target_color,
+                )
+
+                # draw the target as a circle
+                dblr.draw_circle(
+                    target_transform.translation,
+                    0.1,
+                    target_color,
+                    normal=mn.Vector3(0, 1, 0),
+                )
+
+                # draw the initial position of the object
+                dblr.draw_circle(
+                    self._object_initials[ix],
+                    0.05,
+                    mn.Color4.blue(),
+                    normal=mn.Vector3(0, 1, 0),
+                )
+
+                # debug_draw_axis(dblr, self._rigid_objects[ix].transformation)
 
     def load_robot(self) -> None:
         """
@@ -721,47 +896,39 @@ class AppStateIsaacSimViewer(AppStateBase):
         :param reset_objects: if true, reset object states from episode initial states
         """
 
-        base_rot = random.uniform(-mn.math.pi, mn.math.pi)
+        # base_rot = random.uniform(-mn.math.pi, mn.math.pi)
         default_joint_state = self.robot.pos_subsets["full"].fetch_cached_pose(
             pose_name=self.robot.robot_cfg.initial_pose
         )
 
-        # place robot in a region containing most objects
-        obj_region_counts: defaultdict = defaultdict(int)
-        max_region: int = None
-        for obj in self._rigid_objects:
-            possible_regions = self._sim.semantic_scene.get_regions_for_point(
-                obj.translation
-            )
-            for rix in possible_regions:
-                obj_region_counts[rix] += 1
-                if (
-                    max_region is None
-                    or obj_region_counts[max_region] < obj_region_counts[rix]
-                ):
-                    max_region = rix
-        assert max_region is not None
-
-        # we have a region, now sample a navmesh point
-        nav_point = self._sim.pathfinder.get_random_navigable_point()
+        # sample a navigable point near the object
+        obj_pos = self._rigid_objects[0].translation
+        nav_point = self._sim.pathfinder.get_random_navigable_point_near(
+            obj_pos, 1.5
+        )
+        h_dir_to_obj = obj_pos - nav_point
+        h_dir_to_obj[1] = 0.0  # ignore height difference
+        # orient the robot base towards the object
+        base_rot = self.robot.base_rot + self.robot.angle_to(
+            dir_target=h_dir_to_obj
+        )
         nav_samples = 0
         max_nav_samples = 1500
-        # TODO: we use navmeshes closest obstacle as a proxy for collision detection. We should implement that for Isaac or pre-sample valid poses from Habitat-Bullet and cache them.
-        while nav_samples < max_nav_samples and (
-            max_region
-            not in self._sim.semantic_scene.get_regions_for_point(
-                nav_point + mn.Vector3(0, 0.1, 0)
-            )
-            or self.robot_contact_test(
-                pos=nav_point,
-                rot_angle=base_rot,
-                joint_pos=default_joint_state,
-            )
+        while nav_samples < max_nav_samples and self.robot_contact_test(
+            pos=nav_point,
+            rot_angle=base_rot,
+            joint_pos=default_joint_state,
         ):
-            nav_point = self._sim.pathfinder.get_random_navigable_point()
-            # resample base rotation as necessary
-            base_rot = random.uniform(-mn.math.pi, mn.math.pi)
+            nav_point = self._sim.pathfinder.get_random_navigable_point_near(
+                obj_pos, 1.5
+            )
+            h_dir_to_obj = obj_pos - nav_point
+            h_dir_to_obj[1] = 0.0  # ignore height difference
+            base_rot = self.robot.base_rot + self.robot.angle_to(
+                dir_target=h_dir_to_obj
+            )
             nav_samples += 1
+
         if nav_samples < max_nav_samples:
             # self.robot.set_root_pose(pos=nav_point)
             print("found collision free point?")
@@ -770,6 +937,9 @@ class AppStateIsaacSimViewer(AppStateBase):
 
         if reset_objects:
             self.reset_episode_objects()
+            set_articulation_states_from_cache(
+                self.initial_articulation_joint_states
+            )
 
     def set_robot_base_initial_state(self):
         """
@@ -836,6 +1006,16 @@ class AppStateIsaacSimViewer(AppStateBase):
         # )
         if self._recent_mouse_ray_hit_info:
             status_str += self._recent_mouse_ray_hit_info["rigidBody"] + "\n"
+            status_str += (
+                str(
+                    mn.Vector3(
+                        *isaac_prim_utils.usd_to_habitat_position(
+                            self._recent_mouse_ray_hit_info["position"]
+                        )
+                    )
+                )
+                + "\n"
+            )
         # status_str += f"base rot: {self.robot.base_rot} \n"
         status_str += f"Task Prompt: {self.task_prompt}\n"
         status_str += f"time: {self._timer}\n"
@@ -853,6 +1033,11 @@ class AppStateIsaacSimViewer(AppStateBase):
         elif self._frame_recorder.recording:
             status_str += (
                 f"-RECORDING FRAMES ({len(self._frame_recorder.frame_data)})-"
+            )
+        if self.motor_param_in_edit is not None:
+            status_str += (
+                f"Editing motor param: {self.motor_param_in_edit} "
+                f"{self.robot.motor_params[self.motor_param_in_edit]} +- {self.motor_param_edit_magnitude}\n"
             )
 
         return status_str
@@ -1015,8 +1200,36 @@ class AppStateIsaacSimViewer(AppStateBase):
         )
         if current_xr_pose.valid:
             self.xr_pose_adapter.get_global_xr_pose(current_xr_pose).draw_pose(
-                dblr, head=False
+                dblr, head=False, left_hand=False
             )
+
+    def debug_draw_task_timer_xr(self):
+        """
+        Draws a circle with a moving fill line to indicate the task timer in XR view.
+        """
+        current_xr_pose = XRPose(
+            remote_client_state=self._app_service.remote_client_state
+        )
+        if current_xr_pose.valid:
+            self.xr_pose_adapter.get_global_xr_pose(
+                current_xr_pose
+            ).draw_timer_circle(
+                self._app_service.gui_drawer,
+                self._task_timer,
+                self._max_task_time,
+            )
+
+    def base_lock_event(self, base_lock_status: bool):
+        """
+        Calls the correct base lock event based on the status.
+        """
+        if base_lock_status:
+            self._frame_events.append(FrameEvent.LOCK_BASE)
+            self.robot.do_kin_fixed_base = True
+            self._task_timer = 0
+        else:
+            self._frame_events.append(FrameEvent.UNLOCK_BASE)
+            self.robot.do_kin_fixed_base = False
 
     def handle_xr_input(self, dt: float):
         if self._app_service.remote_client_state is None:
@@ -1040,13 +1253,17 @@ class AppStateIsaacSimViewer(AppStateBase):
             pass
 
         if left.get_button_down(XRButton.TWO):
-            print("Resetting Robot Joint Positions")
-            self.robot.pos_subsets["full"].set_cached_pose(
-                pose_name="initial",
-                set_motor_targets=True,
-                set_positions=True,
-            )
-            self._frame_events.append(FrameEvent.RESET_ARMS_FINGERS)
+            # toggle base lock and signal start of a task
+            self.lock_robot_base = not self.lock_robot_base
+            print(f"Toggled base lock {self.lock_robot_base}")
+            self.base_lock_event(self.lock_robot_base)
+            # print("Resetting Robot Joint Positions")
+            # self.robot.set_cached_pose(
+            #     pose_name=self.robot.robot_cfg.initial_pose,
+            #     set_positions=True,
+            #     set_motor_targets=True,
+            # )
+            # self._frame_events.append(FrameEvent.RESET_ARMS_FINGERS)
 
         if left.get_button_up(XRButton.TWO):
             pass
@@ -1086,6 +1303,10 @@ class AppStateIsaacSimViewer(AppStateBase):
             # reset the robot state (e/g/ to unstick or restart)
             self.sample_valid_robot_base_state()
             self._frame_events.append(FrameEvent.TELEPORT)
+            if self.lock_robot_base:
+                # unlock the robot base after teleport to re-align
+                self.lock_robot_base = False
+                self.base_lock_event(self.lock_robot_base)
 
         # IK for each hand when trigger is pressed
         xr_pose = XRPose(
@@ -1104,6 +1325,12 @@ class AppStateIsaacSimViewer(AppStateBase):
                 (right, "right_arm_base", "right_arm_pivot", "right_arm"),
                 (left, "left_arm_base", "left_arm_pivot", "left_arm"),
             ]:
+                if "right" in base_link_key and self.robot.right_arm_locked:
+                    # skip IK for right arm if locked
+                    continue
+                if "left" in base_link_key and self.robot.left_arm_locked:
+                    # skip IK for left arm if locked
+                    continue
                 if xrcontroller.get_hand_trigger() > 0:
                     arm_base_link = self.robot.link_subsets[
                         base_link_key
@@ -1126,7 +1353,8 @@ class AppStateIsaacSimViewer(AppStateBase):
                     )
                     arm_joint_subset = self.robot.pos_subsets[arm_subset_key]
 
-                    cur_arm_pose = arm_joint_subset.get_motor_pos()
+                    # cur_arm_pose = arm_joint_subset.get_motor_pos()
+                    cur_arm_pose = arm_joint_subset.get_pos()
 
                     # # TODO: a bit hacky way to get the correct hand here
                     xr_pose = (
@@ -1474,7 +1702,10 @@ class AppStateIsaacSimViewer(AppStateBase):
             # self.set_physics_paused(True)
 
         if gui_input.get_key_down(KeyCode.P):
-            self.set_physics_paused(not self._do_pause_physics)
+            # self.set_physics_paused(not self._do_pause_physics)
+            self.lock_robot_base = not self.lock_robot_base
+            print(f"Toggled base lock {self.lock_robot_base}")
+            self.base_lock_event(self.lock_robot_base)
 
         if gui_input.get_key_down(KeyCode.H):
             self._hide_gui = not self._hide_gui
@@ -1555,12 +1786,52 @@ class AppStateIsaacSimViewer(AppStateBase):
             self.reset_episode_objects()
             self._frame_events.append(FrameEvent.RESET_OBJECTS)
 
+        if gui_input.get_key_down(KeyCode.TWO):
+            self._rigid_objects[0].com = self._rigid_objects[0].com
+
         if gui_input.get_key_down(KeyCode.THREE):
             print(f"Robot in contact = {self.robot_contact_test()}")
 
         if gui_input.get_key_down(KeyCode.F):
             self.cursor_follow_robot = not self.cursor_follow_robot
             print(f"Set cursor_follow_robot = {self.cursor_follow_robot}")
+
+        # UI to increment and decrement a parameter
+        if gui_input.get_key_down(KeyCode.SLASH):
+            # changes the paramter to modify from a list
+            robot_motor_params = self.robot.motor_params
+            if self.motor_param_in_edit is None:
+                self.motor_param_in_edit = list(robot_motor_params.keys())[0]
+            else:
+                key_index = list(robot_motor_params.keys()).index(
+                    self.motor_param_in_edit
+                )
+                next_key_index = (key_index + 1) % len(robot_motor_params)
+                self.motor_param_in_edit = list(robot_motor_params.keys())[
+                    next_key_index
+                ]
+
+        if gui_input.get_key_down(KeyCode.PERIOD):
+            # right carrot == increment
+            self.robot.motor_params[
+                self.motor_param_in_edit
+            ] += self.motor_param_edit_magnitude
+            self.robot.set_motor_params(self.robot.motor_params)
+
+        if gui_input.get_key_down(KeyCode.COMMA):
+            # left carrot == decrement
+            self.robot.motor_params[
+                self.motor_param_in_edit
+            ] -= self.motor_param_edit_magnitude
+            self.robot.set_motor_params(self.robot.motor_params)
+
+        if gui_input.get_key_down(KeyCode.RIGHT_BRACKET):
+            # right bracket == increment speed x10
+            self.motor_param_edit_magnitude *= 10
+
+        if gui_input.get_key_down(KeyCode.LEFT_BRACKET):
+            # left bracket == increment speed /10
+            self.motor_param_edit_magnitude /= 10
 
     def handle_mouse_press(self) -> None:
         """
@@ -1604,9 +1875,6 @@ class AppStateIsaacSimViewer(AppStateBase):
         self._recent_mouse_ray_hit_info = None
 
         mouse_ray = self._app_service.gui_input.mouse_ray
-
-        if self._app_service.gui_input.get_key(KeyCode.TWO):
-            self._mouse_points_record = []
 
         if not mouse_ray:
             return
@@ -1719,15 +1987,65 @@ class AppStateIsaacSimViewer(AppStateBase):
     #                 pos, pos + finger_normal * finger_offset_dist, color
     #             )
 
+    def get_vla_task_success(self):
+        """
+        Single function call for all task success criteria.
+        """
+        # check base is locked
+        if not self.lock_robot_base:
+            # if the robot base is not locked, we assume the task is not successful
+            print("Task not successful, robot base is not locked.")
+            return 0.0
+
+        # check object position is correct
+        placement_success = validate_target_placement_position(
+            self._rigid_objects[0],
+            self._object_targets[0][1].translation,
+            max_distance=0.05,
+            horizontal_only=True,
+        )
+        if not placement_success:
+            print(
+                "Task not successful, object not placed near enough to target."
+            )
+            return 0.0
+
+        # check that the object is upright
+        tilt_success = validate_tilt_angle(
+            self._rigid_objects[0], max_tilt_angle=0.2
+        )
+        if not tilt_success:
+            print("Task not successful, object not placed upright.")
+            return 0.0
+
+        return 1.0  # Task is successful if all criteria are met
+
     def sim_update(self, dt, post_sim_update_dict):
         self._sps_tracker.increment()
+
+        # use simulation dt for task time tracking to avoid lag factoring in
+        if self.lock_robot_base:
+            self._task_timer += dt
+            if self._task_timer > self._max_task_time:
+                if self.get_vla_task_success() > 0:
+                    self._task_finished_signaled = True
+                else:
+                    print(
+                        f"Task time exceeded {self._max_task_time} seconds, automatic reset triggered."
+                    )
+                    # reset the robot and unlock the base to try again
+                    self.sample_valid_robot_base_state()
+                    self._frame_events.append(FrameEvent.TELEPORT)
+                    self.lock_robot_base = False
+                    self.base_lock_event(self.lock_robot_base)
 
         self.handle_keys(dt, post_sim_update_dict)
         self.update_mouse_raycaster(dt)
         self.handle_mouse_press()
         self.handle_xr_input(dt)
         self._update_cursor_pos()
-        self.update_robot_base_control(dt)
+        if not self.lock_robot_base:
+            self.update_robot_base_control(dt)
         self.update_isaac(post_sim_update_dict)
         self._sync_xr_user_to_robot_cursor()
 
@@ -1757,6 +2075,8 @@ class AppStateIsaacSimViewer(AppStateBase):
 
         # need this in the app even if other debug lines are turned off
         self.debug_draw_quest()
+        if self.lock_robot_base:
+            self.debug_draw_task_timer_xr()
 
         if self._draw_debug_shapes:
             # draw lookat ring
@@ -1812,7 +2132,7 @@ class AppStateIsaacSimViewer(AppStateBase):
             if self._session is None:
                 # Skip the dialogue if outside of the state machine.
                 self._task_finished = True
-                self._task_success = 1.0
+                self._task_success = self.get_vla_task_success()
             else:
                 with self._app_service.ui_manager.update_canvas(
                     "center", destination_mask=Mask.ALL
@@ -1835,7 +2155,8 @@ class AppStateIsaacSimViewer(AppStateBase):
                     ctx.button(
                         uid=BTN_ID_SUCCESS,
                         text="Success",
-                        enabled=not self._task_finished,
+                        enabled=not self._task_finished
+                        and self.get_vla_task_success() > 0.0,
                     )
                     ctx.button(
                         uid=BTN_ID_FAILURE,
@@ -1858,7 +2179,7 @@ class AppStateIsaacSimViewer(AppStateBase):
                     0, BTN_ID_SUCCESS
                 ):
                     self._task_finished = True
-                    self._task_success = 1.0
+                    self._task_success = self.get_vla_task_success()
                     self._app_service.ui_manager.clear_all_canvases(Mask.ALL)
                 elif self._app_service.remote_client_state.ui_button_pressed(
                     0, BTN_ID_FAILURE

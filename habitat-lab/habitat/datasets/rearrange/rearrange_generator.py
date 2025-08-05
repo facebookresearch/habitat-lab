@@ -50,6 +50,21 @@ def get_sample_region_ratios(load_dict) -> Dict[str, float]:
     return sample_region_ratios
 
 
+def debug_draw_axis(
+    dblr, transform: mn.Matrix4 = None, scale: float = 1.0
+) -> None:
+    if transform is not None:
+        dblr.push_transform(transform)
+    for unit_axis in range(3):
+        vec = mn.Vector3()
+        vec[unit_axis] = 1.0
+        color = mn.Color3(0.5)
+        color[unit_axis] = 1.0
+        dblr.draw_transformed_line(mn.Vector3(), vec * scale, color)
+    if transform is not None:
+        dblr.pop_transform()
+
+
 class RearrangeEpisodeGenerator:
     """Generator class encapsulating logic for procedurally sampling individual episodes for general rearrangement task.
 
@@ -196,6 +211,10 @@ class RearrangeEpisodeGenerator:
                 self._receptacle_sets[
                     receptacle_set["name"]
                 ].include_within = receptacle_set["include_within"]
+            if "cull_negative_scale" in receptacle_set:
+                self._receptacle_sets[
+                    receptacle_set["name"]
+                ].cull_negative_scale = receptacle_set["cull_negative_scale"]
 
     def _get_obj_samplers(self) -> None:
         """
@@ -969,6 +988,7 @@ class RearrangeEpisodeGenerator:
         for new_object in self.ep_sampled_objects:
             spawn_positions[new_object.handle] = new_object.translation
             new_obj_centroid += new_object.translation
+
         new_obj_centroid /= len(self.ep_sampled_objects)
         settle_db_obs: List[Any] = []
         if self._render_debug_obs:
@@ -981,6 +1001,10 @@ class RearrangeEpisodeGenerator:
         while self.sim.get_world_time() < duration:
             self.sim.step_world(1.0 / 30.0)
             if self._render_debug_obs:
+                for new_object in self.ep_sampled_objects:
+                    debug_draw_axis(
+                        self.dbv.debug_line_render, new_object.transformation
+                    )
                 settle_db_obs.append(self.dbv.get_observation())
 
         logger.info(

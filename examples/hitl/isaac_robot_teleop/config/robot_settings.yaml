@@ -26,7 +26,7 @@ create_joint_motors: True
 max_joint_velocity: 200
 angular_drive_stiffness: 100 #position gain
 angular_drive_damping: 1 #velocity gain
-angular_drive_max_force: 5000 #max force/torque
+angular_drive_max_force: 25 #max force/torque
 linear_drive_stiffness: 1000 #position gain
 angular_damping: 1
 linear_damping: 5
@@ -50,6 +50,10 @@ ik:
   # lower bound of alpha in the ik solver. Negative values may cause drift.
   # Values should be less than 1. Higher values result in stricter trajectory enforcement.
   lower_alpha_bound: 0.01
+
+  #NOTE: lock settings for the arms' IK to tailor the UI options to the task
+  right_arm_locked: False
+  left_arm_locked: True
 
 configuration_subsets:
   #define the hand and arm joint indices
@@ -129,4 +133,6 @@ link_subsets:
 
 
 #initial pose options. This refers to an entry in the robot_poses.json file.
-initial_pose: "initial"
+#initial_pose: "initial"
+#NOTE: this setup is the VLA experiments with right arm
+initial_pose: "vla_init_right_pick"
