@@ -22,14 +22,14 @@ habitat_hitl:
     skinning: True
 
 isaac_robot_teleop:
-  draw_debug_shapes: False
+  draw_debug_shapes: True
   camera_move_speed: 0.1
   lock_pc_camera_to_robot: True
   usd_scene_path: "../../../data/usd/scenes/"
   navmesh_path: "data/hssd-hab/navmeshes/"
-  scene_name: "103997403_171030405"
-  episode_dataset: "episodes/hitl_teleop_episodes_single_region_scenes.json.gz"
-  episode_index: 1
+  scene_name: "104348133_171513054_8"
+  episode_dataset: "episodes/hitl_teleop_episodes.json.gz"
+  episode_index: 0
 
   #physx configuration settings
   #applied to all rigid objects added to the scene (e.g. from Episodes)
