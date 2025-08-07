@@ -17,7 +17,7 @@ from session import Session
 from habitat_hitl.app_states.app_service import AppService
 
 # TODO: Get session count from episode loader.
-PLACEHOLDER_EPISODE_COUNT = 220
+PLACEHOLDER_EPISODE_COUNT = 2000
 
 
 class AppStateStartSession(AppStateBase):
