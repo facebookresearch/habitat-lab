@@ -14,6 +14,10 @@ from habitat_hitl.core.hydra_utils import register_hydra_plugins
 from habitat_hitl.core.key_mapping import KeyCode
 from habitat_hitl.core.text_drawer import TextOnScreenAlignment
 from habitat_hitl.environment.camera_helper import CameraHelper
+from habitat_hitl.scripts.video_recorder import (
+    VideoRecorder,
+    VideoSourceFramebuffer,
+)
 
 
 class AppStateBasicViewer(AppState):
@@ -37,6 +41,10 @@ class AppStateBasicViewer(AppState):
         self._episode_helper = self._app_service.episode_helper
         self._paused = False
         self._do_single_step = False
+
+        self._framebuffer_video = VideoRecorder(
+            VideoSourceFramebuffer(),
+        )
 
     def _init_lookat_pos(self):
         random_navigable_point = self.get_sim().sample_navigable_point()
@@ -162,6 +170,7 @@ class AppStateBasicViewer(AppState):
         if self._app_service.gui_input.get_key_down(KeyCode.ESC):
             self._app_service.end_episode()
             post_sim_update_dict["application_exit"] = True
+            self._framebuffer_video.save_video("_framebuffer.mp4", fps=30)
 
         if (
             self._env_episode_active()
@@ -192,6 +201,7 @@ class AppStateBasicViewer(AppState):
         self._cam_transform = self._camera_helper.get_cam_transform()
         post_sim_update_dict["cam_transform"] = self._cam_transform
 
+        self._framebuffer_video.record_video_frame()
         self._update_help_text()
 
 
