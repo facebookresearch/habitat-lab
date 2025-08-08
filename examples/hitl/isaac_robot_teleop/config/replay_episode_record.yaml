@@ -43,9 +43,9 @@ isaac_robot_teleop:
   ######################
   # Settings relevant for episode replay only
   replay_mode: True
-  replay_speed: 4
+  replay_speed: 1
   #if true, looping is off and video is recorded from 3rd person perspective
-  record_video: True
+  record_video: False
   # The episode record's .json.gz file
 
   #NOTE: the local output directory
@@ -65,6 +65,12 @@ isaac_robot_teleop:
   lock_pc_camera_to_robot: True
   lock_orientation_to_robot: True
   cam_zoom_distance: 1.0
+  hide_gui: True
+  hide_debug_lines: False
+  #local camera offset in replay mode from robot.
+  replay_camera_look_at: [1.0,0,1.1]
+  replay_camera_look_from: [0.25,0,1.1] #from the approximate torso camera height
+  #replay_camera_look_from: [0.45,1.0,1.1] #from the left side
   #optionally force the initial state of the robot (will be snapped to namvmesh)
   #NOTE: these values initialize in the kitchen for scene 103997403_171030405
   #initial_robot_position: [-11.4, 0, -3.2]

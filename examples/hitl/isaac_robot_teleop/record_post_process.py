@@ -47,6 +47,8 @@ def compare_version(version: str, compare_to_version: str) -> int:
     Assumes semantic versioning: https://semver.org/
     I.e. "<major>.<minor>.<patch>"
     """
+    if compare_to_version is None:
+        return 0
     for v_level in range(3):
         ver = version.split(".")[v_level]
         compare_to_ver = compare_to_version.split(".")[v_level]
@@ -215,6 +217,7 @@ def get_good_first_ep_frame(
             FrameEvent.RESET_ARMS_FINGERS,
             FrameEvent.RESET_OBJECTS,
             FrameEvent.TELEPORT,
+            FrameEvent.LOCK_BASE,
         ]:
             event_indices = get_event_frames(ep_frames_json, reset_event_type)
             print(f"Event {reset_event_type} at indices {event_indices}")
@@ -461,7 +464,10 @@ def get_robot_joint_poses_for_frame_range(
 
 
 def get_sessions_by_version_range(
-    all_sessions: List[str], start_version: str, end_version: str = None
+    all_sessions: List[str],
+    data_dir: str,
+    start_version: str,
+    end_version: str = None,
 ) -> List[str]:
     """
     Cull the list of input session directories to those which fall within the provided range.
@@ -492,9 +498,9 @@ def get_sessions_by_version_range(
         if session_day >= version_days["0.1.0"][0]:
             # after explicit versioning we look for the "app_version" in the episodes
             session_json = load_json_gz(
-                os.path.join(session_dir, "session.json.gz")
+                os.path.join(data_dir, session_dir, "session.json.gz")
             )
-            app_version = session_json["episodes"]["0"]["app_version"]
+            app_version = session_json["episodes"][0]["app_version"]
             if (
                 compare_version(app_version, start_version) >= 0
                 and compare_version(app_version, end_version) <= 0
@@ -581,7 +587,7 @@ def process_record_stats(
     # cull down the sessions by version before stats processing
     if start_version is not None:
         new_session_dirs = get_sessions_by_version_range(
-            session_dirs, start_version, end_version
+            session_dirs, data_dir, start_version, end_version
         )
         print(
             f"culled {len(session_dirs) - len(new_session_dirs)} sessions from version range [{start_version}, {end_version}]"

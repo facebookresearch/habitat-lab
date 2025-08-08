@@ -72,7 +72,10 @@ if TYPE_CHECKING:
 
 # NOTE: assume versions prior to July 24th 2025 are "0.0.x"
 # this version should be bumped with every functional change which may want to be later discriminated.
-APP_VERSION = "0.1.0"
+# prior version notes:
+# v0.1.0 - first explcit version, used for pre-VAL trials in 10k collection (and 1st VLA trial, oops)
+# v0.2.1 - VLA 2nd phase - single object, single scene, w/ bowl
+APP_VERSION = "0.2.1"
 
 
 def bind_physics_material_to_hierarchy(
@@ -350,6 +353,14 @@ class AppStateIsaacSimViewer(AppStateBase):
                 self._camera_helper.cam_zoom_dist = (
                     self._app_cfg.cam_zoom_distance
                 )
+            if hasattr(self._app_cfg, "replay_camera_look_at"):
+                self.replay_camera_look_at = mn.Vector3(
+                    *self._app_cfg.replay_camera_look_at
+                )
+            if hasattr(self._app_cfg, "replay_camera_look_from"):
+                self.replay_camera_look_from = mn.Vector3(
+                    *self._app_cfg.replay_camera_look_from
+                )
 
             # Setup from the episode record
             self.task_prompt = (
@@ -475,7 +486,7 @@ class AppStateIsaacSimViewer(AppStateBase):
             ee_orientation_velocity_limit=self.robot.robot_cfg.ik.ee_orientation_velocity_limit,
             lower_alpha_bound=self.robot.robot_cfg.ik.lower_alpha_bound,
         )
-        self.motor_param_in_edit = None
+        self.motor_param_in_edit: str = None
         self.motor_param_edit_magnitude = 1.0
 
         # load episode contents
@@ -499,7 +510,16 @@ class AppStateIsaacSimViewer(AppStateBase):
             + ".semantic_config.json"
         )
 
+        # option to hide debug line drawing overlays
+        self._hide_debug_lines = False
+        if hasattr(self._app_cfg, "hide_debug_lines"):
+            self._hide_debug_lines = self._app_cfg.hide_debug_lines
+
+        # option to hide the text overlays
         self._hide_gui = False
+        if hasattr(self._app_cfg, "hide_gui"):
+            self._hide_gui = self._app_cfg.hide_gui
+
         self._is_recording = False
 
         self._sps_tracker = AverageRateTracker(2.0)
@@ -856,13 +876,13 @@ class AppStateIsaacSimViewer(AppStateBase):
         self.robot = RobotAppWrapper(
             self._isaac_wrapper.service, self._sim, robot_cfg
         )
-        if self.in_replay_mode:
-            # NOTE: This is a necessary workaround to accurately replay episodes before robot_settings were cached for the session
-            # TODO: we'll remove this hack and retire the data in near future
-            self.robot.ground_to_base_offset = 0
-            print(
-                "!! OVERWRITING self.robot.ground_to_base_offset = 0 FOR v0.1 EPISODE REPLAY !!"
-            )
+        # if self.in_replay_mode:
+        #     # NOTE: This is a necessary workaround to accurately replay episodes before robot_settings were cached for the session
+        #     # TODO: we'll remove this hack and retire the data in near future
+        #     self.robot.ground_to_base_offset = 0
+        #     print(
+        #         "!! OVERWRITING self.robot.ground_to_base_offset = 0 FOR v0.1 EPISODE REPLAY !!"
+        #     )
         # TODO: figure out how to initialize the robot in isolation instead of resetting the world. Doesn't work as expected.
         self._isaac_wrapper.service.world.reset()
         self.robot.post_init()
@@ -2050,15 +2070,20 @@ class AppStateIsaacSimViewer(AppStateBase):
         self._sync_xr_user_to_robot_cursor()
 
         if self.in_replay_mode:
-            robot_orientation = self.robot.get_root_pose()[1]
-            offset = (
-                mn.Vector3(-1.0, 0, 1.25).normalized()
-                * self._camera_helper.cam_zoom_dist
+            robot_pos, robot_rot = self.robot.get_root_pose()
+            look_at = (
+                robot_rot.transform_vector(self.replay_camera_look_at)
+                + robot_pos
             )
-            robot_cam_offset = robot_orientation.transform_vector(offset)
+            look_from = (
+                robot_rot.transform_vector(self.replay_camera_look_from)
+                + robot_pos
+            )
+            self._camera_helper.cam_zoom_dist = (look_at - look_from).length()
+
             self._camera_helper.update_absolute(
-                look_at=self._cursor_pos,
-                look_from=self._cursor_pos + robot_cam_offset,
+                look_at=look_at,
+                look_from=look_from,
             )
         else:
             self._camera_helper.update(self._cursor_pos, dt)
@@ -2068,17 +2093,19 @@ class AppStateIsaacSimViewer(AppStateBase):
         )
         post_sim_update_dict["cam_transform"] = self._cam_transform
 
-        if self.in_replay_mode:
+        if self.in_replay_mode and not self._hide_debug_lines:
             self._frame_recorder.get_xr_pose_from_frame().draw_pose(
                 self._app_service.gui_drawer
             )
 
-        # need this in the app even if other debug lines are turned off
-        self.debug_draw_quest()
-        if self.lock_robot_base:
+        if not self._hide_debug_lines:
+            # need this in the app even if other debug lines are turned off
+            self.debug_draw_quest()
+        if self.lock_robot_base and not self._hide_debug_lines:
             self.debug_draw_task_timer_xr()
 
-        if self._draw_debug_shapes:
+        # NOTE: I know these are redundant, but self._hide_debug_lines is for replay and needs more control than the live version
+        if self._draw_debug_shapes and not self._hide_debug_lines:
             # draw lookat ring
             self.draw_lookat()
             # draw the robot frame
@@ -2090,7 +2117,9 @@ class AppStateIsaacSimViewer(AppStateBase):
                     self._app_service.gui_drawer,
                     self._cam_transform.translation,
                 )
-        self.highlight_added_objects()
+
+        if not self._hide_debug_lines:
+            self.highlight_added_objects()
 
         if self._view_task_prompt:
             if self.episode is not None:

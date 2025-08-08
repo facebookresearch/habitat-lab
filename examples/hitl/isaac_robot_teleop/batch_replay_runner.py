@@ -51,10 +51,9 @@ def get_window_id(process):
 
 
 # define the range of episodes to consider and details from that batch
-episode_dataset = (
-    "data/datasets/hitl_teleop_episodes_single_region_scenes.json.gz"
-)
-session_dir = "../../../Downloads/download/isaac_robot_teleop/"
+episode_dataset = "data/datasets/hitl_teleop_episodes.json.gz"
+# session_dir = "../../../Downloads/download/isaac_robot_teleop/"
+session_dir = "../../../Downloads/isaac_robot_teleop_vla/"
 
 # NOTE: manually set the episode filepaths here
 episode_filepaths = [
@@ -83,7 +82,7 @@ for ep_fp in tqdm(episode_filepaths):
         "replay_episode_record",
         f"isaac_robot_teleop.episode_dataset={episode_dataset}",
         f"isaac_robot_teleop.episode_record_filepath={full_ep_fp}",
-        f"isaac_robot_teleop.replay_speed={4}",
+        f"isaac_robot_teleop.replay_speed={1}",
         # NOTE: the following are set in the yaml but added here for ease of edit
         # f"isaac_robot_teleop.record_video=True",
         # f"isaac_robot_teleop.cam_zoom_distance=1.0",

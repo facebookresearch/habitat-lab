@@ -66,15 +66,15 @@
 
 
     object_sets:
-      - name: "soup_can"
+      - name: "ycb"
         included_substrings:
-          - "005_tomato_soup_can"
+          #- "005_tomato_soup_can"
           #- "002_master_chef_can"
           #- "003_cracker_box"
           #- "004_sugar_box"
           #- "007_tuna_fish_can"
           #- "010_potted_meat_can"
-          #- "024_bowl"
+          - "024_bowl"
 
         excluded_substrings: []
     receptacle_sets:
@@ -98,7 +98,7 @@
       type: uniform
       params:
         object_sets:
-        - soup_can
+        - ycb
         receptacle_sets:
         - countertop
         #NOTE: specifies that all spawned objects should be in the same region
@@ -109,7 +109,7 @@
         orientation_sampling: up
         nav_to_min_distance: 0.6
         constrain_to_largest_nav_island: False
-    
+
     object_target_samplers:
     - name: "countertop_target"
       type: "uniform"
