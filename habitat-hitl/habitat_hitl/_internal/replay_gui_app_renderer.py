@@ -52,7 +52,7 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
             ]
         camera_sensor_spec.position = [0.0, 0.0, 0.0]
         camera_sensor_spec.orientation = [0.0, 0.0, 0.0]
-        camera_sensor_spec.near = 0.2
+        camera_sensor_spec.near = 0.01
         camera_sensor_spec.far = 50.0
 
         cfg.sensor_specifications = [camera_sensor_spec]
