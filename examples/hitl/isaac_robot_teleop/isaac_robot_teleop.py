@@ -242,6 +242,30 @@ def validate_target_placement_position(
     return True
 
 
+def inject_line_breaks(text: str, target_char_per_line: int = 30) -> str:
+    """
+    Insert line breaks at the first space after every 30 characters.
+    Simulates text wrapping for UI.
+    """
+    max_len = target_char_per_line
+    new_text = None
+    if text is not None and len(text) > max_len:
+        new_text = ""
+        start = 0
+        while start < len(text):
+            end = start + max_len
+            if end >= len(text):
+                new_text += text[start:]
+                break
+            space_idx = text.find(" ", end)
+            if space_idx == -1:
+                new_text += text[start:]
+                break
+            new_text += text[start:space_idx] + "\n"
+            start = space_idx + 1
+    return new_text
+
+
 class AppStateIsaacSimViewer(AppStateBase):
     """ """
 
@@ -329,6 +353,10 @@ class AppStateIsaacSimViewer(AppStateBase):
         self._view_task_prompt = True
         # NOTE: this will be filled from the episode or contrived to fit the scenario
         self.task_prompt = ""
+
+        # when the content is a string instead of None, displays the content as a GUI with a "done" button to close
+        # NOTE: use this to write messages to the XR user in response to interactions
+        self._generic_GUI_message: str = None
 
         usd_scenes_path = os.path.join(dir_path, self._app_cfg.usd_scene_path)
         navmeshes_path = self._app_cfg.navmesh_path
@@ -865,6 +893,26 @@ class AppStateIsaacSimViewer(AppStateBase):
 
                 # debug_draw_axis(dblr, self._rigid_objects[ix].transformation)
 
+    def validate_robot_furniture_alignment(
+        self, max_angle_error: float = 0.1
+    ) -> bool:
+        """
+        Validates that the robot's base is oriented orthogonally to and aligned with the front of the target furniture object.
+        Uses dot product between robot's global forward and furniture's global forward vectors.
+        :param max_angle_error: in Radians.
+        Assumes both vectors are unit length.
+        """
+
+        # TODO: get furniture global forward direction in a not hardcoded way
+        furniture_forward = mn.Vector3(-1.0, 0, 0)
+
+        angle_error = mn.math.angle(
+            self.robot.global_forward(), furniture_forward
+        )
+        if float(angle_error) > max_angle_error:
+            return False
+        return True
+
     def load_robot(self) -> None:
         """
         Loads a robot from USD file into the scene for testing.
@@ -1274,9 +1322,21 @@ class AppStateIsaacSimViewer(AppStateBase):
 
         if left.get_button_down(XRButton.TWO):
             # toggle base lock and signal start of a task
-            self.lock_robot_base = not self.lock_robot_base
-            print(f"Toggled base lock {self.lock_robot_base}")
-            self.base_lock_event(self.lock_robot_base)
+
+            # first validate the base orientation
+            if (
+                not self.lock_robot_base
+                and not self.validate_robot_furniture_alignment()
+            ):
+                self._generic_GUI_message = "Cannot begin task, robot's base is not facing the counter. Please re-orient the base until the line on the ground in the front of the robot turns green."
+                self._generic_GUI_message = inject_line_breaks(
+                    self._generic_GUI_message, target_char_per_line=30
+                )
+                print(self._generic_GUI_message)
+            else:
+                self.lock_robot_base = not self.lock_robot_base
+                print(f"Toggled base lock {self.lock_robot_base}")
+                self.base_lock_event(self.lock_robot_base)
             # print("Resetting Robot Joint Positions")
             # self.robot.set_cached_pose(
             #     pose_name=self.robot.robot_cfg.initial_pose,
@@ -2038,6 +2098,17 @@ class AppStateIsaacSimViewer(AppStateBase):
             print("Task not successful, object not placed upright.")
             return 0.0
 
+        # check that the robot's base is oriented correctly toward the furniture
+        base_orientation_success = self.validate_robot_furniture_alignment(
+            max_angle_error=0.1
+        )
+
+        if not base_orientation_success:
+            print(
+                "Task not successful, base not oriented orthogonally to the furniture."
+            )
+            return 0.0
+
         return 1.0  # Task is successful if all criteria are met
 
     def sim_update(self, dt, post_sim_update_dict):
@@ -2108,8 +2179,21 @@ class AppStateIsaacSimViewer(AppStateBase):
         if self._draw_debug_shapes and not self._hide_debug_lines:
             # draw lookat ring
             self.draw_lookat()
+
+            # validate the orientation and set GUI color from results
+            robot_orientation_valid_for_task = (
+                self.validate_robot_furniture_alignment()
+            )
+            forward_vector_color = (
+                mn.Color4.red()
+                if not robot_orientation_valid_for_task
+                else mn.Color4.green()
+            )
+
             # draw the robot frame
-            self.robot.draw_debug(self._app_service.gui_drawer)
+            self.robot.draw_debug(
+                self._app_service.gui_drawer, forward_vector_color
+            )
             # self.debug_draw_hands()
 
             if self.dof_editor is not None:
@@ -2156,6 +2240,34 @@ class AppStateIsaacSimViewer(AppStateBase):
                     self._app_service.ui_manager.clear_all_canvases(Mask.ALL)
             else:
                 self._view_task_prompt = False
+
+        if self._generic_GUI_message is not None:
+            # display the GUI window
+            with self._app_service.ui_manager.update_canvas(
+                "center", destination_mask=Mask.ALL
+            ) as ctx:
+                FONT_SIZE_LARGE = 32
+                FONT_SIZE_SMALL = 24
+                BTN_ID_DONE = "btn_done"
+                ctx.canvas_properties(
+                    padding=12, background_color=[0.3, 0.3, 0.3, 0.7]
+                )
+                ctx.label(
+                    text=self._generic_GUI_message,
+                    font_size=FONT_SIZE_SMALL,
+                    horizontal_alignment=HorizontalAlignment.CENTER,
+                )
+                ctx.separator()
+                ctx.button(
+                    uid=BTN_ID_DONE,
+                    text="Done",
+                    enabled=self._generic_GUI_message is not None,
+                )
+            if self._app_service.remote_client_state.ui_button_pressed(
+                0, BTN_ID_DONE
+            ):
+                self._generic_GUI_message = None
+                self._app_service.ui_manager.clear_all_canvases(Mask.ALL)
 
         if self._task_finished_signaled:
             if self._session is None:

@@ -653,7 +653,9 @@ class RobotAppWrapper:
         # if true, use the velocity based base constraint control, otherwise fully dynamic
         self.do_vel_fix_base = True
         self._do_kin_fixed_base = False
-        self.kin_fixed_base_state = None
+        self.kin_fixed_base_state: Tuple[
+            List[float], List[float], mn.Vector3
+        ] = None
         # datastructure to aggregate the results of contact callbacks in a queryable format
         self.contact_state: Dict[Any, Any] = {}
         self._in_contact = False
@@ -1140,6 +1142,14 @@ class RobotAppWrapper:
             rot = isaac_prim_utils.rotation_wxyz_to_magnum_quat(rot_usd)
         return pos, rot
 
+    def global_forward(self):
+        """
+        Return the global forward vector for the robot's base.
+        """
+        _, rot = self.get_root_pose()
+        glob_forward = rot.transform_vector(mn.Vector3(1.0, 0, 0))
+        return glob_forward
+
     def angle_to(
         self,
         dir_target: mn.Vector3,
@@ -1355,7 +1365,7 @@ class RobotAppWrapper:
             ]
         )
 
-    def draw_debug(self, dblr: DebugLineRender):
+    def draw_debug(self, dblr: DebugLineRender, forward_color=None):
         """
         Draw some representation of the robot state.
         """
@@ -1366,12 +1376,14 @@ class RobotAppWrapper:
         # debug_draw_axis(dblr, tform)
 
         # draw a line in the forward direction of the robot
-        forward_dir = root_rot.transform_vector(mn.Vector3(1.0, 0, 0))
+        if forward_color is None:
+            forward_color = mn.Color4(0.0, 1.0, 0.0, 1.0)
+        forward_dir = root_rot.transform_vector(mn.Vector3(1.0, 0, 0)) * 2.0
         dblr.draw_transformed_line(
             root_pos,
             root_pos + forward_dir,
-            from_color=mn.Color4(0.0, 1.0, 0.0, 1.0),
-            to_color=mn.Color4(0.0, 1.0, 0.0, 1.0),
+            from_color=forward_color,
+            to_color=forward_color,
         )
 
         # draw the navmesh circle
