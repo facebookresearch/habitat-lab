@@ -561,6 +561,7 @@ class DebugVisualizer:
         subject=Union[
             habitat_sim.physics.ManagedArticulatedObject,
             habitat_sim.physics.ManagedRigidObject,
+            mn.Range3D,
             str,
             int,
         ],
@@ -570,9 +571,11 @@ class DebugVisualizer:
         debug_circles: Optional[
             List[Tuple[mn.Vector3, float, mn.Vector3, mn.Color4]]
         ] = None,
+        subject_transform: Optional[mn.Matrix4] = mn.Matrix4.identity_init(),
     ) -> DebugObservation:
         """
-        Generic "peek" function generating a DebugObservation image or a set of images centered on a subject and taking as input all reasonable ways to define a subject to peek. Use this function to quickly "peek" at an object or the top-down view of the full scene.
+        Generic "peek" function generating a DebugObservation image or set of images centered on a subject and taking as input all reasonable ways to define a subject to peek. Use this function to quickly "peek" at an object or the top-down view of the full scene.
+        Reasonable ways to define the subject are: object_id (int), object handle (str), "stage", "scene", or a Magnum Range3D.
 
         :param subject: The subject to visualize. One of: ManagedRigidObject, ManagedArticulatedObject, an object_id integer, a string "stage", "scene", or handle of an object instance.
         :param cam_local_pos: Optionally provide a camera location in location local coordinates. Otherwise offset along local -Z axis from the object.
@@ -580,12 +583,12 @@ class DebugVisualizer:
         :param debug_lines: Optionally provide a list of debug line render tuples, each with a list of points and a color. These will be displayed in all peek images.
         :param debug_circles: Optionally provide a list of debug line render circle Tuples, each with (center, radius, normal, color). These will be displayed in all peek images.
         :return: the DebugObservation containing either 1 image or 6 joined images depending on value of peek_all_axis.
+        :subject_transform: Optionally provide a world transform (applied only if passing a Magnum AABB value to the function).
         """
 
         subject_bb = None
-        subject_transform = mn.Matrix4.identity_init()
 
-        # first check if the subject is an object id or a string defining ("stage"or"scene") or object handle.
+        # first check if the subject is an object id, a string defining ("stage" | "scene") or object handle, or a bounding box.
         if isinstance(subject, int):
             from habitat.sims.habitat_simulator.sim_utilities import (
                 get_obj_from_id,
@@ -617,6 +620,12 @@ class DebugVisualizer:
                         f"The string subject, '{subject}', is not a valid object handle or an allowed alias from ('stage', 'scene')."
                     )
                 subject = subject_obj
+        # We can peek any arbitrary bounding box (Used for comparing whole objects to their decomposed parts).
+        # subject_transform should be provided along with the AABB when called
+        elif isinstance(subject, mn.Range3D):
+            subject_bb = subject
+            if cam_local_pos is None:
+                cam_local_pos = mn.Vector3(0, 1, 0)
 
         if subject_bb is None:
             subject_bb = subject.aabb
