@@ -571,7 +571,7 @@ class DebugVisualizer:
         debug_circles: Optional[
             List[Tuple[mn.Vector3, float, mn.Vector3, mn.Color4]]
         ] = None,
-        subject_transform: Optional[mn.Matrix4] = mn.Matrix4.identity_init(),
+        subject_transform: Optional[mn.Matrix4] = None,
     ) -> DebugObservation:
         """
         Generic "peek" function generating a DebugObservation image or set of images centered on a subject and taking as input all reasonable ways to define a subject to peek. Use this function to quickly "peek" at an object or the top-down view of the full scene.
@@ -585,7 +585,8 @@ class DebugVisualizer:
         :return: the DebugObservation containing either 1 image or 6 joined images depending on value of peek_all_axis.
         :subject_transform: Optionally provide a world transform (applied only if passing a Magnum AABB value to the function).
         """
-
+        if subject_transform is None:
+            subject_transform = mn.Matrix4.identity_init()
         subject_bb = None
 
         # first check if the subject is an object id, a string defining ("stage" | "scene") or object handle, or a bounding box.
