@@ -18,8 +18,10 @@ habitat_hitl:
 
   window:
     title: "IsaacSim Robot Teleop Viewer"
-    width: 1920
-    height: 1080
+    # width: 1920
+    # height: 1080
+    width: 960
+    height: 600
     display_font_size: 24
   ######################
 

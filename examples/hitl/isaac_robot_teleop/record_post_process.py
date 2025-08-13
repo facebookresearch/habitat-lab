@@ -515,6 +515,34 @@ def get_sessions_by_version_range(
     return matching_sessions
 
 
+def obj_in_camera_frustum(single_frame_json: Dict[Any, Any]):
+    """
+    Using the frame_json data, determine if the 1st object is within the camera frustum.
+    """
+    cam_in_robot_frame = mn.Matrix4(
+        ((0, 0, -1, 0.212), (-1, 0, 0, 0), (0, 1, 0, 1.014), (0, 0, 0, 1))
+    ).transposed()
+
+    robot_rot = single_frame_json["robot_state"]["base_rotation_quat"]
+    robot_rot = mn.Quaternion(
+        ((robot_rot[1], robot_rot[2], robot_rot[3]), robot_rot[0])
+    )
+    robot_pos = mn.Vector3(*single_frame_json["robot_state"]["base_pos"])
+    robot_t = mn.Matrix4.from_(robot_rot.to_matrix(), robot_pos)
+
+    cam_t = robot_t @ cam_in_robot_frame
+
+    obj_t_list = single_frame_json["object_states"][0]["transformation"]
+    obj_t = mn.Matrix4(
+        [[obj_t_list[j][i] for j in range(4)] for i in range(4)]
+    )
+    obj_pos = obj_t.translation
+
+    from scripts.utils import point_in_frustum
+
+    return point_in_frustum(cam_t, obj_pos)
+
+
 def process_record_stats(
     data_dir: str,
     out_dir: str,
@@ -623,39 +651,36 @@ def process_record_stats(
     ep_data = {}
     ep_counts: defaultdict = defaultdict(int)
 
-    if do_not_process_frames:
-        # quick path were all data is parsed from the session metadata headers and individual episode files are not opened.
-        for session_dir_name in tqdm(session_dirs):
-            session_dir = os.path.join(data_dir, session_dir_name)
-            session_json = load_json_gz(
-                os.path.join(session_dir, "session.json.gz")
-            )
-            for ep_header_json in session_json["episodes"]:
-                ep_id = int(ep_header_json["episode_id"])
-                ep_finished = ep_header_json["finished"]
-                if not ep_finished:
-                    continue
-                ep_counts[ep_id] += 1
-                ep_path = os.path.join(session_dir, f"{ep_id}.json.gz")
+    # quick path were all data is parsed from the session metadata headers and individual episode files are not opened.
+    for session_dir_name in tqdm(session_dirs):
+        session_dir = os.path.join(data_dir, session_dir_name)
+        session_json = load_json_gz(
+            os.path.join(session_dir, "session.json.gz")
+        )
+        for ep_header_json in session_json["episodes"]:
+            ep_id = int(ep_header_json["episode_id"])
+            ep_finished = ep_header_json["finished"]
+            if not ep_finished:
+                continue
+            ep_counts[ep_id] += 1
+            ep_path = os.path.join(session_dir, f"{ep_id}.json.gz")
 
-                # record info from the episode json for csv export
-                ep_data[ep_path] = {
-                    "task_prompt": ep_header_json["episode_info"][
-                        "task_prompt"
-                    ],
-                    "scene_id": ep_header_json["scene_id"],
-                }
+            # record info from the episode json for csv export
+            ep_data[ep_path] = {
+                "task_prompt": ep_header_json["episode_info"]["task_prompt"],
+                "scene_id": ep_header_json["scene_id"],
+            }
 
-                content_bug = ep_header_json.get("content_bug_flagged", False)
-                if content_bug:
-                    content_bug_ep_paths.append(ep_path)
-                success = ep_header_json["task_percent_complete"] > 0.0
-                if success:
-                    success_ep_paths.append(ep_path)
-                else:
-                    fail_ep_paths.append(ep_path)
+            content_bug = ep_header_json.get("content_bug_flagged", False)
+            if content_bug:
+                content_bug_ep_paths.append(ep_path)
+            success = ep_header_json["task_percent_complete"] > 0.0
+            if success:
+                success_ep_paths.append(ep_path)
+            else:
+                fail_ep_paths.append(ep_path)
 
-    else:
+    if not do_not_process_frames:
         # get all the episodes from the sessions
         session_episodes = [
             os.path.join(data_dir, s_dir, ep)
@@ -666,7 +691,7 @@ def process_record_stats(
         frame_count_sum = 0
         # NOTE: do all the stats processing for the episodes here
         print(f"Processing {len(session_episodes)} episode records ...")
-        for ep_path in tqdm(session_episodes):
+        for ep_path in tqdm(success_ep_paths):
             ep_index = int(ep_path.split("/")[-1].split(".json.gz")[0])
 
             # get the record dict from JSON
@@ -686,7 +711,17 @@ def process_record_stats(
                 continue
 
             good_first_frame = get_good_first_ep_frame(ep_json["frames"])
-            print(f"    good first frame = {good_first_frame}")
+            # print(f"    good first frame = {good_first_frame}")
+
+            object_start_in_sight = obj_in_camera_frustum(
+                ep_json["frames"][good_first_frame]
+            )
+            object_end_in_sight = obj_in_camera_frustum(ep_json["frames"][-1])
+            # print(f"Object starts in sight = {object_start_in_sight}")
+
+            ep_data[ep_path]["obj_in_sight"] = (
+                object_start_in_sight and object_end_in_sight
+            )
 
             interesting_frames = (
                 int(ep_json["episode"]["frame_count"]) - good_first_frame
@@ -694,11 +729,11 @@ def process_record_stats(
             frame_count_sum += interesting_frames
 
             # success sorting
-            success = get_ep_success(ep_json)
-            if success:
-                success_ep_paths.append(ep_path)
-            else:
-                fail_ep_paths.append(ep_path)
+            # success = get_ep_success(ep_json)
+            # if success:
+            #     success_ep_paths.append(ep_path)
+            # else:
+            #     fail_ep_paths.append(ep_path)
 
     num_completed_episodes = len(success_ep_paths) + len(fail_ep_paths)
 
@@ -750,6 +785,7 @@ def process_record_stats(
                     short_ep_path.split(".")[0],
                     ep_data[ep_path]["task_prompt"],
                     ep_data[ep_path]["scene_id"],
+                    ep_data[ep_path]["obj_in_sight"],
                 ]
             )
     print(f"Wrote successful episode paths to {csv_out_file}")

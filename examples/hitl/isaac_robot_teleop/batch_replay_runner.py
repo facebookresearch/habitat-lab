@@ -50,10 +50,13 @@ def get_window_id(process):
     return window_id
 
 
+# NOTE: added this flag because we now have embedded video capture
+record_screen = False
+
 # define the range of episodes to consider and details from that batch
 episode_dataset = "data/datasets/hitl_teleop_episodes.json.gz"
 # session_dir = "../../../Downloads/download/isaac_robot_teleop/"
-session_dir = "../../../Downloads/isaac_robot_teleop_vla/"
+session_dir = "../../../Downloads/isaac_robot_teleop_vla_b/"
 
 # NOTE: manually set the episode filepaths here
 episode_filepaths = [
@@ -82,9 +85,11 @@ for ep_fp in tqdm(episode_filepaths):
         "replay_episode_record",
         f"isaac_robot_teleop.episode_dataset={episode_dataset}",
         f"isaac_robot_teleop.episode_record_filepath={full_ep_fp}",
-        f"isaac_robot_teleop.replay_speed={1}",
+        f"isaac_robot_teleop.replay_speed={20}",
+        f"habitat_hitl.target_sps={600}",
+        f"isaac_robot_teleop.video_prefix={video_prefix}",
         # NOTE: the following are set in the yaml but added here for ease of edit
-        # f"isaac_robot_teleop.record_video=True",
+        "isaac_robot_teleop.record_video=True",
         # f"isaac_robot_teleop.cam_zoom_distance=1.0",
         # f"isaac_robot_teleop.lock_orientation_to_robot=True",
     ]
@@ -92,28 +97,30 @@ for ep_fp in tqdm(episode_filepaths):
     print(f"Running: {' '.join(cmd)}")
     process = subprocess.Popen(cmd)
 
-    window_id = get_window_id(process)
-    geometry = get_window_geometry(window_id)
-    output_file = (
-        f"hitl_teleop_record_stats_out/video/capture_{video_prefix}.mp4"
-    )
+    if record_screen:
+        window_id = get_window_id(process)
+        geometry = get_window_geometry(window_id)
+        output_file = (
+            f"hitl_teleop_record_stats_out/video/capture_{video_prefix}.mp4"
+        )
 
-    stop_event = threading.Event()
-    capture_thread = threading.Thread(
-        target=capture_window,
-        args=(
-            window_id,
-            geometry["x"],
-            geometry["y"],
-            geometry["width"],
-            geometry["height"],
-            output_file,
-            stop_event,
-        ),
-    )
-    capture_thread.start()
+        stop_event = threading.Event()
+        capture_thread = threading.Thread(
+            target=capture_window,
+            args=(
+                window_id,
+                geometry["x"],
+                geometry["y"],
+                geometry["width"],
+                geometry["height"],
+                output_file,
+                stop_event,
+            ),
+        )
+        capture_thread.start()
 
     # Wait for the process to finish
     process.wait()
-    stop_event.set()
-    capture_thread.join()
+    if record_screen:
+        stop_event.set()
+        capture_thread.join()

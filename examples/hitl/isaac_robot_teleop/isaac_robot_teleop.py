@@ -56,6 +56,10 @@ from habitat_hitl.core.key_mapping import KeyCode, MouseButton
 from habitat_hitl.core.text_drawer import TextOnScreenAlignment
 from habitat_hitl.core.xr_input import HAND_LEFT, HAND_RIGHT
 from habitat_hitl.environment.camera_helper import CameraHelper
+from habitat_hitl.scripts.video_recorder import (
+    VideoRecorder,
+    VideoSourceFramebuffer,
+)
 from scripts.frame_recorder import FrameEvent, FrameRecorder
 from scripts.ik import DifferentialInverseKinematics, to_ik_pose
 from scripts.utils import LERP, debug_draw_axis
@@ -298,6 +302,7 @@ class AppStateIsaacSimViewer(AppStateBase):
         self._camera_helper = CameraHelper(
             self._app_service.hitl_config, self._app_service.gui_input
         )
+
         # not supported
         assert not self._app_service.hitl_config.camera.first_person_mode
 
@@ -578,6 +583,11 @@ class AppStateIsaacSimViewer(AppStateBase):
             if hasattr(self._app_cfg, "record_video")
             else False
         )
+        self._framebuffer_video = None
+        if self.record_video:
+            self._framebuffer_video = VideoRecorder(
+                VideoSourceFramebuffer(),
+            )
         self.prev_replay_frame = 0
 
     def load_semantic_scene(self, scene_descriptor: str) -> None:
@@ -893,6 +903,44 @@ class AppStateIsaacSimViewer(AppStateBase):
 
                 # debug_draw_axis(dblr, self._rigid_objects[ix].transformation)
 
+    def draw_frustum(self):
+        """
+        Draw the rays from the robot's torso camera viewport corners.
+        This visualizes the 3D space which the robot can see.
+        """
+        # NOTE: we pre-compute and cache these rays from the replay script
+        robot_pos, robot_rot = self.robot.get_root_pose()
+        robot_transform = mn.Matrix4.from_(robot_rot.to_matrix(), robot_pos)
+
+        frustum_color = mn.Color4.green()
+        if not self.validate_obj_and_tar_in_torso_frustum():
+            frustum_color = mn.Color4.red()
+
+        dblr = self._app_service.gui_drawer
+        for local_corner_ray in [
+            (
+                mn.Vector3(0.212, 0, 1.014),
+                mn.Vector3(0.711137, 0.596746, 0.371723),
+            ),
+            (
+                mn.Vector3(0.212, 0, 1.014),
+                mn.Vector3(0.711161, -0.596723, 0.371714),
+            ),
+            (
+                mn.Vector3(0.212, 0, 1.014),
+                mn.Vector3(0.710479, 0.596194, -0.37386),
+            ),
+            (
+                mn.Vector3(0.212, 0, 1.014),
+                mn.Vector3(0.710504, -0.596171, -0.37385),
+            ),
+        ]:
+            global_o = robot_transform.transform_point(local_corner_ray[0])
+            global_d = robot_transform.transform_vector(local_corner_ray[1])
+            dblr.draw_transformed_line(
+                global_o, global_o + global_d, frustum_color, frustum_color
+            )
+
     def validate_robot_furniture_alignment(
         self, max_angle_error: float = 0.1
     ) -> bool:
@@ -912,6 +960,34 @@ class AppStateIsaacSimViewer(AppStateBase):
         if float(angle_error) > max_angle_error:
             return False
         return True
+
+    def validate_obj_and_tar_in_torso_frustum(self):
+        """
+        Validates that the object initial state and target position are both within the robot's fixed torso camera frustum.
+        NOTE: We use baked camera intrinsics and extrinsics to make this feasible. If camera mounting changes, we should re-bake these values.
+        """
+
+        # NOTE: this function has baked intrinsics
+        from scripts.utils import point_in_frustum
+
+        # NOTE: this is the baked extrinsic
+        cam_in_robot_frame = mn.Matrix4(
+            ((0, 0, -1, 0.212), (-1, 0, 0, 0), (0, 1, 0, 1.014), (0, 0, 0, 1))
+        ).transposed()
+
+        robot_pos, robot_rot = self.robot.get_root_pose()
+        robot_t = mn.Matrix4.from_(robot_rot.to_matrix(), robot_pos)
+        cam_t = robot_t @ cam_in_robot_frame
+
+        obj_initial_in_frustum = point_in_frustum(
+            cam_t, self._object_initials[0]
+        )
+
+        target_in_frustum = point_in_frustum(
+            cam_t, self._object_targets[0][1].translation
+        )
+
+        return obj_initial_in_frustum and target_in_frustum
 
     def load_robot(self) -> None:
         """
@@ -1870,7 +1946,23 @@ class AppStateIsaacSimViewer(AppStateBase):
             self._rigid_objects[0].com = self._rigid_objects[0].com
 
         if gui_input.get_key_down(KeyCode.THREE):
-            print(f"Robot in contact = {self.robot_contact_test()}")
+            # print(f"Robot in contact = {self.robot_contact_test()}")
+            from scripts.utils import point_in_frustum
+
+            print(
+                f"Obj in cam frustum = {point_in_frustum(self._cam_transform, self._rigid_objects[0].com)}"
+            )
+            # mouse_pos_2d = self._app_service.gui_input.mouse_position
+            # mouse_ray = self._app_service.gui_input.mouse_ray
+            # a_mouse_point = mouse_ray.origin + mouse_ray.direction
+            # hit_pos_usd = self._recent_mouse_ray_hit_info["position"]
+            # hit_pos_habitat = mn.Vector3(
+            #     *isaac_prim_utils.usd_to_habitat_position(hit_pos_usd)
+            # )
+            # print(f"Mouse pos 2d = {mouse_pos_2d}")
+            # print(f"Mouse pos 3d = {hit_pos_habitat}")
+            # print(f"Mouse pos 3d->2d = {project_point(self._cam_transform, hit_pos_habitat)}")
+            # print(f"Mouse cam frustum = {point_in_frustum(self._cam_transform, hit_pos_habitat)}")
 
         if gui_input.get_key_down(KeyCode.F):
             self.cursor_follow_robot = not self.cursor_follow_robot
@@ -2067,15 +2159,15 @@ class AppStateIsaacSimViewer(AppStateBase):
     #                 pos, pos + finger_normal * finger_offset_dist, color
     #             )
 
-    def get_vla_task_success(self):
+    def get_vla_task_success(self) -> Tuple[float, str]:
         """
         Single function call for all task success criteria.
+        NOTE: also returns a reason for failure or None if successful
         """
         # check base is locked
         if not self.lock_robot_base:
             # if the robot base is not locked, we assume the task is not successful
-            print("Task not successful, robot base is not locked.")
-            return 0.0
+            return 0.0, "Task not successful, robot base is not locked."
 
         # check object position is correct
         placement_success = validate_target_placement_position(
@@ -2085,18 +2177,17 @@ class AppStateIsaacSimViewer(AppStateBase):
             horizontal_only=True,
         )
         if not placement_success:
-            print(
-                "Task not successful, object not placed near enough to target."
+            return (
+                0.0,
+                "Task not successful, object not placed near enough to target.",
             )
-            return 0.0
 
         # check that the object is upright
         tilt_success = validate_tilt_angle(
             self._rigid_objects[0], max_tilt_angle=0.2
         )
         if not tilt_success:
-            print("Task not successful, object not placed upright.")
-            return 0.0
+            return 0.0, "Task not successful, object not placed upright."
 
         # check that the robot's base is oriented correctly toward the furniture
         base_orientation_success = self.validate_robot_furniture_alignment(
@@ -2104,12 +2195,18 @@ class AppStateIsaacSimViewer(AppStateBase):
         )
 
         if not base_orientation_success:
-            print(
-                "Task not successful, base not oriented orthogonally to the furniture."
+            return (
+                0.0,
+                "Task not successful, base not oriented orthogonally to the furniture.",
             )
-            return 0.0
 
-        return 1.0  # Task is successful if all criteria are met
+        if not self.validate_obj_and_tar_in_torso_frustum():
+            return (
+                0.0,
+                "Task not successful, object initial and target states not within torso camera frustum.",
+            )
+
+        return 1.0, None  # Task is successful if all criteria are met
 
     def sim_update(self, dt, post_sim_update_dict):
         self._sps_tracker.increment()
@@ -2118,7 +2215,7 @@ class AppStateIsaacSimViewer(AppStateBase):
         if self.lock_robot_base:
             self._task_timer += dt
             if self._task_timer > self._max_task_time:
-                if self.get_vla_task_success() > 0:
+                if self.get_vla_task_success()[0] > 0:
                     self._task_finished_signaled = True
                 else:
                     print(
@@ -2164,6 +2261,25 @@ class AppStateIsaacSimViewer(AppStateBase):
         )
         post_sim_update_dict["cam_transform"] = self._cam_transform
 
+        # NOTE: this code is used to compute the local camera matrix for offline visibility testing
+        # robot_pos, robot_rot = self.robot.get_root_pose()
+        # robot_transform = mn.Matrix4.from_(robot_rot.to_matrix(), robot_pos)
+        # cam_transform_in_robot_space = robot_transform.inverted()@self._cam_transform
+        # print(f"cam_transform_in_robot_space = {cam_transform_in_robot_space}")
+        # print(f"cam_transform = {self._cam_transform}")
+        # print(f"robot_transform = {robot_transform}")
+        # print("--")
+        # NOTE: this code computes the frustum rays for debug drawing
+        # if self._app_service.gui_input._corner_rays is not None:
+        #     c_rays_local = []
+        #     for corner_ray in list(self._app_service.gui_input._corner_rays):
+        #         corner_ray_local_o = robot_transform.inverted().transform_point(corner_ray.origin)
+        #         corner_ray_local_d = robot_transform.inverted().transform_vector(corner_ray.direction)
+        #         print(f"corner_ray =  {corner_ray_local_o} | {corner_ray_local_d}")
+        #         c_rays_local.append((corner_ray_local_o, corner_ray_local_d))
+        #     print(c_rays_local)
+        #     breakpoint()
+
         if self.in_replay_mode and not self._hide_debug_lines:
             self._frame_recorder.get_xr_pose_from_frame().draw_pose(
                 self._app_service.gui_drawer
@@ -2179,6 +2295,7 @@ class AppStateIsaacSimViewer(AppStateBase):
         if self._draw_debug_shapes and not self._hide_debug_lines:
             # draw lookat ring
             self.draw_lookat()
+            self.draw_frustum()
 
             # validate the orientation and set GUI color from results
             robot_orientation_valid_for_task = (
@@ -2204,6 +2321,10 @@ class AppStateIsaacSimViewer(AppStateBase):
 
         if not self._hide_debug_lines:
             self.highlight_added_objects()
+
+        # record the current framebuffer video frame
+        if self.record_video:
+            self._framebuffer_video.record_video_frame()
 
         if self._view_task_prompt:
             if self.episode is not None:
@@ -2273,7 +2394,7 @@ class AppStateIsaacSimViewer(AppStateBase):
             if self._session is None:
                 # Skip the dialogue if outside of the state machine.
                 self._task_finished = True
-                self._task_success = self.get_vla_task_success()
+                self._task_success = self.get_vla_task_success()[0]
             else:
                 with self._app_service.ui_manager.update_canvas(
                     "center", destination_mask=Mask.ALL
@@ -2297,7 +2418,7 @@ class AppStateIsaacSimViewer(AppStateBase):
                         uid=BTN_ID_SUCCESS,
                         text="Success",
                         enabled=not self._task_finished
-                        and self.get_vla_task_success() > 0.0,
+                        and self.get_vla_task_success()[0] > 0.0,
                     )
                     ctx.button(
                         uid=BTN_ID_FAILURE,
@@ -2320,7 +2441,7 @@ class AppStateIsaacSimViewer(AppStateBase):
                     0, BTN_ID_SUCCESS
                 ):
                     self._task_finished = True
-                    self._task_success = self.get_vla_task_success()
+                    self._task_success = self.get_vla_task_success()[0]
                     self._app_service.ui_manager.clear_all_canvases(Mask.ALL)
                 elif self._app_service.remote_client_state.ui_button_pressed(
                     0, BTN_ID_FAILURE
@@ -2362,6 +2483,15 @@ class AppStateIsaacSimViewer(AppStateBase):
         ):
             # we've reached the looping point and should exit
             post_sim_update_dict["application_exit"] = True
+            video_prefix = (
+                self._app_cfg.video_prefix
+                if hasattr(self._app_cfg, "video_prefix")
+                else "video"
+            )
+            self._framebuffer_video.save_video(
+                f"hitl_teleop_record_stats_out/video/{video_prefix}_framebuffer.mp4",
+                fps=30,
+            )
 
         # record state trajectory frames in the session object for cloud serialization
         if self._session is not None:

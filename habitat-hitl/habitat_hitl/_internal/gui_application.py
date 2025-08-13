@@ -7,6 +7,7 @@
 import abc
 import math
 import time
+from typing import Any, List
 
 import magnum as mn
 from magnum.platform.glfw import Application
@@ -34,6 +35,7 @@ class InputHandlerApplication(Application):
         super().__init__(config)
         self._gui_input = GuiInput()
         self._mouse_ray = None
+        self._corner_rays: List[Any] = None
 
     def key_press_event(self, event: Application.KeyEvent) -> None:
         key = MagnumKeyConverter.convert_key(event.key)
@@ -109,6 +111,17 @@ class InputHandlerApplication(Application):
 
     def update_mouse_ray(self, unproject_fn):
         self._mouse_ray = unproject_fn(self._gui_input._mouse_position)
+
+    def get_rays_for_corners(self, unproject_fn):
+        self._corner_rays = []
+        for c in [
+            mn.Vector2i(0, 0),
+            mn.Vector2i(self.window_size[0], 0),
+            mn.Vector2i(0, self.window_size[1]),
+            mn.Vector2i(self.window_size[0], self.window_size[1]),
+        ]:
+            self._corner_rays.append(unproject_fn(c))
+        self._gui_input._corner_rays = self._corner_rays
 
 
 class GuiApplication(InputHandlerApplication):
@@ -190,6 +203,8 @@ class GuiApplication(InputHandlerApplication):
 
         # todo: also update when mouse moves
         self.update_mouse_ray(self._app_renderer.unproject)
+        # NOTE: uncomment this to rebake the frustum rays. Disable for perf.
+        # self.get_rays_for_corners(self._app_renderer.unproject)
 
         # app_renderer should have rendered to mn.gl.default_framebuffer
         if did_render:

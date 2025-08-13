@@ -498,6 +498,9 @@ class RearrangeEpisodeGenerator:
                 failed_episodes += 1
                 continue
             generated_episodes.append(new_episode)
+            logger.info(
+                f"!!! SUCCESSFULLY GENERATED EPISODE {len(generated_episodes)}/{num_episodes} !!!"
+            )
             if verbose:
                 pbar.update(1)
         if verbose:

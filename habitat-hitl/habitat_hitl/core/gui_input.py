@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from habitat_hitl.core.key_mapping import KeyCode, MouseButton
 
@@ -33,6 +33,7 @@ class GuiInput:
         self._relative_mouse_position = [0, 0]
         self._mouse_scroll_offset = 0.0
         self._mouse_ray: Optional[Ray] = None
+        self._corner_rays: Optional[List[Ray]] = None
 
     def validate_key(key):
         assert isinstance(key, KeyCode)
