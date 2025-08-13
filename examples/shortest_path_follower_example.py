@@ -8,11 +8,14 @@ import os
 import shutil
 
 import numpy as np
+import magnum as mn
 
 import habitat
+import habitat_sim
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 from habitat.utils.visualizations import maps
 from habitat.utils.visualizations.utils import images_to_video
+from habitat.config import read_write
 
 IMAGE_DIR = os.path.join("examples", "images")
 if not os.path.exists(IMAGE_DIR):
@@ -41,11 +44,14 @@ def draw_top_down_map(info, output_size):
 
 def shortest_path_example():
     config = habitat.get_config(
-        config_path="benchmark/nav/pointnav/pointnav_habitat_test.yaml",
+        config_path="benchmark/nav/pointnav/pointnav_gibson.yaml",
         overrides=[
             "+habitat/task/measurements@habitat.task.measurements.top_down_map=top_down_map"
         ],
     )
+
+    with read_write(config):
+        config.habitat.dataset.split = 'val'
 
     with SimpleRLEnv(config=config) as env:
         goal_radius = env.episodes[0].goals[0].radius

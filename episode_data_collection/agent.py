@@ -27,7 +27,6 @@ from habitat_baselines.utils.common import batch_obs
 
 # Local
 import utils
-from rl_distance_train import distance_policy, dataset, distance_policy_gt
 
 
 class ImageNavShortestPathFollower(ShortestPathFollower):
@@ -142,6 +141,9 @@ class PPOAgent(Agent):
     def get_observation_space(self) -> SpaceDict:
         """Return the observation space of the agent."""
         return self.obs_space
+
+    def get_config(self) -> "DictConfig":
+        return self.config
 
     @staticmethod
     def from_config(config_path: str) -> "PPOAgent":

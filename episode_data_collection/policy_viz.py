@@ -25,9 +25,10 @@ from habitat.config import read_write
 
 from episode_data_collection.env import SimpleRLEnv
 import episode_data_collection.utils as utils
-from episode_data_collection.utils import draw_top_down_map, load_embedding, transform_rgb_bgr
+from episode_data_collection.utils import draw_top_down_map, load_embedding, transform_rgb_bgr, se3_world_T_cam_plusZ, K_from_fov, make_mini_plot
 from episode_data_collection.agent import ImageNavShortestPathFollower, PPOAgent
 
+from rl_distance_train import distance_policy, dataset, distance_policy_gt
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 def env_navigation(args):
@@ -39,6 +40,9 @@ def env_navigation(args):
 
     with read_write(config):
         config.habitat.dataset.split = args.split
+        config.habitat.environment.max_episode_steps = 300
+
+    distance_norm = config.habitat.task.lab_sensors.pointgoal_with_gps_compass_sensor.distance_norm
 
     if args.describe_goal:
         describer = utils.ImageDescriber()
@@ -47,6 +51,8 @@ def env_navigation(args):
     os.makedirs(args.save_dir, exist_ok=True)
     
     agent = PPOAgent.from_config(args.policy_checkpoint)
+    distance_model, img_transform = load_embedding(agent.get_config().habitat_baselines.rl.ddppo.encoder_backbone)
+    distance_model.eval()
 
     with SimpleRLEnv(config=config) as env:
         goal_radius = env.episodes[0].goals[0].radius
@@ -104,7 +110,7 @@ def env_navigation(args):
             if goal_image is not None and args.describe_goal:
                 goal_description = describer.describe_image(goal_image, goal_category)
 
-            images = []
+            images, gt_distances, temporal_distances = [], [], []
             while not env.habitat_env.episode_over:
                 # copy observations to avoid modifying the original
                 try:
@@ -117,23 +123,34 @@ def env_navigation(args):
                 if action is None:
                     break
                 
+                # log the current state
+                print("Destination, distance: {:3f}, theta(radians): {:.2f}".format(
+                observations["pointgoal_with_gps_compass"][0] * distance_norm,
+                observations["pointgoal_with_gps_compass"][1]))
+                gt_distances.append(observations["pointgoal_with_gps_compass"][0] * distance_norm)
+
+
+                with torch.no_grad():
+                    transformed_imgs = torch.stack([img_transform(Image.fromarray(f)) for f in [observations['rgb'], goal_image]]).to('cuda')
+                    temporal_dist, conf = distance_model(transformed_imgs[:1], transformed_imgs[1:])
+                    temporal_dist = temporal_dist.cpu().numpy()[0]
+                print(f"Predicted distance {temporal_dist:2f}")
+                temporal_distances.append(temporal_dist)
+
+                # collect current view and state
+                plot_img = make_mini_plot(gt_distances, temporal_distances, size=observations['rgb'].shape[0])
+
                 top_down_map = draw_top_down_map(info, observations['rgb'].shape[0])
-                combined_image = cv2.hconcat([observations["rgb"], top_down_map, goal_image])
+                combined_image = cv2.hconcat([observations["rgb"], top_down_map, goal_image, plot_img.astype(np.uint8)])
                 images.append(combined_image)
                                             
                 observations, reward, done, info = env.step(action)
-
-                print("Destination, distance: {:3f}, theta(radians): {:.2f}".format(
-                    observations["pointgoal_with_gps_compass"][0],
-                    observations["pointgoal_with_gps_compass"][1]))
-
 
             episode_id = f"%0{len(str(len(env.episodes)))}d" % episode
             images_to_video(images, args.save_dir, f"trajectory_{episode_id}", verbose=False)
 
 def main(args):
     env_navigation(args)
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

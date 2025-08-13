@@ -2,13 +2,14 @@
 
 defaults:
   - imagenav_base
-  - /habitat/dataset/imagenav: hm3d
+  - /habitat/dataset/instance_imagenav: hm3d_v2
   - _self_
 
 habitat:
   environment:
     max_episode_steps: 1000
   simulator:
+    scene_dataset: "/cluster/work/rsl/lmilikic/hm3d/hm3d_annotated_basis.scene_dataset_config.json"
     agents:
       main_agent:
         sim_sensors:
@@ -16,9 +17,14 @@ habitat:
             width: 256
             height: 256
             hfov: 90
-            position: [0, 0.9, 0]
           depth_sensor:
             width: 256
             height: 256
+            hfov: 90
+            min_depth: 0.0
+            max_depth: 100.0
+            normalize_depth: False
+    habitat_sim_v0:
+      allow_sliding: True
   dataset:
-    scenes_dir: "/cluster/work/rsl/lmilikic/gibson"
+    scenes_dir: "/cluster/work/rsl/lmilikic/hm3d"

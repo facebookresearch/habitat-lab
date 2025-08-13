@@ -9,6 +9,8 @@ habitat:
   environment:
     max_episode_steps: 1000
   simulator:
+    turn_angle: 30
+    forward_step_size: 0.25
     agents:
       main_agent:
         sim_sensors:
@@ -18,5 +20,11 @@ habitat:
           depth_sensor:
             width: 256
             height: 256
+            hfov: 90
+            min_depth: 0.0
+            max_depth: 100.0
+            normalize_depth: False
+    habitat_sim_v0:
+      allow_sliding: True
   dataset:
     scenes_dir: "/cluster/work/rsl/lmilikic/gibson"

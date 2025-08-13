@@ -20,18 +20,14 @@ habitat:
             width: 256
             height: 256
             hfov: 90
-            position: [0, 0.9, 0]
           depth_sensor:
             width: 256
             height: 256
             hfov: 90
-            min_depth: 0.5
-            max_depth: 5.0
-            position: [0, 0.9, 0]
-        height: 1.41
-        radius: 0.17
+            min_depth: 0.0
+            max_depth: 100.0
+            normalize_depth: False
     habitat_sim_v0:
-      # gpu_device_id: 0
       allow_sliding: True
   dataset:
     scenes_dir: "/cluster/work/rsl/lmilikic/hm3d"

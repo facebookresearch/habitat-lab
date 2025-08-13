@@ -22,5 +22,10 @@ habitat:
             width: 256
             height: 256
             hfov: 90
+            min_depth: 0.0
+            max_depth: 100.0
+            normalize_depth: False
+    habitat_sim_v0:
+      allow_sliding: True
   dataset:
     scenes_dir: "/cluster/work/rsl/lmilikic/gibson"

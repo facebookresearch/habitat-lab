@@ -1084,7 +1084,7 @@ class _ProgressReward(Measure):
         self.prev_dist: Optional[float] = None
         
         # Constant hyper-parameters
-        self.cs = 10.0               # bonus when reaching goal
+        self.cs = 15.0               # bonus when reaching goal
         self.ca = 5.0               # extra bonus if within angle threshold
         self.rg = 1.0               # goal radius
         self.theta_g = np.deg2rad(25.0)

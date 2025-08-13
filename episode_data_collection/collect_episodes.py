@@ -26,7 +26,7 @@ from habitat.utils.visualizations.utils import images_to_video
 from habitat.utils.geometry_utils import quaternion_to_list
 from habitat.config import read_write
 
-from utils import draw_top_down_map, load_embedding, animate_episode, zip_directory
+from utils import draw_top_down_map, load_embedding, animate_episode, zip_directory, se3_world_T_cam_plusZ, K_from_fov
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -56,6 +56,10 @@ def shortest_path_navigation(args):
         with read_write(config):
             config.habitat.environment.max_episode_steps = 100000
 
+    if args.collect_surface_points:
+        with read_write(config):
+            config.habitat.simulator.agents.main_agent.sim_sensors.depth_sensor.normalize_depth = False
+
     if args.describe_goal:
         describer = utils.ImageDescriber()
 
@@ -69,6 +73,13 @@ def shortest_path_navigation(args):
 
         if args.verbose:
             print("Environment creation successful")
+
+        # depth sensor values
+        depth_sensor = config.habitat.simulator.agents[config.habitat.simulator.agents_order[0]].sim_sensors.depth_sensor
+        depth_img_hfov = depth_sensor.hfov
+        depth_img_width = depth_sensor.width
+        depth_img_height = depth_sensor.height
+        K = K_from_fov(depth_img_width, depth_img_height, depth_img_hfov)
         
         for episode in tqdm(range(len(env.episodes))):
             observations, info = env.reset(return_info=True)
@@ -146,7 +157,7 @@ def shortest_path_navigation(args):
             if args.verbose:
                 print("Agent stepping around inside environment.")
 
-            images, actions, distances, gps_list, compass_list, views = [], [], [], [], [], []
+            images, actions, distances, gps_list, compass_list, views, fov_points = [], [], [], [], [], [], []
             while not env.habitat_env.episode_over:
                 best_action = follower.get_next_action(env.habitat_env.current_episode.goals[0].position)
                 if best_action is None:
@@ -154,7 +165,7 @@ def shortest_path_navigation(args):
                 
                 try:
                     images.append(observations["rgb"])
-                    distances.append(observations["pointgoal_with_gps_compass"][0])
+                    distances.append(info['distance_to_goal'])
                     gps_list.append(list(observations['gps']))
                     compass_list.append(list(observations['compass']))
                 except Exception as e:
@@ -166,6 +177,14 @@ def shortest_path_navigation(args):
                 if args.eval_model is not None:
                     top_down_map = draw_top_down_map(info, observations['rgb'].shape[0])
                     maps.append(top_down_map)
+
+                if args.collect_surface_points:
+                    curr_depth = np.squeeze(observations["depth"]).astype(np.float32)
+                    agent_state = env.habitat_env.sim.get_agent_state(0)
+                    cam_state = agent_state.sensor_states["depth"]
+                    world_T_cam_curr = se3_world_T_cam_plusZ(cam_state.position, cam_state.rotation)
+
+                    fov_points.append({'depth': curr_depth, 'se3': world_T_cam_curr, 'K': K})
                     
                 if args.every_view and best_action == HabitatSimActions.move_forward:
                     original_state = env.habitat_env.sim.get_agent_state()  # Save current agent state
@@ -232,6 +251,10 @@ def shortest_path_navigation(args):
             if args.every_view:
                 with open(f"{dirname}/views.pkl", "wb") as f:
                     pickle.dump(views, f)
+
+            if fov_points:
+                with open(f"{dirname}/fov_points.pkl", "wb") as f:
+                    pickle.dump(fov_points, f)
 
             if args.eval_model:
                 model, transform = load_embedding(args.eval_model)
@@ -317,6 +340,7 @@ if __name__ == "__main__":
     parser.add_argument("--save-per-scene", action="store_true", default=False)
     parser.add_argument("--describe-goal", action="store_true", default=False)
     parser.add_argument("--eval-model", type=str, default=None)
+    parser.add_argument("--collect-surface-points", action="store_true")
     parser.add_argument("--max-len", type=int, default=100, help="Max frames to animate")
     parser.add_argument("--zip", action="store_true", help="Zip each episode folder and delete the folder.")
     parser.add_argument("--verbose", action="store_true", default=False)
