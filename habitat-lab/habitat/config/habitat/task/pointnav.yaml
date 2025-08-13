@@ -30,7 +30,7 @@ lab_sensors:
     distance_norm: 6.5
     # noise
     noise_enabled: True
-    noise_sigma: 0.60
+    noise_sigma: 0.55
     noise_alpha: 0.99
     noise_spike_prob: 0.10
     noise_spike_scale: 2.5

@@ -371,6 +371,7 @@ class DDPPOConfig(HabitatBaselinesBaseConfig):
     use_confidence: bool = False
     distance_scale: float = 1.0
     use_vision: bool = False
+    use_pretrained_encoder: bool = False
 
 
 @dataclass

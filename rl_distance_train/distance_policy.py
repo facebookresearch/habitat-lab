@@ -18,7 +18,8 @@ from habitat.tasks.nav.nav import (
 )
 from rl_distance_train.models import TemporalDistanceEncoder
 from typing import Union, List, Dict, Optional, Tuple
-
+from efficientnet_pytorch import EfficientNet
+from torchvision import transforms
 
 @baseline_registry.register_policy
 class TemporalDistanceNavPolicy(NetPolicy):
@@ -38,6 +39,8 @@ class TemporalDistanceNavPolicy(NetPolicy):
         freeze_encoder=True,
         distance_scale=1.0,
         use_confidence=False,
+        use_vision=False,
+        vision_backbone='efficientnet-b0',
         pretrained_weights=None,
         policy_config: "DictConfig" = None,
         **kwargs
@@ -65,20 +68,28 @@ class TemporalDistanceNavPolicy(NetPolicy):
             encoder_base=encoder_base,
             freeze_encoder=freeze_encoder,
             distance_scale=distance_scale,
-            use_confidence=use_confidence)
+            use_confidence=use_confidence,
+            use_vision=use_vision,
+            vision_backbone=vision_backbone)
 
         super().__init__(net, action_space, policy_config=policy_config)
 
         if pretrained_weights is not None:
             try:
                 print(f"Loading pretrained weights from: {pretrained_weights}")
-                checkpoint = torch.load(pretrained_weights, map_location="cpu")
+                checkpoint = torch.load(pretrained_weights, map_location="cpu", weights_only=False)
                 if "state_dict" in checkpoint:
                     checkpoint = checkpoint["state_dict"]
                 load_res = self.load_state_dict(checkpoint, strict=False)
                 print("== Pretrained weights loaded (non-strict) ==")
-                print("Missing keys:", {k for k in load_res.missing_keys if not k.startswith('net.visual_encoder')})
-                print("Unexpected keys:", load_res.unexpected_keys)
+                
+                missing = {k for k in load_res.missing_keys if not k.startswith('net.distance_encoder')}
+                print("Missing keys:", missing)
+                assert len(missing) == 0
+
+                unexpected = load_res.unexpected_keys
+                print("Unexpected keys:", unexpected)
+                assert len(unexpected) == 0
             except Exception as e:
                 print(f"Could not load pretrained weights: {e}")
 
@@ -117,6 +128,8 @@ class TemporalDistanceNavPolicy(NetPolicy):
             freeze_encoder=getattr(ddppo_cfg, 'freeze_encoder', True),
             distance_scale=getattr(ddppo_cfg, 'distance_scale', 1.0),
             use_confidence=getattr(ddppo_cfg, "use_confidence", False),
+            use_vision=getattr(ddppo_cfg, "use_vision", False),
+            vision_backbone=getattr(ddppo_cfg, "backbone", 'efficientnet-b0'),
             pretrained_weights=getattr(ddppo_cfg, "pretrained_weights", None),
             policy_config=config.habitat_baselines.rl.policy[agent_name],
         )
@@ -139,6 +152,8 @@ class TemporalDistanceNavNet(Net):
         freeze_encoder,
         distance_scale,
         use_confidence,
+        use_vision,
+        vision_backbone,
     ):
         super().__init__()
         self._hidden_size = hidden_size
@@ -150,7 +165,7 @@ class TemporalDistanceNavNet(Net):
         rnn_input_size = prev_emb_size
 
         # 2) Joint image-goal encoder
-        self.visual_encoder = TemporalDistanceEncoder(
+        self.distance_encoder = TemporalDistanceEncoder(
             encoder_base=encoder_base,
             freeze=freeze_encoder,
             random_crop=random_crop,
@@ -165,7 +180,31 @@ class TemporalDistanceNavNet(Net):
             self.tgt_emb = nn.Linear(1, 32)
         rnn_input_size += 32
 
-        # 3) Sensor embeddings
+        # 3) Visual Encoder
+        self.use_vision = use_vision
+        if self.use_vision:
+            assert "rgb" in observation_space.spaces
+            assert vision_backbone.startswith('efficientnet')
+    
+            self.transform = transforms.Compose([
+                transforms.Resize(256),
+                transforms.CenterCrop(224),
+                transforms.Normalize(
+                    mean=[0.485, 0.456, 0.406],
+                    std=[0.229, 0.224, 0.225]
+                )
+            ])
+
+            self.visual_encoder = EfficientNet.from_name(vision_backbone, in_channels=3, num_classes=self._hidden_size)
+            self.visual_encoder.load_state_dict(torch.load('/cluster/home/lmilikic/rl_distance_nav/habitat-lab/data/checkpoints/visual_encoder.pth', weights_only=False))
+
+            # Freeze all vision_backbone layers
+            for param in self.visual_encoder.parameters():
+                param.requires_grad = False
+
+            rnn_input_size += self._hidden_size
+
+        # 4) Sensor embeddings
         if EpisodicGPSSensor.cls_uuid in observation_space.spaces:
             gps_dim = observation_space.spaces[EpisodicGPSSensor.cls_uuid].shape[0]
             self.gps_emb = nn.Linear(gps_dim, 32)
@@ -174,7 +213,7 @@ class TemporalDistanceNavNet(Net):
             self.compass_emb = nn.Linear(2, 32)
             rnn_input_size += 32
 
-        # 4) RNN State Encoder
+        # 5) RNN State Encoder
         self.state_encoder = build_rnn_state_encoder(
             rnn_input_size,
             self._hidden_size,
@@ -218,13 +257,27 @@ class TemporalDistanceNavNet(Net):
     ) -> Tuple[torch.Tensor, torch.Tensor, Dict[str, torch.Tensor]]:
         features = []
         aux_loss_state = {}
+
+        if self.use_vision:
+            rgb = observations['rgb']
+            if rgb.shape[-1] == 3:
+                if rgb.ndim == 4:
+                    rgb = rgb.permute(0, 3, 1, 2) # → [B, 3, H, W]
+                elif rgb.ndim == 3:
+                    rgb = rgb.permute(2, 0, 1) # → [3, H, W]
+
+            rgb = rgb.div(255.0)
+            rgb = self.transform(rgb)
+            rgb_encoded = self.visual_encoder(rgb).contiguous()
+            features.append(rgb_encoded)
+
         # Joint image-goal
         rgb = observations.get('rgb', None)
         goal_img = observations.get(ImageGoalSensor.cls_uuid, None)
         assert rgb is not None and goal_img is not None, \
             "Missing 'rgb' or goal image in observations"
         
-        dist = self.visual_encoder(rgb, goal_img)
+        dist = self.distance_encoder(rgb, goal_img)
         if self.use_confidence:
             features.append(self.tgt_emb(dist[:, :2]))
         else:
