@@ -78,8 +78,9 @@ if TYPE_CHECKING:
 # this version should be bumped with every functional change which may want to be later discriminated.
 # prior version notes:
 # v0.1.0 - first explcit version, used for pre-VAL trials in 10k collection (and 1st VLA trial, oops)
-# v0.2.1 - VLA 2nd phase - single object, single scene, w/ bowl
-APP_VERSION = "0.2.1"
+# v0.2.1 - VLA 2nd phase - single object, single scene
+# v0.2.2 - VLA 2nd phase - single object, single scene, constrain to view frustum
+APP_VERSION = "0.2.2"
 
 
 def bind_physics_material_to_hierarchy(
