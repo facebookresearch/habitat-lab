@@ -129,7 +129,6 @@ def env_navigation(args):
                 observations["pointgoal_with_gps_compass"][1]))
                 gt_distances.append(observations["pointgoal_with_gps_compass"][0] * distance_norm)
 
-
                 with torch.no_grad():
                     transformed_imgs = torch.stack([img_transform(Image.fromarray(f)) for f in [observations['rgb'], goal_image]]).to('cuda')
                     temporal_dist, conf = distance_model(transformed_imgs[:1], transformed_imgs[1:])
