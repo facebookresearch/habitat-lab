@@ -12,11 +12,14 @@ import numpy as np
 # HABITAT_TO_MOCHI_POS_OFFSET = -mn.Vector3(-8.05, 0.465, -3.94)
 
 # dining table
-HABITAT_TO_MOCHI_POS_OFFSET = -mn.Vector3(-3.55631, 0.76268, -7.34351)
+# HABITAT_TO_MOCHI_POS_OFFSET = -mn.Vector3(-3.55631, 0.76268, -7.34351)
 
 # modern kitchen
 # HABITAT_TO_MOCHI_POS_OFFSET = -mn.Vector3(0.0, 1.0, 0.0)
 
+# at origin, good for debugging in polyscope
+# raised up 1 meter to make VR interaction easier
+HABITAT_TO_MOCHI_POS_OFFSET = -mn.Vector3(0.0, 1.0, 0.0)
 
 def habitat_to_mochi_position(src):
     if isinstance(src, mn.Vector3):

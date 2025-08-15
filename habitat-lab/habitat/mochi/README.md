@@ -45,6 +45,7 @@ cmake .. -DMOCHI_BUILD_ALL=ON -DCMAKE_BUILD_TYPE=Debug
 cmake --build . -- -j$(nproc)
 
 # run hello world
+cd ../
 ./build/bin/mochi_hello_world
 
 # Get assets folder from fbsource and set MOCHI_ASSETS_PATH. Below instructions only work for a Meta-provisioned machine. We should find a clean way to make these assets available on non-Meta machines.
