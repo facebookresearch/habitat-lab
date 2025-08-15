@@ -1,0 +1,152 @@
+---
+    dataset_path: "data/hssd-hab/hssd-hab-articulated.scene_dataset_config.json"
+    additional_object_paths:
+    - data/objects/ycb/configs/
+    scene_sets:
+      - name: "hitl"
+        included_substrings:
+          - "104862621_172226772"
+
+
+        excluded_substrings:
+          - "NONE"
+          - "102344193_5" #small laundry room
+          - "103997643_171030747_0" #small hall bathroom
+          - "103997643_171030747_3" #small hall bathroom
+          - "103997643_171030747_5" #small hall bathroom
+          - "103997895_171031182_1" #tight small laundry room with sofa
+          - "103997895_171031182_2" #bathroom
+          - "103997895_171031182_4" #no furniture objects
+          - "104348133_171513054_0" #tight bedroom, likely no space for the robot
+          - "104348133_171513054_4" #bathroom
+          #- "104348133_171513054_8" #TODO - should be ok, but small region means no placement for robot
+          - "104862501_172226556_2" #bathroom
+          - "104862501_172226556_6" #bathroom
+          - "104862621_172226772_1" #bathroom
+          - "104862621_172226772_2" #bathroom
+          - "104862621_172226772_3" #closet
+          - "104862621_172226772_6" #bathroom
+          - "104862660_172226844_1" #TODO
+          - "104862660_172226844_3" #TODO
+          - "104862660_172226844_6" #TODO
+          - "108736722_177263382_2" #TODO
+          - "108736722_177263382_3" #TODO
+          - "108736722_177263382_5" #TODO
+          - "108736722_177263382_6" #TODO
+          - "107734254_176000121_4" #TODO
+          - "108294558_176710095_0" #TODO
+          - "108294558_176710095_2" #TODO
+          - "108294558_176710095_3" #TODO
+          - "108294558_176710095_7" #TODO
+          - "108294939_176710668_1" #TODO
+          - "108294939_176710668_2" #TODO
+          - "108294939_176710668_5" #TODO
+          - "108294939_176710668_7" #TODO - can't find accessible objects
+          - "106879080_174887211_10" #TODO
+          - "106879080_174887211_4" #TODO
+          - "106879080_174887211_9" #TODO
+          - "106366104_174226332_14" #TODO - no recs
+          - "106366104_174226332_15" #TODO
+          - "106366104_174226332_2" #TODO
+          - "106366104_174226332_7" #TODO
+          - "106366104_174226332_8" #TODO
+          - "104862681_172226874_0" #TODO
+          - "106878945_174887058_0" #TODO
+          - "106878945_174887058_3" #TODO
+          - "106878945_174887058_7" #TODO
+          - "106878945_174887058_8" #TODO
+          - "108736635_177263256_7" #TODO
+          - "108736884_177263634_3" #TODO - no recs
+          - "108736884_177263634_9" #TODO
+          - "104862669_172226853_2" #TODO
+          - "108294897_176710602_3" #TODO
+          - "108294897_176710602_4" #TODO
+
+
+
+
+    object_sets:
+      - name: "ycb"
+        included_substrings:
+          - "005_tomato_soup_can"
+          - "002_master_chef_can"
+          - "003_cracker_box"
+          - "004_sugar_box"
+          - "007_tuna_fish_can"
+          - "010_potted_meat_can"
+          - "024_bowl"
+
+        excluded_substrings: []
+    receptacle_sets:
+      - name: "any"
+        include_within: False
+        cull_negative_scale: True
+        included_object_substrings:
+          - "9a4e9d27e3aa56daadc737f57afe48467566e0c6"
+          - "f3b8f5e1fd45ea0496a8e5091dbd7c23e87910b2"
+          - "9444fd4deeb56fac5538938168e6171d034e0ede"
+          - "3c0114990e89b0c6a978793245301a99285e503a"
+          - "915c99bbc312ab90562407cfcda3dc829389d664"
+          - "18eddeceba520df015d106ff28b0f3915ed4335c"
+          - "949163af00d4cfe9f1dda1ed7ecb1125cc802348"
+          - "8321dbf7d07a301d1f3f12ff893cce05ca5ef8a2"
+          - "1a410a0dd43016b5b8ef47c09fc11d38b8d85917"
+          - "7a5231e95b238efac3e6e403b250d2f74d0ec6b4"
+          - "b6ec8f40a7e189e29dab623aeb9efac53de71809"
+        excluded_object_substrings: []
+        included_receptacle_substrings:
+          - ""
+        excluded_receptacle_substrings: []
+    scene_sampler:
+      type: scene_balanced
+      params:
+        scene_sets:
+        - hitl
+
+    object_samplers:
+    - name: "clutter"
+      type: uniform
+      params:
+        object_sets:
+        - ycb
+        receptacle_sets:
+        - any
+        #NOTE: specifies that all spawned objects should be in the same region
+        single_region: False
+        num_samples:
+        - 10
+        - 15
+        orientation_sampling: up
+        nav_to_min_distance: 0.6
+        constrain_to_largest_nav_island: False
+
+    object_target_samplers:
+    - name: "place_target"
+      type: "uniform"
+      params:
+        object_samplers: ["clutter"]
+        receptacle_sets: ["any"]
+        num_samples: [10, 10]
+        orientation_sampling: "up"
+        nav_to_min_distance: 0.6
+
+    #max_objects_per_receptacle:
+    #- ["96160d32939e3ef146bb30d72d232fc6ac0d1493_:0001|Kitchen_Cabinet0016_countertop_receptacle_mesh.0000", 1]
+    #- ["96160d32939e3ef146bb30d72d232fc6ac0d1493_:0000|Kitchen_Cabinet0016_countertop_receptacle_mesh.0000", 1]
+
+    correct_unstable_results: True
+
+    regenerate_new_mesh: True
+    agent_radius: 0.35
+    agent_height: 1.3
+    agent_max_climb: 0.01
+
+    check_navigable: False
+    navmesh_offset: [[0.0, 0.0]]
+    max_collision_rate_for_navigable: 0.3
+    angle_threshold: 0.05
+    angular_velocity: 1.0
+    distance_threshold: 0.25
+    linear_velocity: 1.0
+
+    gpu_device_id: 0

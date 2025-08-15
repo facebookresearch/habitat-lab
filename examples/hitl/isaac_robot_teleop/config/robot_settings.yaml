@@ -53,7 +53,7 @@ ik:
 
   #NOTE: lock settings for the arms' IK to tailor the UI options to the task
   right_arm_locked: False
-  left_arm_locked: True
+  left_arm_locked: False
 
 configuration_subsets:
   #define the hand and arm joint indices
@@ -135,4 +135,4 @@ link_subsets:
 #initial pose options. This refers to an entry in the robot_poses.json file.
 #initial_pose: "initial"
 #NOTE: this setup is the VLA experiments with right arm
-initial_pose: "vla_init_right_pick"
+initial_pose: "vla_init_bimanual"

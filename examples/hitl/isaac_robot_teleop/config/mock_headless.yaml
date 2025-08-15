@@ -40,7 +40,7 @@ isaac_robot_teleop:
 
   scene_name: "103997403_171030405"
   # OR initialize by episode. These will take precedent when provided
-  episode_dataset: "data/datasets/hitl_teleop_episodes.json.gz"
+  episode_dataset: "data/datasets/hitl_teleop_demo_episodes.json.gz"
   #episode_index: 2
 
   #physx configuration settings

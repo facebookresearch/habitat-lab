@@ -942,54 +942,6 @@ class AppStateIsaacSimViewer(AppStateBase):
                 global_o, global_o + global_d, frustum_color, frustum_color
             )
 
-    def validate_robot_furniture_alignment(
-        self, max_angle_error: float = 0.1
-    ) -> bool:
-        """
-        Validates that the robot's base is oriented orthogonally to and aligned with the front of the target furniture object.
-        Uses dot product between robot's global forward and furniture's global forward vectors.
-        :param max_angle_error: in Radians.
-        Assumes both vectors are unit length.
-        """
-
-        # TODO: get furniture global forward direction in a not hardcoded way
-        furniture_forward = mn.Vector3(-1.0, 0, 0)
-
-        angle_error = mn.math.angle(
-            self.robot.global_forward(), furniture_forward
-        )
-        if float(angle_error) > max_angle_error:
-            return False
-        return True
-
-    def validate_obj_and_tar_in_torso_frustum(self):
-        """
-        Validates that the object initial state and target position are both within the robot's fixed torso camera frustum.
-        NOTE: We use baked camera intrinsics and extrinsics to make this feasible. If camera mounting changes, we should re-bake these values.
-        """
-
-        # NOTE: this function has baked intrinsics
-        from scripts.utils import point_in_frustum
-
-        # NOTE: this is the baked extrinsic
-        cam_in_robot_frame = mn.Matrix4(
-            ((0, 0, -1, 0.212), (-1, 0, 0, 0), (0, 1, 0, 1.014), (0, 0, 0, 1))
-        ).transposed()
-
-        robot_pos, robot_rot = self.robot.get_root_pose()
-        robot_t = mn.Matrix4.from_(robot_rot.to_matrix(), robot_pos)
-        cam_t = robot_t @ cam_in_robot_frame
-
-        obj_initial_in_frustum = point_in_frustum(
-            cam_t, self._object_initials[0]
-        )
-
-        target_in_frustum = point_in_frustum(
-            cam_t, self._object_targets[0][1].translation
-        )
-
-        return obj_initial_in_frustum and target_in_frustum
-
     def load_robot(self) -> None:
         """
         Loads a robot from USD file into the scene for testing.
@@ -1345,23 +1297,7 @@ class AppStateIsaacSimViewer(AppStateBase):
         )
         if current_xr_pose.valid:
             self.xr_pose_adapter.get_global_xr_pose(current_xr_pose).draw_pose(
-                dblr, head=False, left_hand=False
-            )
-
-    def debug_draw_task_timer_xr(self):
-        """
-        Draws a circle with a moving fill line to indicate the task timer in XR view.
-        """
-        current_xr_pose = XRPose(
-            remote_client_state=self._app_service.remote_client_state
-        )
-        if current_xr_pose.valid:
-            self.xr_pose_adapter.get_global_xr_pose(
-                current_xr_pose
-            ).draw_timer_circle(
-                self._app_service.gui_drawer,
-                self._task_timer,
-                self._max_task_time,
+                dblr, head=False, left_hand=True
             )
 
     def base_lock_event(self, base_lock_status: bool):
@@ -1371,7 +1307,6 @@ class AppStateIsaacSimViewer(AppStateBase):
         if base_lock_status:
             self._frame_events.append(FrameEvent.LOCK_BASE)
             self.robot.do_kin_fixed_base = True
-            self._task_timer = 0
         else:
             self._frame_events.append(FrameEvent.UNLOCK_BASE)
             self.robot.do_kin_fixed_base = False
@@ -1399,21 +1334,9 @@ class AppStateIsaacSimViewer(AppStateBase):
 
         if left.get_button_down(XRButton.TWO):
             # toggle base lock and signal start of a task
-
-            # first validate the base orientation
-            if (
-                not self.lock_robot_base
-                and not self.validate_robot_furniture_alignment()
-            ):
-                self._generic_GUI_message = "Cannot begin task, robot's base is not facing the counter. Please re-orient the base until the line on the ground in the front of the robot turns green."
-                self._generic_GUI_message = inject_line_breaks(
-                    self._generic_GUI_message, target_char_per_line=30
-                )
-                print(self._generic_GUI_message)
-            else:
-                self.lock_robot_base = not self.lock_robot_base
-                print(f"Toggled base lock {self.lock_robot_base}")
-                self.base_lock_event(self.lock_robot_base)
+            self.lock_robot_base = not self.lock_robot_base
+            print(f"Toggled base lock {self.lock_robot_base}")
+            self.base_lock_event(self.lock_robot_base)
             # print("Resetting Robot Joint Positions")
             # self.robot.set_cached_pose(
             #     pose_name=self.robot.robot_cfg.initial_pose,
@@ -2166,9 +2089,9 @@ class AppStateIsaacSimViewer(AppStateBase):
         NOTE: also returns a reason for failure or None if successful
         """
         # check base is locked
-        if not self.lock_robot_base:
-            # if the robot base is not locked, we assume the task is not successful
-            return 0.0, "Task not successful, robot base is not locked."
+        # if not self.lock_robot_base:
+        #    # if the robot base is not locked, we assume the task is not successful
+        #    return 0.0, "Task not successful, robot base is not locked."
 
         # check object position is correct
         placement_success = validate_target_placement_position(
@@ -2190,43 +2113,10 @@ class AppStateIsaacSimViewer(AppStateBase):
         if not tilt_success:
             return 0.0, "Task not successful, object not placed upright."
 
-        # check that the robot's base is oriented correctly toward the furniture
-        base_orientation_success = self.validate_robot_furniture_alignment(
-            max_angle_error=0.1
-        )
-
-        if not base_orientation_success:
-            return (
-                0.0,
-                "Task not successful, base not oriented orthogonally to the furniture.",
-            )
-
-        if not self.validate_obj_and_tar_in_torso_frustum():
-            return (
-                0.0,
-                "Task not successful, object initial and target states not within torso camera frustum.",
-            )
-
         return 1.0, None  # Task is successful if all criteria are met
 
     def sim_update(self, dt, post_sim_update_dict):
         self._sps_tracker.increment()
-
-        # use simulation dt for task time tracking to avoid lag factoring in
-        if self.lock_robot_base:
-            self._task_timer += dt
-            if self._task_timer > self._max_task_time:
-                if self.get_vla_task_success()[0] > 0:
-                    self._task_finished_signaled = True
-                else:
-                    print(
-                        f"Task time exceeded {self._max_task_time} seconds, automatic reset triggered."
-                    )
-                    # reset the robot and unlock the base to try again
-                    self.sample_valid_robot_base_state()
-                    self._frame_events.append(FrameEvent.TELEPORT)
-                    self.lock_robot_base = False
-                    self.base_lock_event(self.lock_robot_base)
 
         self.handle_keys(dt, post_sim_update_dict)
         self.update_mouse_raycaster(dt)
@@ -2296,22 +2186,11 @@ class AppStateIsaacSimViewer(AppStateBase):
         if self._draw_debug_shapes and not self._hide_debug_lines:
             # draw lookat ring
             self.draw_lookat()
-            self.draw_frustum()
-
-            # validate the orientation and set GUI color from results
-            robot_orientation_valid_for_task = (
-                self.validate_robot_furniture_alignment()
-            )
-            forward_vector_color = (
-                mn.Color4.red()
-                if not robot_orientation_valid_for_task
-                else mn.Color4.green()
-            )
 
             # draw the robot frame
-            self.robot.draw_debug(
-                self._app_service.gui_drawer, forward_vector_color
-            )
+            # self.robot.draw_debug(
+            #     self._app_service.gui_drawer, forward_vector_color
+            # )
             # self.debug_draw_hands()
 
             if self.dof_editor is not None:
