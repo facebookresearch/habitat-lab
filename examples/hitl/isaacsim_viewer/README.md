@@ -27,11 +27,14 @@ See [habitat-lab/habitat/isaac_sim/README.md](../../../habitat-lab/habitat/isaac
 
 ### Data
 
-1. Download [hssd-hab](https://huggingface.co/datasets/hssd/hssd-hab) to `data/scene_datasets/hssd-hab`. I used revision `9ec06b0d25cba85b6ee422b02e52e14ec4acafc7`. (You alternately also use the Habitat-sim dataset downloader script.)
-2. Download [ycb](https://huggingface.co/datasets/ai-habitat/ycb) to `data/objects/ycb`. I used revision `29be64fdd95b4881f244152ad653058e0a48c28f`.
-3. Download [hab_spot_arm](https://huggingface.co/datasets/ai-habitat/hab_spot_arm) to `data/robots/hab_spot_arm`. I used revision `0267f9c3eaea0081a788716e87ee1088afa3cb50`.
-4. Download [isaac_vr_extra_server_data.zip](https://drive.google.com/file/d/1AF5zpL6Uo_8nJ6H-Twn8vu34Ec_a06ip/view?usp=drive_link
- ) and extract at `data/`. This should create `data/from_gum` and `data/usd` folders.
+1. Download [ycb](https://huggingface.co/datasets/ai-habitat/ycb) to `data/objects/ycb`. I used revision `29be64fdd95b4881f244152ad653058e0a48c28f`.
+2. Download [mochi_vr_data](https://huggingface.co/datasets/undersan/mochi_vr_data) to `data/mochi_vr_data`.
+
+### Setting IP address on the Quest client
+```
+adb shell "sed -i 's/[0-9]\{1,3\}\(\.[0-9]\{1,3\}\)\{3\}/192.168.1.17/' \
+  /sdcard/Android/data/com.meta.siro_hitl_vr_client4/files/config.txt"
+```
 
 ## To run the desktop app
 

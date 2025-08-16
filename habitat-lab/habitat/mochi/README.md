@@ -4,12 +4,10 @@
 ```
 cd /path/to/mochi
 
-# pick a build folder for our python version
-PYVER=$(python -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}')")
-BUILD_DIR="build-py$PYVER"
+# make sure you delete your old build folder if your python version changes!
 
-echo "Building Mochi python extension to $BUILD_DIR..."
-mkdir -p "$BUILD_DIR" && cd "$BUILD_DIR"
+# build mochi
+mkdir -p build && cd build
 cmake .. -DMOCHI_BUILD_ALL=ON
 cmake --build . -- -j$(nproc)
 
