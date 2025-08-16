@@ -583,10 +583,12 @@ class AppStateIsaacSimViewer(AppState):
                     positions, wxyz_rotations
                 )
             else:
-                self._app_service.reconfigure_sim(
-                    "/home/eric/projects/mochi2/habitat_render_data/data/hssd-hab/hssd-hab.scene_dataset_config.json",
-                    "102344193.scene_instance.json",
-                )
+                # background HSSD scene?
+                if False:
+                    self._app_service.reconfigure_sim(
+                        "/home/eric/projects/mochi2/habitat_render_data/data/hssd-hab/hssd-hab.scene_dataset_config.json",
+                        "102344193.scene_instance.json",
+                    )
 
         # self._spot = SpotWrapper(self._sim)
 
