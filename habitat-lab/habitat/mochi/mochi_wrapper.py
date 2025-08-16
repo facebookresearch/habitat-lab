@@ -52,7 +52,7 @@ class MochiWrapper:
         self._mochi_visualizer = MochiVisualizer(hab_sim, self._env._mochi)
 
         self._mochi_visualizer.add_render_map(
-            "./data/mochi_vr_data/mochi/test_scene.render_map.json"
+            "./data/mochi_vr_data/test_scene.render_map.json"
         )
 
         # render_actors =

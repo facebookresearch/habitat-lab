@@ -29,6 +29,11 @@ See [habitat-lab/habitat/isaac_sim/README.md](../../../habitat-lab/habitat/isaac
 
 1. Download [ycb](https://huggingface.co/datasets/ai-habitat/ycb) to `data/objects/ycb`. I used revision `29be64fdd95b4881f244152ad653058e0a48c28f`.
 2. Download [mochi_vr_data](https://huggingface.co/datasets/undersan/mochi_vr_data) to `data/mochi_vr_data`.
+3. Set up a symlink into Mochi's assets folder for `hab_mochi_shared_data`:
+```
+ln -s -f $(pwd)/data/mochi_vr_data/hab_mochi_shared_data \
+    /path/to/mochi/common/assets/hab_mochi_shared_data
+```
 
 ### Setting IP address on the Quest client
 ```
