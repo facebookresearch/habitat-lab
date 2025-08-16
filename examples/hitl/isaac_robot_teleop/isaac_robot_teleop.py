@@ -270,7 +270,36 @@ def inject_line_breaks(text: str, target_char_per_line: int = 30) -> str:
             start = space_idx + 1
     return new_text
 
+def get_navmesh_lines(pathfinder)->List[Tuple[mn.Vector3]]:
+    """
+    Converts the navmesh geometry into a set of line segments which can be drawn with debug line render.
+    """
+    assert pathfinder.is_loaded
 
+    lines = []
+
+    verts = pathfinder.build_navmesh_vertices()
+    ixs = pathfinder.build_navmesh_vertex_indices()
+
+    for ix in range(0,int(len(ixs)/3)-1):
+        cix = ixs[ix*3]
+        nix = ixs[ix*3+1]
+        pix = ixs[ix*3+2]
+        lines.append((verts[cix], verts[nix]))
+        lines.append((verts[nix], verts[pix]))
+        lines.append((verts[pix], verts[cix]))
+
+    return lines
+
+def draw_debug_lines(dblr, lines:List[Tuple[mn.Vector3]], color=None):
+    if color is None:
+        color = mn.Color4(0.8, 0.8, 0.8, 0.8)
+    for line in lines:
+        dblr.draw_transformed_line(
+            line[0],
+            line[1],
+            color
+        )
 class AppStateIsaacSimViewer(AppStateBase):
     """ """
 
@@ -318,8 +347,6 @@ class AppStateIsaacSimViewer(AppStateBase):
         self.xr_origin_rotation = mn.Quaternion()
         self.xr_origin_yaw_offset: float = -mn.math.pi / 2.0
         self.dof_editor: "DoFEditor" = None
-        # a flag to indicate the robot base is moving in order to prevent the arm from lag skipping on stale XR frames.
-        self._moving = False
         # a flag to lock the robot's base to prevent motion during static tasks
         self.lock_robot_base = False
         if app_data is None:
@@ -565,6 +592,8 @@ class AppStateIsaacSimViewer(AppStateBase):
         # setup the configured navmesh
         self._sim.pathfinder.load_nav_mesh(scene_navmesh_file)
         assert self._sim.pathfinder.is_loaded
+        self._navmesh_lines = get_navmesh_lines(self._sim.pathfinder)
+        self._draw_navmesh = True
 
         # load or sample initial robot state
         self.set_robot_base_initial_state()
@@ -1003,27 +1032,29 @@ class AppStateIsaacSimViewer(AppStateBase):
         nav_point = self._sim.pathfinder.get_random_navigable_point_near(
             obj_pos, 1.5
         )
-        h_dir_to_obj = obj_pos - nav_point
-        h_dir_to_obj[1] = 0.0  # ignore height difference
-        # orient the robot base towards the object
-        base_rot = self.robot.base_rot + self.robot.angle_to(
-            dir_target=h_dir_to_obj
-        )
-        nav_samples = 0
-        max_nav_samples = 1500
-        while nav_samples < max_nav_samples and self.robot_contact_test(
-            pos=nav_point,
-            rot_angle=base_rot,
-            joint_pos=default_joint_state,
-        ):
-            nav_point = self._sim.pathfinder.get_random_navigable_point_near(
-                obj_pos, 1.5
-            )
+        if not np.isnan(nav_point).any():
             h_dir_to_obj = obj_pos - nav_point
             h_dir_to_obj[1] = 0.0  # ignore height difference
+            # orient the robot base towards the object
             base_rot = self.robot.base_rot + self.robot.angle_to(
                 dir_target=h_dir_to_obj
             )
+        nav_samples = 0
+        max_nav_samples = 1500
+        while nav_samples < max_nav_samples and (np.isnan(nav_point).any() or self.robot_contact_test(
+            pos=nav_point,
+            rot_angle=base_rot,
+            joint_pos=default_joint_state,
+        )):
+            nav_point = self._sim.pathfinder.get_random_navigable_point_near(
+                obj_pos, 1.5
+            )
+            if not np.isnan(nav_point).any():
+                h_dir_to_obj = obj_pos - nav_point
+                h_dir_to_obj[1] = 0.0  # ignore height difference
+                base_rot = self.robot.base_rot + self.robot.angle_to(
+                    dir_target=h_dir_to_obj
+                )
             nav_samples += 1
 
         if nav_samples < max_nav_samples:
@@ -1067,6 +1098,8 @@ class AppStateIsaacSimViewer(AppStateBase):
                 pos=self._sim.pathfinder.get_random_navigable_point()
             )
             self.robot.base_rot = base_rot
+        self.lock_robot_base = True
+        self.base_lock_event(self.lock_robot_base)
 
     def draw_lookat(self):
         if self._hide_gui:
@@ -1392,6 +1425,7 @@ class AppStateIsaacSimViewer(AppStateBase):
         xr_pose = XRPose(
             remote_client_state=self._app_service.remote_client_state
         )
+
         if xr_pose.valid:
             global_xr_pose = self.xr_pose_adapter.get_global_xr_pose(xr_pose)
 
@@ -1411,6 +1445,7 @@ class AppStateIsaacSimViewer(AppStateBase):
                 if "left" in base_link_key and self.robot.left_arm_locked:
                     # skip IK for left arm if locked
                     continue
+
                 if xrcontroller.get_hand_trigger() > 0:
                     arm_base_link = self.robot.link_subsets[
                         base_link_key
@@ -1479,7 +1514,7 @@ class AppStateIsaacSimViewer(AppStateBase):
                     #     )
 
                     new_arm_pose = cur_arm_pose
-                    if not self._moving:
+                    if not self.robot._moving:
                         new_arm_pose = self._ik.inverse_kinematics(
                             to_ik_pose(xr_pose), cur_arm_pose
                         )
@@ -1544,74 +1579,6 @@ class AppStateIsaacSimViewer(AppStateBase):
         lin_speed = self.robot.robot_cfg.max_linear_speed
         ang_speed = self.robot.robot_cfg.max_angular_speed
 
-        ##############################################
-        # Waypoint base control via mouse right click
-        if (
-            gui_input.get_mouse_button_down(MouseButton.RIGHT)
-            and self._recent_mouse_ray_hit_info is not None
-        ):
-            self.robot.base_vel_controller.track_waypoints = True
-            self.robot.base_vel_controller._pause_track_waypoints = True
-            hab_hit_pos = mn.Vector3(
-                *isaac_prim_utils.usd_to_habitat_position(
-                    self._recent_mouse_ray_hit_info["position"]
-                )
-            )
-            if (
-                self._sim.pathfinder.is_loaded
-                and self._sim.pathfinder.is_navigable(hab_hit_pos)
-            ):
-                self.robot.base_vel_controller.target_position = (
-                    self._sim.pathfinder.snap_point(hab_hit_pos)
-                )
-            else:
-                print("Cannot set waypoint to non-navigable target.")
-
-        if (
-            gui_input.get_mouse_button(MouseButton.RIGHT)
-            and self._recent_mouse_ray_hit_info is not None
-        ):
-            hab_hit_pos = mn.Vector3(
-                *isaac_prim_utils.usd_to_habitat_position(
-                    self._recent_mouse_ray_hit_info["position"]
-                )
-            )
-            global_dir = mn.Vector3(1.0, 0, 0)
-            frame_to_mouse = (
-                hab_hit_pos - self.robot.base_vel_controller.target_position
-            )
-            norm_dir = mn.Vector3(
-                [frame_to_mouse[0], 0, frame_to_mouse[2]]
-            ).normalized()
-            if not np.isnan(norm_dir).any():
-                angle_to_target = self.robot.angle_to(
-                    dir_target=norm_dir, dir_init=global_dir
-                )
-                self.robot.base_vel_controller.target_rotation = (
-                    angle_to_target
-                )
-
-        # start control on button release
-        if (
-            gui_input.get_mouse_button_up(MouseButton.RIGHT)
-            and self._sim.pathfinder.is_loaded
-            and self._sim.pathfinder.is_navigable(
-                self.robot.base_vel_controller.target_position
-            )
-        ):
-            self.robot.base_vel_controller._pause_track_waypoints = False
-            # NOTE: hold Q while selecting the waypoint to teleport. Useful for crossing boundaries like doorframes.
-            if gui_input.get_key(KeyCode.Q):
-                target_pos = self.robot.base_vel_controller.target_position
-                # this setter will reset the waypoint target so we cache first
-                self.robot.base_rot = (
-                    self.robot.base_vel_controller.target_rotation
-                )
-                self.robot.set_root_pose(target_pos)
-
-        # end waypoint control with mouse right click
-        #####################################################################
-
         #####################################################################
         # Base velocity control with keyboard 'IJKL'
         # NOTE: interrupts waypoint control
@@ -1619,20 +1586,58 @@ class AppStateIsaacSimViewer(AppStateBase):
         if not self.robot.base_vel_controller.track_waypoints:
             self.robot.base_vel_controller.reset()
 
+        move_action_requested = False
+
+        if self.robot.check_navmesh(self._sim.pathfinder):
+            self.last_good_state = self.robot.get_root_pose()
+        else:
+
+
         if gui_input.get_key(KeyCode.I):
             self.robot.base_vel_controller.track_waypoints = False
-            self.robot.base_vel_controller.target_linear_vel = lin_speed
+            #self.robot.base_vel_controller.target_linear_vel = lin_speed
+            move_action_requested = True
+            pos, rot = self.robot.get_root_pose()
+            estimated_base_pos = pos + self.robot.global_forward()*lin_speed*(1/30)
+            estimated_base_pos[1] += self.robot.ground_to_base_offset
+            if not self.robot.check_navmesh(self._sim.pathfinder, estimated_base_pos):
+                #movement off the navmesh is not allowed
+                self.robot.unstick_navmesh_translation(self._sim.pathfinder)
+            else:
+                self.robot.set_kin_fixed_base_pos(estimated_base_pos)
         if gui_input.get_key(KeyCode.K):
             self.robot.base_vel_controller.track_waypoints = False
-            self.robot.base_vel_controller.target_linear_vel = -lin_speed
+            #self.robot.base_vel_controller.target_linear_vel = -lin_speed
+            move_action_requested = True
+            pos, rot = self.robot.get_root_pose()
+            estimated_base_pos = pos + self.robot.global_forward()*-lin_speed*(1/30)
+            estimated_base_pos[1] += self.robot.ground_to_base_offset
+            if not self.robot.check_navmesh(self._sim.pathfinder, estimated_base_pos):
+                #movement off the navmesh is not allowed
+                self.robot.unstick_navmesh_translation(self._sim.pathfinder)
+            else:
+                self.robot.set_kin_fixed_base_pos(estimated_base_pos)
         if gui_input.get_key(KeyCode.J):
             # self.robot.base_rot += 0.1
             self.robot.base_vel_controller.track_waypoints = False
-            self.robot.base_vel_controller.target_angular_vel = ang_speed
+            #self.robot.base_vel_controller.target_angular_vel = ang_speed
+            pos, rot = self.robot.get_root_pose()
+            turn_angle = ang_speed/15
+            delta_rot = mn.Quaternion.rotation(mn.Rad(turn_angle), mn.Vector3(0,1,0))
+            estimated_base_rot = delta_rot*rot
+            if self.robot.check_navmesh(self._sim.pathfinder, pos=None, rot=estimated_base_rot):
+                self.robot.turn_kin_fixed_base(turn_angle)
+                move_action_requested = True
         if gui_input.get_key(KeyCode.L):
             self.robot.base_vel_controller.track_waypoints = False
-            self.robot.base_vel_controller.target_angular_vel = -ang_speed
-            # self.robot.base_rot -= 0.1
+            #self.robot.base_vel_controller.target_angular_vel = -ang_speed
+            pos, rot = self.robot.get_root_pose()
+            turn_angle = -ang_speed/15
+            delta_rot = mn.Quaternion.rotation(mn.Rad(turn_angle), mn.Vector3(0,1,0))
+            estimated_base_rot = delta_rot*rot
+            if self.robot.check_navmesh(self._sim.pathfinder, pos=None, rot=estimated_base_rot):
+                self.robot.turn_kin_fixed_base(turn_angle)
+                move_action_requested = True
 
         # end base velocity control with keyboard
         #####################################################################
@@ -1647,8 +1652,6 @@ class AppStateIsaacSimViewer(AppStateBase):
                 left = xr_input.controllers[HAND_LEFT]
                 right = xr_input.controllers[HAND_RIGHT]
 
-                self._moving = False
-
                 # use left thumbstick to move the robot
                 left_thumbstick = left.get_thumbstick()
                 if left_thumbstick[1] != 0:
@@ -1656,13 +1659,17 @@ class AppStateIsaacSimViewer(AppStateBase):
                         lin_speed * left_thumbstick[1]
                     )
                     self.robot.base_vel_controller.track_waypoints = False
-                    self._moving = True
+                    move_action_requested = True
+                    estimated_base_pos = self.robot.get_root_pose()[0] + self.robot.global_forward()*self.robot.base_vel_controller.target_linear_vel*(1/30)
+                    if not self._sim.pathfinder.is_navigable(estimated_base_pos):
+                        #movement off the navmesh is not allowed
+                        self.robot.base_vel_controller.target_linear_vel = 0
                 if left_thumbstick[0] != 0:
                     self.robot.base_vel_controller.target_angular_vel = (
                         -ang_speed * left_thumbstick[0]
                     )
                     self.robot.base_vel_controller.track_waypoints = False
-                    self._moving = True
+                    move_action_requested = True
 
                 # use right thumbstick up/down to raise/lower the head point
                 # use right thumbstick left/right to rotate the alignment
@@ -1681,6 +1688,12 @@ class AppStateIsaacSimViewer(AppStateBase):
 
         # end base velocity control with XR joysticks
         #####################################################################
+
+        #update the moving flag and do caching if ncessary
+        if move_action_requested and not self.robot._moving:
+            #cache the state on a fresh movement sequence
+            self.robot._moving_state = self.robot.pos_subsets["full"].get_pos()
+        self.robot._moving = move_action_requested
 
         self._xr_cursor_pos = self.robot.get_global_view_offset()
         if self.cursor_follow_robot:
@@ -2123,8 +2136,8 @@ class AppStateIsaacSimViewer(AppStateBase):
         self.handle_mouse_press()
         self.handle_xr_input(dt)
         self._update_cursor_pos()
-        if not self.lock_robot_base:
-            self.update_robot_base_control(dt)
+        #if not self.lock_robot_base:
+        self.update_robot_base_control(dt)
         self.update_isaac(post_sim_update_dict)
         self._sync_xr_user_to_robot_cursor()
 
@@ -2179,19 +2192,12 @@ class AppStateIsaacSimViewer(AppStateBase):
         if not self._hide_debug_lines:
             # need this in the app even if other debug lines are turned off
             self.debug_draw_quest()
-        if self.lock_robot_base and not self._hide_debug_lines:
-            self.debug_draw_task_timer_xr()
 
         # NOTE: I know these are redundant, but self._hide_debug_lines is for replay and needs more control than the live version
         if self._draw_debug_shapes and not self._hide_debug_lines:
             # draw lookat ring
             self.draw_lookat()
-
-            # draw the robot frame
-            # self.robot.draw_debug(
-            #     self._app_service.gui_drawer, forward_vector_color
-            # )
-            # self.debug_draw_hands()
+            self.robot.draw_debug(self._app_service.gui_drawer)
 
             if self.dof_editor is not None:
                 self.dof_editor.debug_draw(
@@ -2201,6 +2207,8 @@ class AppStateIsaacSimViewer(AppStateBase):
 
         if not self._hide_debug_lines:
             self.highlight_added_objects()
+            if self._draw_navmesh:
+                draw_debug_lines(self._app_service.gui_drawer, self._navmesh_lines)
 
         # record the current framebuffer video frame
         if self.record_video:

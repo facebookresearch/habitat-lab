@@ -8,7 +8,12 @@ usd: "data/usd/robots/franka_with_hand_v2_3.usda"
 robot_prim_path_name: "Murp"
 
 #what radius is required to represent the robot on the navmesh
-navmesh_radius: 0.45
+navmesh_radius: 0.33
+#the local points w.r.t. the base for navmesh comparisons
+navmesh_shape: [
+ [0.2,0,0],
+ [-0.2,0,0]
+]
 navmesh_height: 1.2
 #how much extra clearance to add between navmesh heights and base position heights
 ground_to_base_offset: -0.05

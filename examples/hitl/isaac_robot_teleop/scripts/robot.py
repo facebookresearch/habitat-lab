@@ -656,6 +656,15 @@ class RobotAppWrapper:
         self.kin_fixed_base_state: Tuple[
             List[float], List[float], mn.Vector3
         ] = None
+        self.navmesh_points = [
+            mn.Vector3(*nav_point)
+            for nav_point in self.robot_cfg.navmesh_shape
+        ]
+
+        # a flag to indicate the robot base is moving in order to prevent the arm from lag skipping on stale XR frames.
+        self._moving = False
+        self._moving_state = None
+
         # datastructure to aggregate the results of contact callbacks in a queryable format
         self.contact_state: Dict[Any, Any] = {}
         self._in_contact = False
@@ -685,6 +694,90 @@ class RobotAppWrapper:
         # else:
         # self.do_vel_fix_base = True
         self._do_kin_fixed_base = value
+
+    def turn_kin_fixed_base(self, angle):
+        if self.kin_fixed_base_state is not None:
+            _, rot = self.get_root_pose()
+            glob_forward = rot.transform_vector(mn.Vector3(1.0, 0, 0))
+            rot = mn.Quaternion.rotation(mn.Rad(angle), mn.Vector3(0, 1, 0))
+            new_forward = rot.transform_vector(glob_forward)
+            self.kin_fixed_base_state = (
+                self.kin_fixed_base_state[0],
+                self.kin_fixed_base_state[1],
+                new_forward,
+            )
+
+    def set_kin_fixed_base_pos(self, pos: mn.Vector3):
+        self.kin_fixed_base_state = (
+            isaac_prim_utils.habitat_to_usd_position(pos),
+            self.kin_fixed_base_state[1],
+            self.kin_fixed_base_state[2],
+        )
+
+    def check_navmesh(self, pathfinder, pos=None, rot=None):
+        """
+        Checks the robot's navmesh embodiment against the navmesh.
+        If no global states are provided, use the robot's current state.
+        """
+
+        assert pathfinder.is_loaded
+
+        c_pos, c_rot = self.get_root_pose()
+        if pos is None:
+            pos = c_pos
+        if rot is None:
+            rot = c_rot
+
+        for nav_point in self.navmesh_points:
+            glob_point = c_pos + c_rot.transform_vector(nav_point)
+            if not pathfinder.is_navigable(glob_point):
+                return False
+        return True
+
+    def unstick_navmesh_translation(
+        self, pathfinder, kin_unstick=True
+    ) -> mn.Vector3:
+        """
+        Finite difference to check for a feasible navmesh state nearby the current state.
+        If kin_unstick is true, also updates the kinematic state to apply the changes.
+        """
+        assert pathfinder.is_loaded
+
+        c_pos, c_rot = self.get_root_pose()
+        c_pos[1] += self.ground_to_base_offset
+        # Generate points uniformly distributed around a unit circle in the XZ plane
+        circle_points = [mn.Vector3(0, 0, 0)]  # start with a zero
+        num_points = 8  # You can adjust this for desired resolution
+        move_dist = 0.01  # 0.02 0.04 0.08 0.16
+        for range_extension in range(5):
+            move_dist *= 2
+            circle_points += [
+                move_dist
+                * mn.Vector3(
+                    np.cos(2 * np.pi * i / num_points),
+                    0,
+                    np.sin(2 * np.pi * i / num_points),
+                )
+                for i in range(num_points)
+            ]
+            for proposed_delta in circle_points:
+                good_delta = True
+                for nav_point in self.navmesh_points:
+                    glob_point = (
+                        c_pos
+                        + c_rot.transform_vector(nav_point)
+                        + proposed_delta
+                    )
+                    if not pathfinder.is_navigable(glob_point):
+                        good_delta = False
+                if good_delta:
+                    if kin_unstick:
+                        print(f"c_pos = {c_pos}")
+                        print(f"proposed_delta = {proposed_delta}")
+                        self.set_kin_fixed_base_pos(c_pos + proposed_delta)
+                    return proposed_delta
+        print("Could not correct navmesh state.")
+        return None
 
     def set_motor_params(self, motor_params: Dict[str, Any]) -> None:
         """
@@ -1069,6 +1162,16 @@ class RobotAppWrapper:
         if self.do_vel_fix_base:
             self.fix_base(step_size, base_position, base_orientation)
 
+        if self._moving and False:
+            # if robot base is moving, lock the arms
+            for joint_subset_key in ["full"]:
+                joint_subset = self.pos_subsets[joint_subset_key]
+                joint_subset.set_pos_from_full(self._moving_state)
+                joint_subset.set_motor_pos_from_full(self._moving_state)
+                joint_subset.set_velocities(
+                    np.zeros(len(joint_subset.joint_ixs))
+                )
+
         # NOTE: set the state cache to dirty. Next time a query is made, update it.
         self._body_prim_states_dirty = True
         # TODO: apply robot controller drive actions here
@@ -1376,26 +1479,27 @@ class RobotAppWrapper:
         # debug_draw_axis(dblr, tform)
 
         # draw a line in the forward direction of the robot
-        if forward_color is None:
-            forward_color = mn.Color4(0.0, 1.0, 0.0, 1.0)
-        forward_dir = root_rot.transform_vector(mn.Vector3(1.0, 0, 0)) * 2.0
-        dblr.draw_transformed_line(
-            root_pos,
-            root_pos + forward_dir,
-            from_color=forward_color,
-            to_color=forward_color,
-        )
+        # if forward_color is None:
+        #     forward_color = mn.Color4(0.0, 1.0, 0.0, 1.0)
+        # forward_dir = root_rot.transform_vector(mn.Vector3(1.0, 0, 0)) * 2.0
+        # dblr.draw_transformed_line(
+        #     root_pos,
+        #     root_pos + forward_dir,
+        #     from_color=forward_color,
+        #     to_color=forward_color,
+        # )
 
-        # draw the navmesh circle
-        dblr.draw_circle(
-            root_pos,
-            radius=self.robot_cfg.navmesh_radius,
-            color=mn.Color4(0.8, 0.7, 0.9, 0.8),
-            normal=mn.Vector3(0, 1, 0),
-        )
+        # draw the navmesh circles
+        for nav_point in self.navmesh_points:
+            dblr.draw_circle(
+                root_pos + root_rot.transform_vector(nav_point),
+                radius=self.robot_cfg.navmesh_radius,
+                color=mn.Color4(0.8, 0.7, 0.9, 0.8),
+                normal=mn.Vector3(0, 1, 0),
+            )
 
-        if self.base_vel_controller.track_waypoints:
-            self.base_vel_controller.debug_draw_waypoint(dblr)
+        # if self.base_vel_controller.track_waypoints:
+        #    self.base_vel_controller.debug_draw_waypoint(dblr)
 
         # draw the finger raycast sensors
         # for finger_raycast_sensor in self.finger_raycast_sensors:

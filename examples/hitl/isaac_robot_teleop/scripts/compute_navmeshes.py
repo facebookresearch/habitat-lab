@@ -23,7 +23,7 @@ def navmesh_config_and_recompute(sim: Simulator, outfile: str) -> None:
     navmesh_settings = NavMeshSettings()
     navmesh_settings.set_defaults()
     navmesh_settings.agent_height = 1.3
-    navmesh_settings.agent_radius = 0.3
+    navmesh_settings.agent_radius = 0.33
     navmesh_settings.include_static_objects = True
     navmesh_settings.cell_height = 0.01
 
