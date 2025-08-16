@@ -17,6 +17,7 @@ defaults:
       - compass_sensor
       - gps_sensor
       - pointgoal_with_gps_compass_sensor
+      - geometric_overlap_sensor
   - _self_
 
 type: Nav-v0

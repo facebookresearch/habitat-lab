@@ -28,7 +28,7 @@ habitat:
             max_depth: 100.0
             normalize_depth: False
     habitat_sim_v0:
-      allow_sliding: True
+      allow_sliding: False
   dataset:
     scenes_dir: "/cluster/work/rsl/lmilikic/gibson"
     # scenes_dir: "/cluster/work/rsl/lmilikic/hm3d"

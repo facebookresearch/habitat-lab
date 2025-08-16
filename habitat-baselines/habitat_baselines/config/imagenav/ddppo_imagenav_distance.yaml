@@ -14,12 +14,12 @@ habitat_baselines:
   verbose: False
   trainer_name: "ddppo"
   torch_gpu_id: 0
-  tensorboard_dir: "tb/image_nav_dist_conf_vis"
+  tensorboard_dir: "tb/image_nav_dist_conf_vis_overlap_policy"
   video_dir: "video_dir"
   test_episode_count: -1
-  eval_ckpt_path_dir: "data/image_nav_dist_vis_conf_checkpoints"
+  eval_ckpt_path_dir: "data/image_nav_dist_vis_conf_overlap_policy_checkpoints"
   num_environments: 6
-  checkpoint_folder: "data/image_nav_dist_vis_conf_checkpoints"
+  checkpoint_folder: "data/image_nav_dist_vis_conf_overlap_policy_checkpoints"
   num_updates: -1
   total_num_steps: 1e9
   log_interval: 100
@@ -69,7 +69,7 @@ habitat_baselines:
       # The PyTorch distributed backend to use
       distrib_backend: NCCL
       # Visual encoder backbone
-      pretrained_weights: data/gt_dist_vision_noise_pre_checkpoints/ckpt.19.pth
+      pretrained_weights: data/overlap_dist_vision_pre_noise_conf_checkpoints/ckpt.5.pth
       # Initialize with pretrained weights
       pretrained: False
       # Whether the visual encoder backbone will be trained.
@@ -83,7 +83,7 @@ habitat_baselines:
       encoder_backbone: dist_decoder_conf_100max
       encoder_mode: dense
       freeze_encoder: True
-      distance_scale: 42
+      distance_scale: 100
       use_confidence: True
       rnn_type: LSTM
       use_vision: True

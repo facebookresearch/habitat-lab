@@ -46,6 +46,7 @@ __all__ = [
     "HumanoidDetectorSensorConfig",
     "ArmDepthBBoxSensorConfig",
     "SpotHeadStereoDepthSensorConfig",
+    "GeometricOverlapSensorConfig",
     # REARRANGEMENT ACTIONS
     "EmptyActionConfig",
     "ArmActionConfig",
@@ -510,6 +511,13 @@ class GPSSensorConfig(LabSensorConfig):
     """
     type: str = "GPSSensor"
     dimensionality: int = 2
+
+@dataclass
+class GeometricOverlapSensorConfig(LabSensorConfig):
+    type: str = "GeometricOverlapSensor"
+    hfov: float = 90.0
+    width: int = 256
+    height: int = 256
 
 
 @dataclass
@@ -2142,6 +2150,12 @@ cs.store(
 
 
 # Task Sensors
+cs.store(
+    package="habitat.task.lab_sensors.geometric_overlap_sensor",
+    group="habitat/task/lab_sensors",
+    name="geometric_overlap_sensor",
+    node=GeometricOverlapSensorConfig,
+)
 cs.store(
     package="habitat.task.lab_sensors.gps_sensor",
     group="habitat/task/lab_sensors",

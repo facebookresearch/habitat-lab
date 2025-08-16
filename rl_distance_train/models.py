@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 from torchvision.transforms import ColorJitter, RandomResizedCrop, Compose
-from typing import Union, List
+from typing import Union, List, Dict
 from PIL import Image
 
 from vint_based import load_distance_model
@@ -131,3 +131,82 @@ class TemporalDistanceEncoder(nn.Module):
             ], dim=1)
 
         return out
+
+
+class MLPHead(nn.Module):
+    def __init__(self, in_dim: int, hidden: List[int], dropout: float):
+        super().__init__()
+        layers = []
+        dims = [in_dim] + hidden
+        for i in range(len(dims) - 1):
+            layers += [
+                nn.Linear(dims[i], dims[i + 1]),
+                nn.GELU(),
+                nn.Dropout(dropout),
+            ]
+        self.trunk = nn.Sequential(*layers)
+
+    def forward(self, x):
+        return self.trunk(x)
+
+class DistanceEstimator(nn.Module):
+    """
+    MLP trunk + two classification heads:
+      - dist_head -> n_dist_bins
+      - conf_head -> n_conf_bins
+    """
+    def __init__(self, in_dim: int, hidden: List[int], dropout: float, n_dist: int, n_conf: int):
+        super().__init__()
+        self.backbone = MLPHead(in_dim, hidden, dropout)
+        last_dim = hidden[-1] if len(hidden) > 0 else in_dim
+        self.dist_head = nn.Linear(last_dim, n_dist)
+        self.conf_head = nn.Linear(last_dim, n_conf)
+
+    def forward(self, x, sample=False):
+        z = self.backbone(x)
+        dist_logits = self.dist_head(z)
+        conf_logits = self.conf_head(z)
+
+        if not sample:
+            return dist_logits, conf_logits
+
+        probs_dist = torch.softmax(dist_logits, dim=-1)
+        probs_conf = torch.softmax(conf_logits, dim=-1)
+
+        dist = self.sample_from_bins(probs_dist)
+        conf = self.sample_from_bins(probs_conf)
+
+        out = torch.cat([
+            dist.unsqueeze(1),  # [B,1]
+            conf.unsqueeze(1)   # [B,1]
+        ], dim=1)
+
+        return out
+
+    @staticmethod
+    def sample_from_bins(probs: torch.Tensor) -> torch.Tensor:
+        """
+        probs: torch tensor [B, n_bins], each row sums to 1
+        returns: torch tensor [B] with sampled values in [0, 1]
+        """
+        B, n_bins = probs.shape
+        device = probs.device
+        dtype = probs.dtype
+
+        # Bin edges in normalized [0, 1]
+        bin_edges = torch.linspace(0, 1, n_bins + 1, device=device, dtype=dtype)
+
+        # Sample bin indices from probs
+        bin_indices = torch.multinomial(probs, num_samples=1, replacement=True).squeeze(1)
+
+        # Get bin low/high edges
+        lows = bin_edges[bin_indices]
+        highs = bin_edges[bin_indices + 1]
+
+        # Gaussian sample inside chosen bin
+        lows = bin_edges[bin_indices]
+        highs = bin_edges[bin_indices + 1]
+        mid = (lows + highs) / 2
+        std = (highs - lows) / 6  # ~99.7% of values within [lows, highs]
+
+        return np.random.normal(mid, std)

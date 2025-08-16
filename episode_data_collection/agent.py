@@ -124,6 +124,7 @@ class PPOAgent(Agent):
 
     def act(self, observations: Observations) -> Dict[str, int]:
         batch = batch_obs([observations], device=self.device)
+        batch = {k: v.float() for k, v in batch.items()}
         with torch.no_grad():
             action_data = self.actor_critic.act(
                 batch,

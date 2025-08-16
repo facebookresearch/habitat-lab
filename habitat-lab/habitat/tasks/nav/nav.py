@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, List, Optional, Sequence, Tuple, Union
 
 import attr
 import cv2
+import math
 import numpy as np
 import quaternion
 from gym import spaces
@@ -574,6 +575,196 @@ class ProximitySensor(Sensor):
             ],
             dtype=np.float32,
         )
+
+@registry.register_sensor(name="GeometricOverlapSensor")
+class GeometricOverlapSensor(Sensor):
+    cls_uuid: str = "geometric_overlap_sensor"
+
+    def __init__(self, sim: Simulator, config, **kwargs: Any):
+        super().__init__(config=config)
+
+        self._sim = sim
+
+        hfov = getattr(config, "hfov", 90.0)
+        W = getattr(config, "width", 256)
+        H = getattr(config, "height", 256)
+        self.K = self.K_from_fov(W, H, hfov)
+
+        self.goal_info_map = {}
+
+    # Defines the name of the sensor in the sensor suite dictionary
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
+
+    # Defines the type of the sensor
+    def _get_sensor_type(self, *args: Any, **kwargs: Any):
+        return SensorTypes.TENSOR
+
+    # Defines the size and range of the observations of the sensor
+    def _get_observation_space(self, *args: Any, **kwargs: Any):
+        return spaces.Box(
+            shape=(13,), low=-np.inf, high=np.inf, dtype=np.float32
+        )
+
+    def get_goal_info(self, observations, episode: NavigationEpisode, *args: Any, **kwargs: Any):
+        """
+        Get the goal information from the episode.
+        """
+        goal = episode.goals[0]
+        if hasattr(goal, "rotation") and goal.rotation is not None:
+            goal_source_rotation = goal.rotation
+        else:
+            seed = abs(hash(episode.episode_id)) % (2**32)
+            rng = np.random.RandomState(seed)
+            angle = rng.uniform(0, 2 * np.pi)
+            goal_source_rotation = [0, np.sin(angle / 2), 0, np.cos(angle / 2)]
+
+        # Set the simulator state to the goal state.
+        original_agent_state = self._sim.get_agent_state()
+        self._sim.set_agent_state(goal.position, goal_source_rotation)
+        goal_obs = self._sim.get_sensor_observations()
+        goal_state = self._sim.get_agent_state()
+
+        # Restore the original agent state.
+        self._sim.set_agent_state(original_agent_state.position, original_agent_state.rotation)
+
+        # Return the goal observations and state
+        return np.squeeze(goal_obs['depth']).astype(np.float32), goal_state.sensor_states['depth']
+
+    # This is called whenever reset is called or an action is taken
+    def get_observation(
+        self, observations, *args: Any, episode: NavigationEpisode, **kwargs: Any
+    ):
+        agent_state = self._sim.get_agent_state()
+        cam_state = agent_state.sensor_states["depth"]
+        world_T_cam_curr = self.se3_world_T_cam_plusZ(
+            cam_state.position, cam_state.rotation
+        )
+        curr_depth = np.squeeze(observations["depth"]).astype(np.float32)
+
+        episode_uniq_id = f"{episode.scene_id} {episode.episode_id}"
+        if episode_uniq_id not in self.goal_info_map:
+            goal_depth, goal_state = self.get_goal_info(observations, episode)
+            self.goal_info_map[episode_uniq_id] = (goal_depth, goal_state)
+
+        if len(self.goal_info_map) > 1000:
+            # Limit the size of the goal info map to avoid memory issues
+            # Pop 700 oldest entries
+            keys = list(self.goal_info_map.keys())
+            for key in keys[:700]:
+                self.goal_info_map.pop(key)
+
+        # Get the goal depth and state from the map
+        goal_depth, goal_state = self.goal_info_map[episode_uniq_id]
+        world_T_cam_goal = self.se3_world_T_cam_plusZ(
+            goal_state.position, goal_state.rotation
+        )
+
+        ratio = self.projection_success_ratio(
+            goal_depth, self.K, world_T_cam_goal,
+            curr_depth, self.K, world_T_cam_curr,
+            depth_thresh=0.2, sample_every=1
+        )
+
+        R_rel, t_rel = self.relative_cam_T(world_T_cam_goal, world_T_cam_curr)
+        t_rel_enc = self.sym_log(t_rel)
+
+        return np.concatenate([[ratio], R_rel.reshape(-1), t_rel_enc], axis=0)
+    
+    @staticmethod
+    def K_from_fov(width: int, height: int, hfov_deg: float) -> np.ndarray:
+        hfov = math.radians(hfov_deg)
+        vfov = 2.0 * math.atan(math.tan(hfov/2.0) * (height/width))
+        fx = 0.5 * width  / math.tan(hfov/2.0)
+        fy = 0.5 * height / math.tan(vfov/2.0)
+        cx = (width  - 1) * 0.5
+        cy = (height - 1) * 0.5
+        return np.array([[fx, 0,  cx],
+                        [0,  fy, cy],
+                        [0,   0,  1]], dtype=np.float32)
+    
+    @staticmethod
+    def se3_world_T_cam_plusZ(position, rotation_quat) -> np.ndarray:
+        """Return 4x4 world_T_cam where the *camera* frame is +Z forward (OpenCV).
+        Habitat's native camera is -Z forward; we fix that with a constant flip."""
+        R_wc_hab = quaternion.as_rotation_matrix(rotation_quat)  # world <- cam(Habitat basis)
+        F = np.diag([1, 1, -1])                                  # cam(+Z) -> cam(Habitat)
+        # world <- cam(+Z)
+        R_wc = R_wc_hab @ F
+        T = np.eye(4, dtype=np.float32)
+        T[:3,:3] = R_wc
+        T[:3, 3] = np.asarray(position, dtype=np.float32)
+        return T
+    
+    @staticmethod
+    def relative_cam_T(goal_world_T_cam: np.ndarray, curr_world_T_cam: np.ndarray):
+        curr_cam_T_world = np.linalg.inv(curr_world_T_cam)
+        curr_cam_T_goal_cam = curr_cam_T_world @ goal_world_T_cam
+        R_rel = curr_cam_T_goal_cam[:3,:3]        # (3,3)
+        t_rel = curr_cam_T_goal_cam[:3, 3]        # (3,)
+        return R_rel, t_rel
+    
+    @staticmethod
+    def sym_log(x: np.ndarray, alpha: float = 1.0) -> np.ndarray:
+        return np.sign(x) * np.log1p(alpha * np.abs(x))
+    
+    @staticmethod
+    def projection_success_ratio(
+        depth_goal: np.ndarray, K_goal: np.ndarray, world_T_cam_goal: np.ndarray,
+        depth_curr: np.ndarray, K_curr: np.ndarray, world_T_cam_curr: np.ndarray,
+        depth_thresh: float = 0.10, sample_every: int = 1
+    ) -> float:
+        """All inputs assume +Z-forward camera frames and metric depths in meters."""
+        Hg, Wg = depth_goal.shape
+        # Habitat uses 0 for invalid; set to -1 for our logic
+        dg = depth_goal.copy()
+        dg[dg <= 0] = -1.0
+
+        valid = dg > 0
+        if sample_every > 1:
+            # downsample to speed up if you want
+            mask = np.zeros_like(valid)
+            mask[::sample_every, ::sample_every] = True
+            valid = valid & mask
+
+        total = int(valid.sum())
+        if total == 0:
+            return 0.0
+
+        vg, ug = np.where(valid)               # (N,)
+        zg = dg[vg, ug]                        # (N,)
+
+        pix = np.stack([ug, vg, np.ones_like(ug)], 0)   # (3,N)
+        Kg_inv = np.linalg.inv(K_goal)
+        pts_cam_goal = Kg_inv @ pix * zg                 # (3,N)
+        pts_h_goal = np.vstack([pts_cam_goal, np.ones((1, pts_cam_goal.shape[1]))])
+
+        # goal-cam -> world -> current-cam
+        curr_cam_T_goal_cam = np.linalg.inv(world_T_cam_curr) @ world_T_cam_goal
+        pts_h_curr = curr_cam_T_goal_cam @ pts_h_goal
+        pts_curr = pts_h_curr[:3, :]                       # (3,N)
+
+        Z = pts_curr[2, :]
+        in_front = Z > 0                                   # +Z forward
+
+        # project to current image
+        pix_curr_h = K_curr @ pts_curr
+        u = pix_curr_h[0, :] / (pix_curr_h[2, :] + 1e-8)
+        v = pix_curr_h[1, :] / (pix_curr_h[2, :] + 1e-8)
+        ui = np.round(u).astype(np.int32)
+        vi = np.round(v).astype(np.int32)
+
+        Hc, Wc = depth_curr.shape
+        in_bounds = (ui >= 0) & (ui < Wc) & (vi >= 0) & (vi < Hc)
+        ok = in_front & in_bounds
+        if not np.any(ok):
+            return 0.0
+
+        Z_curr_img = depth_curr[vi[ok], ui[ok]]
+        valid_curr = Z_curr_img > 0
+        dep_ok = np.abs(Z[ok] - Z_curr_img) < depth_thresh
+        success = valid_curr & dep_ok
+        return float(success.sum()) / float(total)
 
 
 @registry.register_measure

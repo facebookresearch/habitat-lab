@@ -22,25 +22,44 @@ from habitat.utils.visualizations import maps
 from habitat.utils.visualizations.utils import images_to_video
 from habitat.utils.geometry_utils import quaternion_to_list
 from habitat.config import read_write
-
+from habitat.config.default_structured_configs import (
+    TopDownMapMeasurementConfig,
+    PointGoalWithGPSCompassSensorConfig,
+)
 from episode_data_collection.env import SimpleRLEnv
 import episode_data_collection.utils as utils
 from episode_data_collection.utils import draw_top_down_map, load_embedding, transform_rgb_bgr, se3_world_T_cam_plusZ, K_from_fov, make_mini_plot
 from episode_data_collection.agent import ImageNavShortestPathFollower, PPOAgent
 
-from rl_distance_train import distance_policy, dataset, distance_policy_gt
+from rl_distance_train import distance_policy, dataset, distance_policy_gt, geometric_distance_policy
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 def env_navigation(args):
-    overrides = ["+habitat/task/measurements@habitat.task.measurements.top_down_map=top_down_map"]
-    config = habitat.get_config(
-        config_path=os.path.join("benchmark/nav/", args.env_config),
-        overrides=overrides
-    )
+    agent = PPOAgent.from_config(args.policy_checkpoint)
+    distance_model, img_transform = load_embedding(agent.get_config().habitat_baselines.rl.ddppo.encoder_backbone)
+    distance_model.eval()
+
+
+    # overrides = ["+habitat/task/measurements@habitat.task.measurements.top_down_map=top_down_map"]
+    # config = habitat.get_config(
+    #     config_path=os.path.join("benchmark/nav/", args.env_config),
+    #     overrides=overrides
+    # )
+
+    config = agent.get_config()
 
     with read_write(config):
         config.habitat.dataset.split = args.split
         config.habitat.environment.max_episode_steps = 300
+        # Add TopDownMap measurement if missing
+        if "top_down_map" not in config.habitat.task.measurements:
+            config.habitat.task.measurements["top_down_map"] = TopDownMapMeasurementConfig()
+
+        # Add PointGoalWithGPSCompassSensor if missing
+        if "pointgoal_with_gps_compass_sensor" not in config.habitat.task.lab_sensors:
+            config.habitat.task.lab_sensors[
+                "pointgoal_with_gps_compass_sensor"
+            ] = PointGoalWithGPSCompassSensorConfig()
 
     distance_norm = config.habitat.task.lab_sensors.pointgoal_with_gps_compass_sensor.distance_norm
 
@@ -50,10 +69,6 @@ def env_navigation(args):
     random.seed(42)
     os.makedirs(args.save_dir, exist_ok=True)
     
-    agent = PPOAgent.from_config(args.policy_checkpoint)
-    distance_model, img_transform = load_embedding(agent.get_config().habitat_baselines.rl.ddppo.encoder_backbone)
-    distance_model.eval()
-
     with SimpleRLEnv(config=config) as env:
         goal_radius = env.episodes[0].goals[0].radius
         turn_angle = config.habitat.simulator.turn_angle
@@ -104,7 +119,8 @@ def env_navigation(args):
                 goal_image = obs["rgb"][:, :, :3]
                 env.habitat_env.sim.set_agent_state(original_state.position, original_state.rotation) # return the agent in the starting position
             else:
-                raise ValueError("No goal image found in observations or episode goals.")
+                print("No goal image found in observations or episode goals.")
+                goal_image = None
 
             goal_description = ""
             if goal_image is not None and args.describe_goal:
@@ -129,18 +145,24 @@ def env_navigation(args):
                 observations["pointgoal_with_gps_compass"][1]))
                 gt_distances.append(observations["pointgoal_with_gps_compass"][0] * distance_norm)
 
-                with torch.no_grad():
-                    transformed_imgs = torch.stack([img_transform(Image.fromarray(f)) for f in [observations['rgb'], goal_image]]).to('cuda')
-                    temporal_dist, conf = distance_model(transformed_imgs[:1], transformed_imgs[1:])
-                    temporal_dist = temporal_dist.cpu().numpy()[0]
-                print(f"Predicted distance {temporal_dist:2f}")
-                temporal_distances.append(temporal_dist)
+                if goal_image is not None:
+                    with torch.no_grad():
+                        transformed_imgs = torch.stack([img_transform(Image.fromarray(f)) for f in [observations['rgb'], goal_image]]).to('cuda')
+                        temporal_dist, conf = distance_model(transformed_imgs[:1], transformed_imgs[1:])
+                        temporal_dist = temporal_dist.cpu().numpy()[0]
+                    print(f"Predicted distance {temporal_dist:2f}")
+                    temporal_distances.append(temporal_dist)
+                else:
+                    temporal_distances.append(0)
 
                 # collect current view and state
                 plot_img = make_mini_plot(gt_distances, temporal_distances, size=observations['rgb'].shape[0])
 
                 top_down_map = draw_top_down_map(info, observations['rgb'].shape[0])
-                combined_image = cv2.hconcat([observations["rgb"], top_down_map, goal_image, plot_img.astype(np.uint8)])
+                if goal_image is not None:
+                    combined_image = cv2.hconcat([observations["rgb"], top_down_map, goal_image, plot_img.astype(np.uint8)])
+                else:
+                    combined_image = cv2.hconcat([observations["rgb"], top_down_map, plot_img.astype(np.uint8)])
                 images.append(combined_image)
                                             
                 observations, reward, done, info = env.step(action)
