@@ -18,8 +18,9 @@ import numpy as np
 # HABITAT_TO_MOCHI_POS_OFFSET = -mn.Vector3(0.0, 1.0, 0.0)
 
 # at origin, good for debugging in polyscope
-# raised up 1 meter to make VR interaction easier
-HABITAT_TO_MOCHI_POS_OFFSET = -mn.Vector3(0.0, 1.0, 0.0)
+HABITAT_TO_MOCHI_POS_OFFSET = -mn.Vector3(0.0, 0.0, 0.0)
+# raised up 1 meter to make VR interaction easier?
+# HABITAT_TO_MOCHI_POS_OFFSET = -mn.Vector3(0.0, 0.0, 0.0)
 
 def habitat_to_mochi_position(src):
     if isinstance(src, mn.Vector3):
@@ -65,13 +66,18 @@ def rotvec_to_magnum_quat(rotvec):
     w = q_wxyz[0]
     return mn.Quaternion(mn.Vector3(x, y, z), w)
 
+def quat_to_rotvec(q) -> np.ndarray:
 
-def quat_to_rotvec(q: mn.Quaternion) -> np.ndarray:
-    q = q.normalized()
+    if isinstance(q, mn.Quaternion):
+        q = q.normalized()
+        # Always use positive w for consistency (same as C++ code)
+        v = np.array(list(q.vector))
+        w = q.scalar
+    elif isinstance(q, (list, np.array)):
+        # assume wxyz
+        v = np.array(q[1:])
+        w = q[0]
 
-    # Always use positive w for consistency (same as C++ code)
-    v = np.array(list(q.vector))
-    w = q.scalar
     if w < 0:
         v = -v
         w = -w
@@ -111,6 +117,9 @@ def rotvec_to_quat_wxyz(rotvec):
 def magnum_quat_to_list_wxyz(rot_quat):
     return [rot_quat.scalar, *list(rot_quat.vector)]
 
+def list_wxyz_to_magnum_quat(q_wxyz):
+    return mn.Quaternion(mn.Vector3(q_wxyz[1], q_wxyz[2], q_wxyz[3]), q_wxyz[0])    
+
 
 def quat_multiply(q1, q2):
     w1, x1, y1, z1 = q1
@@ -131,3 +140,45 @@ def quat_rotate(q, v):
     q_conj = quat_transpose(q)
     v_quat = [0, *v]
     return quat_multiply(quat_multiply(q, v_quat), q_conj)[1:]
+
+
+def quat_to_rotmat(rotation_wxyz):
+    """Convert quaternion [wxyz] to 3x3 rotation matrix."""
+    w, x, y, z = rotation_wxyz
+    xx, yy, zz = x*x, y*y, z*z
+    xy, xz, yz = x*y, x*z, y*z
+    wx, wy, wz = w*x, w*y, w*z
+
+    return np.array([
+        [1 - 2*(yy + zz),     2*(xy - wz),       2*(xz + wy)],
+        [    2*(xy + wz), 1 - 2*(xx + zz),       2*(yz - wx)],
+        [    2*(xz - wy),     2*(yz + wx),   1 - 2*(xx + yy)]
+    ])
+
+def world_to_local(point_world, pos, quat):
+    """Transform point from world to local coordinates.
+
+    Args:
+        point_world: (3,) array
+        pos: (3,) array, world position of local origin
+        quat: (4,) array [x, y, z, w], local→world orientation
+
+    Returns:
+        point_local: (3,) array
+    """
+    R = quat_to_rotmat(quat)
+    return R.T @ (point_world - pos)
+
+def local_to_world(point_local, pos, quat):
+    """Transform point from local to world coordinates.
+
+    Args:
+        point_local: (3,) array
+        pos: (3,) array, world position of local origin
+        quat: (4,) array [x, y, z, w], local→world orientation
+
+    Returns:
+        point_world: (3,) array
+    """
+    R = quat_to_rotmat(quat)
+    return R @ point_local + pos

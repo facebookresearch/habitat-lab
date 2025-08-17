@@ -1,24 +1,21 @@
-# IsaacSim Viewer
-![spot_and_hand_banner](https://github.com/user-attachments/assets/6aaf5ab1-2568-4b22-bd3c-54ab521b0ee7)
+# Mochi VR
 
 This is an updated version of the IsaacSim Viewer with an alternate Mochi backend.
 
-The app is an interactive VR physics sandbox. It features an HSSD scene, YCB objects, and a policy-driven Spot. If you connect a VR client, you can also interact with the scene via a Metahand. The app is also a good starting point for testing/hacking/benchmarking.
-
 ## Requirements
 
-* A headed Linux desktop. Ubuntu is recommended for compatibility with Isaac Sim.
+* A headed Mac or Linux desktop.
 * for VR (optional), you need a Quest 3, and the Linux server can be run headless.
 
 ## Installation
 
+1. See [habitat-hitl base install steps](habitat-hitl/README.md), but note custom Habitat-sim branch below.
+2. `pip install roboticstoolbox-python spatialmath-python`
+3. Build and install Mochi (below).
+
 ### Mochi
 
 See [habitat-lab/habitat/mochi/README.md](../../../habitat-lab/habitat/mochi/README.md).
-
-### Isaac Sim
-
-See [habitat-lab/habitat/isaac_sim/README.md](../../../habitat-lab/habitat/isaac_sim/README.md).
 
 ### Habitat-sim
 

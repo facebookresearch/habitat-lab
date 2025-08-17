@@ -24,13 +24,25 @@ import hydra
 import magnum as mn
 import numpy as np
 
+from dataclasses import dataclass
+
 from habitat.isaac_sim import isaac_prim_utils
 
 # import habitat.isaacsim.isaacsim_wrapper as isaacsim_wrapper
 # from habitat.isaacsim.usd_visualizer import UsdVisualizer
 from habitat.isaac_sim.isaac_app_wrapper import IsaacAppWrapper
 from habitat.isaac_sim.usd_visualizer import UsdVisualizer
-from habitat.mochi.mochi_utils import habitat_to_mochi_position
+from habitat.mochi.mochi_utils import (
+    habitat_to_mochi_position, 
+    world_to_local, 
+    local_to_world, 
+    rotvec_to_quat_wxyz,
+    list_wxyz_to_magnum_quat,
+    quat_multiply,
+    quat_transpose,
+    quat_to_rotvec,
+    magnum_quat_to_list_wxyz
+)
 from habitat.mochi.mochi_wrapper import MochiWrapper
 from habitat_hitl._internal.networking.average_rate_tracker import (
     AverageRateTracker,
@@ -54,7 +66,24 @@ import traceback
 
 import habitat_sim  # unfortunately we can't import this earlier
 
+def pretty(vals, decimals=2):
+    """
+    Pretty-format floats with fixed decimals (no scientific notation).
+    Works on floats, lists, tuples, numpy arrays, or nested containers.
+    """
+    fmt = f"{{:.{decimals}f}}"
 
+    if isinstance(vals, np.ndarray):
+        vals = vals.tolist()  # convert to nested Python lists
+
+    if isinstance(vals, (list, tuple)):
+        return "[" + ", ".join(pretty(v, decimals) for v in vals) + "]"
+
+    try:
+        return fmt.format(float(vals))
+    except (TypeError, ValueError):
+        return str(vals)
+    
 def bind_physics_material_to_hierarchy(
     stage,
     root_prim,
@@ -687,7 +716,7 @@ class AppStateIsaacSimViewer(AppState):
             self._do_camera_follow_spot = True
             self._do_control_spot = True
 
-        self._hide_gui = True
+        self._hide_gui = False
         self._is_recording = False
 
         # arbitrary spot for VR avatar
@@ -1372,16 +1401,18 @@ class AppStateIsaacSimViewer(AppState):
     def update_metahand_from_art_hand(
         self,
         metahand_wrapper,
+        hand_idx,
         use_identify_root_transform=False,
         extra_rot=None,
         extra_pos=None,
     ):
-        hand_idx = 1  # right hand
         (
             art_hand_positions,
             art_hand_rotations,
         ) = self.get_art_hand_positions_rotations(hand_idx=hand_idx)
         if not art_hand_positions:
+            metahand_wrapper.set_target_base_position(mn.Vector3(0, 0, 0))
+            metahand_wrapper.set_target_base_rotation(mn.Quaternion())
             return
 
         # art_hand_rotations[0] = mn.Quaternion()
@@ -1486,9 +1517,6 @@ class AppStateIsaacSimViewer(AppState):
         # new_joint_pos = (self._app_service.get_anim_fraction() - 0.5) * 0.3
         # self._spot.set_all_joints(new_joint_pos)
 
-        if gui_input.get_key_down(GuiInput.KeyNS.T):
-            self._mochi_wrapper._env.reset()
-
         if gui_input.get_key_down(GuiInput.KeyNS.H):
             self._hide_gui = not self._hide_gui
 
@@ -1570,6 +1598,8 @@ class AppStateIsaacSimViewer(AppState):
             self._is_recording = False
             self._hide_gui = False
 
+        self.handle_mochi_keys()
+
     def debug_draw_rigid_objects(self):
         for ro in self._rigid_objects:
             com_world = isaac_prim_utils.get_com_world(ro._rigid_prim)
@@ -1643,72 +1673,314 @@ class AppStateIsaacSimViewer(AppState):
                 body_name, force_vec, hit_pos_usd
             )
 
+    @dataclass
+    class MochiHelperState:
+        target_arm_poses = [
+            [0.00, -0.20, 0.00, -2.20, 0.00, 3.20, 0.00],
+            [0.00, -0.20, 0.00, -2.20, 0.00, 3.20, 0.00]]
+        target_hand_poses = [
+            [0.0] * 16,
+            [0.0] * 16
+        ]
+        active_arm_idx = 0
+        target_ee_orientation = [0, 0, 0]
+        debug_pose = [0.0] * 40
+
     def init_mochi(self):
         do_render = (
             self._app_service.hitl_config.experimental.headless.do_headless
         )
         self._mochi_wrapper = MochiWrapper(self._sim, do_render)
 
-        self._dummy_metahand_wrapper = DummyMetahandWrapper()
+        self._dummy_metahand_wrappers = [
+            DummyMetahandWrapper(),
+            DummyMetahandWrapper()
+        ]
 
-        if False:  # some test code for RenderInstanceHelper
-            from habitat_sim._ext.habitat_sim_bindings import (
-                RenderInstanceHelper,
-            )
+        self._mochi_helper_state = AppStateIsaacSimViewer.MochiHelperState()
 
-            tmp_render_instance_helper = RenderInstanceHelper(
-                self._sim, use_xyzw_orientations=False
-            )
+    def update_murp_from_metahand(self, hand_idx, metahand):
 
-            test_objects = [
-                "/home/eric/projects/MochiAssets/ycb_root/004_sugar_box.stl",
-                "data/objects/ycb/meshes/004_sugar_box/google_16k/textured.glb",
+        if metahand.target_base_position == mn.Vector3(0, 0, 0):
+            return
+        
+        rot = magnum_quat_to_list_wxyz(metahand.target_base_rotation)
+
+        # todo: figure out why hand 1 seems to need only about a 60 degree fixup
+        if not hasattr(self, "_metahand_murp_fixups"):
+            self._metahand_murp_fixups = [
+                 [0.70710678118, 0, 0, 0.70710678118],
+                 [0.9659258262890683, 0.0, 0.0, -0.25881904510252074]
             ]
 
-            for filepath in test_objects:
-                semantic_id = 0
-                scale = mn.Vector3(1.0, 1.0, 1.0)
-                tmp_render_instance_helper.add_instance(
-                    filepath, semantic_id, scale
-                )
+        rot_corrected =  quat_multiply(rot, self._metahand_murp_fixups[hand_idx])
 
-            num_objects = len(test_objects)
-            positions = np.array(
-                [
-                    [0.0, 0.0, 0.1],
-                    [0.0, 0.0, 0.2],
-                ],
-                dtype=np.float32,
-            )
-            wxyz_rotations = np.array(
-                [
-                    [1.0, 0.0, 0.0, 0.0],
-                    [1.0, 0.0, 0.0, 0.0],  # [0.7071, 0.7071, 0, 0],
-                ],
-                dtype=np.float32,
-            )
+        self.update_murp_arm(hand_idx, metahand.target_base_position, rot_corrected)
 
-            tmp_render_instance_helper.set_world_poses(
-                np.ascontiguousarray(positions),
-                np.ascontiguousarray(wxyz_rotations),
-            )
+        self.update_murp_hand_from_metahand(hand_idx, metahand)
+
+    def update_murp_arm(self, arm_idx, target_pos, target_orientation):
+
+        helper_state = self._mochi_helper_state
+        arm_root_names = ["hab_murp/left_base", "hab_murp/right_base"]
+
+        arm_root_name = arm_root_names[arm_idx]
+        handle = self._mochi_wrapper._object_handles[arm_root_name]
+        mochi = self._mochi_wrapper._env._mochi
+        root_pose = mochi.get_object_origin_transform(handle)
+
+        # beware this ignores HABITAT_TO_MOCHI_POS_OFFSET offset
+
+        root_rot_quat = rotvec_to_quat_wxyz(root_pose[1])
+
+        target_pos_local = world_to_local(list(target_pos), root_pose[0], 
+                                            root_rot_quat)
+
+        target_orientation_local = quat_multiply(quat_transpose(root_rot_quat), target_orientation)
+        target_orientation_local_rotvec = quat_to_rotvec(target_orientation_local)
+
+        ik_helpers = self._mochi_wrapper._franka_ik_helpers
+        ik_helper = ik_helpers[arm_idx]
+        arm_pose = helper_state.target_arm_poses[arm_idx]
+        ee_target = (target_pos_local, target_orientation_local_rotvec)
+        
+        # print(f"raw target ee:     {pretty(ee_target)}")
+        if True:  # do clamp?
+            ee_target = ik_helper.clamp_target(ee_target)
+            # print(f"clamped target ee: {pretty(ee_target)}")
+        # arm_pose = ik_helper.step(arm_pose, ee_target)
+
+        arm_pose = ik_helper.step_until_progress(arm_pose, ee_target)
+        
+        # print(f"ee after:          {pretty(ik_helper.ee_pose(arm_pose))}")
+        helper_state.target_arm_poses[arm_idx] = arm_pose         
+
+    def update_murp_hand_from_metahand(self, arm_idx, metahand):
+
+        # note different finger convention
+
+        # source
+        # 0 pointer twist
+        # 1 thumb rotate
+        # 2 ring twist
+        # 3 pinky twist
+        # 4 pointer base
+        # 5 thumb twist
+        # 6 ring base
+        # 7 pinky base
+        # 8 pointer mid
+        # 9 thumb base
+        # 10 ring mid
+        # 11 pinky mid
+        # 12 pointer tip
+        # 13 thumb tip
+        # 14 ring tip
+        # 15 pinky tip
+
+        # dest
+        # 0..4 finger twist and thumb rotate
+        # 4..8 finger first joint bend and thumb twist
+        # 8..12 finger second joint bend and thumb first joint bend
+        # 12..16 last joint bend
+
+        # 0,4,8,12 -> thumb rotate, thumb twist, then bend
+        # 1,5,9,13 -> pinky twist and joint bends
+        # 2,6,10,14 -> ring twist and joint bends
+        # 3,7,11,15 -> pointer twist and joint bends
+
+        remap = {
+            0: 3,
+            1: 0,
+            2: 2,
+            3: 1,
+            4: 7,
+            5: 4,
+            6: 6,
+            7: 5,
+            8: 11,
+            9: 8,
+            10: 10,
+            11: 9,
+            12: 15,
+            13: 12,
+            14: 14,
+            15: 13,
+        }
+
+        helper_state = self._mochi_helper_state
+        target_hand_pose = helper_state.target_hand_poses[arm_idx]
+
+        start = 6
+        for src in remap:
+            dest = remap[src]
+            target_hand_pose[dest] = metahand._target_joint_positions[src]
+
+    def handle_mochi_keys(self):
+
+        gui_input = self._app_service.gui_input
+        helper_state = self._mochi_helper_state
+
+        if gui_input.get_key_down(GuiInput.KeyNS.T):
+            self._mochi_wrapper._env.reset()
+            # reset pose
+            self._mochi_helper_state = AppStateIsaacSimViewer.MochiHelperState()
+            helper_state = self._mochi_helper_state
+
+        if False:
+            if gui_input.get_key_down(GuiInput.KeyNS.ONE):
+                helper_state.active_arm_idx = 0
+            if gui_input.get_key_down(GuiInput.KeyNS.TWO):
+                helper_state.active_arm_idx = 1
+
+            joint_keys = [
+                GuiInput.KeyNS.THREE,
+                GuiInput.KeyNS.FOUR,
+                GuiInput.KeyNS.FIVE,
+                GuiInput.KeyNS.SIX,
+                GuiInput.KeyNS.SEVEN,
+                GuiInput.KeyNS.EIGHT,
+                GuiInput.KeyNS.NINE,
+            ]
+
+            joint_delta = 0.0
+            if gui_input.get_key_down(GuiInput.KeyNS.UP):
+                joint_delta = -0.2
+            if gui_input.get_key_down(GuiInput.KeyNS.DOWN):
+                joint_delta = 0.2
+            
+            if joint_delta != 0.0:
+                for dof_idx, joint_key in enumerate(joint_keys):
+                    if gui_input.get_key(joint_key):
+                        pose = helper_state.target_arm_poses[helper_state.active_arm_idx]
+                        pose[dof_idx] += joint_delta
+                        print(f"arm {helper_state.active_arm_idx} pose = [{pretty(pose)}]")
+        
+        # use 3-8 keys to select target_ee_orientation
+        if gui_input.get_any_key_down():
+            orientation_keys = [
+                GuiInput.KeyNS.THREE,
+                GuiInput.KeyNS.FOUR,
+                GuiInput.KeyNS.FIVE,
+                GuiInput.KeyNS.SIX,
+                GuiInput.KeyNS.SEVEN,
+                GuiInput.KeyNS.EIGHT,
+            ]
+
+            rotvec_max_angle = np.deg2rad(150)  # ~2.62 rad
+
+            # rotvecs
+            orientations = [
+                (np.pi/2) * np.array([0.75,  0.5,  0.25]),  # tilt axis slightly toward +Z
+                (np.pi/2) * np.array([0.75,  1.5,  0.25]),  # tilt axis slightly toward +Z
+                (np.pi/2) * np.array([0.75,  0.5,  -0.25]),  # tilt axis slightly toward +Z
+                (np.pi/2) * np.array([0.75,  1.5,  -0.25]),  # tilt axis slightly toward +Z
+                (np.pi/2) * np.array([0.5,  0.5,  0.25]),  # tilt axis slightly toward +Z
+                (np.pi/2) * np.array([1.0,  1.5,  -0.25]),  # tilt axis slightly toward +Z
+
+            ]
+
+            for (idx, key) in enumerate(orientation_keys):
+                if gui_input.get_key_down(key):
+                    helper_state.target_ee_orientation = orientations[idx]
+           
+
+        if gui_input.get_key(GuiInput.KeyNS.SPACE):
+            self.update_murp_arm(arm_idx=helper_state.active_arm_idx, target_pos=self._cursor_pos, 
+                                 target_orientation=rotvec_to_quat_wxyz(helper_state.target_ee_orientation))
+
+    def draw_extents_box(self, clamp_min, clamp_max):
+        xmin, ymin, zmin = clamp_min
+        xmax, ymax, zmax = clamp_max
+
+        red_min, red_max   = mn.Color4(0.5, 0, 0, 1), mn.Color4(1, 0, 0, 1)
+        green_min, green_max = mn.Color4(0, 0.5, 0, 1), mn.Color4(0, 1, 0, 1)
+        blue_min, blue_max  = mn.Color4(0, 0, 0.5, 1), mn.Color4(0, 0, 1, 1)
+
+        line_render = self._app_service.line_render
+
+        def L(p1, p2, color): 
+            line_render.draw_transformed_line(mn.Vector3(*p1), mn.Vector3(*p2), color, color)
+
+        # X edges
+        L((xmin,ymin,zmin),(xmax,ymin,zmin), red_min)  # bottom-front
+        L((xmin,ymin,zmax),(xmax,ymin,zmax), red_min)  # bottom-back
+        L((xmin,ymax,zmin),(xmax,ymax,zmin), red_max)  # top-front
+        L((xmin,ymax,zmax),(xmax,ymax,zmax), red_max)  # top-back
+
+        # Y edges
+        L((xmin,ymin,zmin),(xmin,ymax,zmin), green_min)
+        L((xmax,ymin,zmin),(xmax,ymax,zmin), green_max)
+        L((xmin,ymin,zmax),(xmin,ymax,zmax), green_min)
+        L((xmax,ymin,zmax),(xmax,ymax,zmax), green_max)
+
+        # Z edges
+        L((xmin,ymin,zmin),(xmin,ymin,zmax), blue_min)
+        L((xmax,ymin,zmin),(xmax,ymin,zmax), blue_min)
+        L((xmin,ymax,zmin),(xmin,ymax,zmax), blue_max)
+        L((xmax,ymax,zmin),(xmax,ymax,zmax), blue_max)
+
+
+    def draw_hab_murp_ik_range(self):
+
+        line_render = self._app_service.line_render
+        for arm_idx in [0]:
+
+            ik_helpers = self._mochi_wrapper._franka_ik_helpers
+            ik_helper = ik_helpers[arm_idx]
+            clamp_min, clamp_max = ik_helper.get_position_clamp_range()
+
+            arm_root_names = ["hab_murp/left_base", "hab_murp/right_base"]
+            arm_root_name = arm_root_names[arm_idx]
+            handle = self._mochi_wrapper._object_handles[arm_root_name]
+            mochi = self._mochi_wrapper._env._mochi
+            root_pose = mochi.get_object_origin_transform(handle)
+
+            mn_pos = mn.Vector3(*root_pose[0])
+            mn_rotation_quat = list_wxyz_to_magnum_quat(rotvec_to_quat_wxyz(root_pose[1]))
+            root_pose_mat = mn.Matrix4.from_(mn_rotation_quat.to_matrix(), mn_pos)
+
+            line_render.push_transform(root_pose_mat)
+            self.draw_extents_box(clamp_min[0:3], clamp_max[0:3])
+            line_render.pop_transform()
 
     def update_mochi(self):
         if not self._mochi_wrapper:
             return
 
-        def lerp(a: float, b: float, t: float) -> float:
-            return a + t * (b - a)
+        helper_state = self._mochi_helper_state
 
-        # self._dummy_metahand_wrapper._target_joint_positions[0:16] = [0.0] * 16
+        num_dofs = 54
+        num_base_dofs = 6
+        num_joint_dofs = num_dofs - num_base_dofs
+        murp_target_pose = []
+        murp_target_pose += [0, 0, 0]  # habitat_to_mochi_position(self._cursor_pos)
+        murp_target_pose += [-1.57079632679, 0.0, 0.0]  # rotation
+        murp_target_pose += [0.0] * num_joint_dofs
 
-        # anim_fraction = self._app_service.get_anim_fraction()
-        # num_dofs = 16
-        # pos = lerp(0.0, mn.math.pi, anim_fraction) * 1.0
+        for arm_idx in range(2):
+            self.update_murp_from_metahand(arm_idx, self._dummy_metahand_wrappers[arm_idx])
 
-        # self._dummy_metahand_wrapper._target_joint_positions[3:16:4] = [pos] * 4
+            arm_pose = helper_state.target_arm_poses[arm_idx]
+            arm_dof_idxs = self._mochi_wrapper._franka_arm_dof_idxs[arm_idx]
+            assert len(arm_pose) == len(arm_dof_idxs)
+            for local_idx in range(len(arm_pose)):
+                dof_idx = arm_dof_idxs[local_idx]
+                murp_target_pose[dof_idx] = arm_pose[local_idx]
 
-        self._mochi_wrapper.step(self._dummy_metahand_wrapper)
+            num_arm_dofs = 7 * 2
+            num_debug_dofs = num_dofs - num_arm_dofs
+            assert len(helper_state.debug_pose) == num_debug_dofs
+            for local_idx in range(num_debug_dofs):
+                murp_target_pose[start_dof_idx + local_idx] = helper_state.debug_pose[local_idx]
+
+            # hand_pose = helper_state.target_hand_poses[arm_idx]
+            # allegro_dof_start = 32 if arm_idx == 0 else 16
+            # for local_idx in range(len(hand_pose)):
+            #     murp_target_pose[allegro_dof_start + local_idx] = hand_pose[local_idx]
+            
+        self._mochi_wrapper._env._mochi.set_agent_target_pose(murp_target_pose, agent_idx=1)
+
+        self._mochi_wrapper.step(self._dummy_metahand_wrappers[0])
         self._mochi_wrapper.pre_render()
 
     def sim_update(self, dt, post_sim_update_dict):
@@ -1737,21 +2009,12 @@ class AppStateIsaacSimViewer(AppState):
         # extra_pos = [-7.0, 1.0, -2.75]
         # self.update_metahand_from_art_hand(use_identify_root_transform=True, extra_pos=extra_pos)
         # self.update_metahand_from_art_hand(use_identify_root_transform=False, extra_pos=mn.Vector3(0.2, 0.00, 0.0))
-        metahand_wrapper = (
-            self._dummy_metahand_wrapper
-            if self._mochi_wrapper
-            else self._metahand_wrapper
-        )
-        self.update_metahand_from_art_hand(
-            metahand_wrapper, use_identify_root_transform=False, extra_pos=None
-        )
 
-        if self._isaac_wrapper:
-            self.update_spot_pre_step(dt)
-
-            self.update_mouse_raycaster(dt)
-
-            self.update_isaac(post_sim_update_dict)
+        for hand_idx in range(2):
+            metahand_wrapper = self._dummy_metahand_wrappers[hand_idx]
+            self.update_metahand_from_art_hand(
+                metahand_wrapper, hand_idx=hand_idx, use_identify_root_transform=False, extra_pos=None
+            )
 
         do_show_vr_cam_pose = False
         vr_cam_pose = self.get_vr_camera_pose()
@@ -1780,6 +2043,8 @@ class AppStateIsaacSimViewer(AppState):
         self.draw_lookat()
 
         self.draw_world_origin()
+
+        self.draw_hab_murp_ik_range()
 
         # draw line for Spot forward vec
         if False:
