@@ -117,18 +117,34 @@ class MochiVisualizer:
                     init_rotation = mn.Quaternion()
                     runtime_rotation = None
 
-            if elem_name not in object_names:
-                print(f"MochiVisualizer: no object found for {elem_name} named in {render_map_filepath}")
-                continue
+            import re
+            pattern = re.compile(elem_name)
+            matched = False
+            for obj_name in object_names:
+                m = pattern.fullmatch(obj_name)
+                if not m:
+                    continue
+                matched = True
 
-            mochi_handle = self._mochi.get_actor_handle(elem_name)
+                resolved_filepath = render_asset_filepath
+                for i, g in enumerate(m.groups(), start=1):
+                    resolved_filepath = resolved_filepath.replace(f"${i}", g)
 
-            group_type = _InstanceGroupType.DYNAMIC if is_dynamic else _InstanceGroupType.STATIC
-            group = self._instance_groups[group_type]
-            group._render_instance_helper.add_instance(render_asset_filepath, semantic_id, scale=scale, rotation=init_rotation)
-            group._object_handles[elem_name] = mochi_handle
-            if runtime_rotation:
-                group._hack_rotations[elem_name] = magnum_quat_to_list_wxyz(runtime_rotation)
+                # print(f"mapping {obj_name} to {resolved_filepath}")
+
+                mochi_handle = self._mochi.get_actor_handle(obj_name)
+                group_type = _InstanceGroupType.DYNAMIC if is_dynamic else _InstanceGroupType.STATIC
+                group = self._instance_groups[group_type]
+                group._render_instance_helper.add_instance(
+                    resolved_filepath, semantic_id, scale=scale, rotation=init_rotation
+                )
+                group._object_handles[obj_name] = mochi_handle
+                if runtime_rotation:
+                    group._hack_rotations[obj_name] = magnum_quat_to_list_wxyz(runtime_rotation)
+
+            if not matched:
+                print(f"MochiVisualizer: no object found for regex {elem_name} in {render_map_filepath}")
+
 
     def flush_to_hab_sim(self):
 

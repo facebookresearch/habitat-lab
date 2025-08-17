@@ -185,6 +185,24 @@ class HitlBareSimDriver(AppDriver):
         hab_cfg.sim_cfg.enable_gfx_replay_save = True
         self._bare_sim.reconfigure(hab_cfg)
 
+        if True:
+            # save out gfx-replay for this scene
+            self.get_sim().gfx_replay_manager.save_keyframe()
+
+            keyframes: List[
+                str
+            ] = (
+                self.get_sim().gfx_replay_manager.write_incremental_saved_keyframes_to_string_array()
+            )        
+
+            for keyframe in keyframes:
+                self._recording_keyframes.append(keyframe)
+
+            self._save_filepath_base = scene
+            self._save_recorded_keyframes_to_file()
+
+            self._recording_keyframes.clear()
+
         assert self.get_sim().renderer is None        
 
 

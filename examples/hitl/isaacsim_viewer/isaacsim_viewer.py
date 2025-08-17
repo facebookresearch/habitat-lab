@@ -615,9 +615,28 @@ class AppStateIsaacSimViewer(AppState):
                 # background HSSD scene?
                 if False:
                     self._app_service.reconfigure_sim(
-                        "/home/eric/projects/mochi2/habitat_render_data/data/hssd-hab/hssd-hab.scene_dataset_config.json",
-                        "102344193.scene_instance.json",
+                        "/home/eric/projects/hssd-hab2/hssd-hab-partnr.scene_dataset_config.json",
+                        "108294897_176710602.scene_instance.json"
+
+                        # "/home/eric/projects/mochi2/habitat_render_data/data/hssd-hab/hssd-hab.scene_dataset_config.json",
+                        # "102344193.scene_instance.json",
                     )
+                if True:
+                    replay_filepath = "data/mochi_vr_data/gfx_replay/108294897_176710602_shifted.scene_instance.json.gfx_replay.json"
+                    sim = self._app_service.sim
+                    player = sim.gfx_replay_manager.read_keyframes_from_file(replay_filepath)
+                    assert player
+                    player.set_keyframe_index(0)
+
+                    for frame in range(player.get_num_keyframes()):
+                        player.set_keyframe_index(frame)
+
+                    # hack so that player doesn't get garbage-collected and clear its content
+                    self._old_objects = []
+                    self._old_objects.append(player)
+                    
+
+
 
         # self._spot = SpotWrapper(self._sim)
 
