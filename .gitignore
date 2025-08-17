@@ -100,3 +100,5 @@ data
 /sandbox
 /plots/outputs
 /wandb/
+
+imgui.ini

@@ -351,11 +351,83 @@ class MochiWrapper:
         # render_actors =
         # self._debug_drawer = MochiDebugDrawer(
 
+
+    def _update_metahand_and_get_action(self, dummy_metahand):
+        target_pose = self._env._previous_target_pose
+        target_pose[0:3] = list(
+            habitat_to_mochi_position(dummy_metahand.target_base_position)
+        )
+        target_pose[3:6] = quat_to_rotvec(dummy_metahand.target_base_rotation)
+
+        # note different finger convention
+
+        # source
+        # 0 pointer twist
+        # 1 thumb rotate
+        # 2 ring twist
+        # 3 pinky twist
+        # 4 pointer base
+        # 5 thumb twist
+        # 6 ring base
+        # 7 pinky base
+        # 8 pointer mid
+        # 9 thumb base
+        # 10 ring mid
+        # 11 pinky mid
+        # 12 pointer tip
+        # 13 thumb tip
+        # 14 ring tip
+        # 15 pinky tip
+
+        # dest
+        # 0..4 finger twist and thumb rotate
+        # 4..8 finger first joint bend and thumb twist
+        # 8..12 finger second joint bend and thumb first joint bend
+        # 12..16 last joint bend
+
+        # 0,4,8,12 -> thumb rotate, thumb twist, then bend
+        # 1,5,9,13 -> pinky twist and joint bends
+        # 2,6,10,14 -> ring twist and joint bends
+        # 3,7,11,15 -> pointer twist and joint bends
+
+        remap = {
+            0: 3,
+            1: 0,
+            2: 2,
+            3: 1,
+            4: 7,
+            5: 4,
+            6: 6,
+            7: 5,
+            8: 11,
+            9: 8,
+            10: 10,
+            11: 9,
+            12: 15,
+            13: 12,
+            14: 14,
+            15: 13,
+        }
+
+        start = 6
+        for src in remap:
+            dest = remap[src]
+            target_pose[start + dest] = dummy_metahand._target_joint_positions[
+                src
+            ]
+
+        # target_pose[6:22] = [0.0] * 16  # temp
+
+        # target_pose[6:22] = dummy_metahand._target_joint_positions
+
+        action = [0.0] * 16
+        return action
+
     def step(self, dummy_metahand):
         env = self._env
 
-        # action = self._update_metahand_and_get_action(dummy_metahand)
-        action = [0.0] * 16
+        action = self._update_metahand_and_get_action(dummy_metahand)
+        # action = [0.0] * 16
 
         # Send the computed action to the env.
         _, reward, terminated, truncated, info = env.step(action)

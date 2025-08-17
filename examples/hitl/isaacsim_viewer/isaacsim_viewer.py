@@ -1684,7 +1684,8 @@ class AppStateIsaacSimViewer(AppState):
         ]
         active_arm_idx = 0
         target_ee_orientation = [0, 0, 0]
-        debug_pose = [0.0] * 40
+        debug_pose = [0.0] * 34
+        debug_dof_offset = 0
 
     def init_mochi(self):
         do_render = (
@@ -1715,14 +1716,16 @@ class AppStateIsaacSimViewer(AppState):
 
         rot_corrected =  quat_multiply(rot, self._metahand_murp_fixups[hand_idx])
 
-        self.update_murp_arm(hand_idx, metahand.target_base_position, rot_corrected)
+        # temp don't update arms
+        # self.update_murp_arm(hand_idx, metahand.target_base_position, rot_corrected)
 
+        # updates helper_state.debug_pose
         self.update_murp_hand_from_metahand(hand_idx, metahand)
 
     def update_murp_arm(self, arm_idx, target_pos, target_orientation):
 
         helper_state = self._mochi_helper_state
-        arm_root_names = ["hab_murp/left_base", "hab_murp/right_base"]
+        arm_root_names = ["hab_murp_copy/left_base", "hab_murp_copy/right_base"]
 
         arm_root_name = arm_root_names[arm_idx]
         handle = self._mochi_wrapper._object_handles[arm_root_name]
@@ -1762,58 +1765,73 @@ class AppStateIsaacSimViewer(AppState):
         # source
         # 0 pointer twist
         # 1 thumb rotate
-        # 2 ring twist
-        # 3 pinky twist
+        # 2 middle twist
+        # 3 ring twist
         # 4 pointer base
         # 5 thumb twist
-        # 6 ring base
-        # 7 pinky base
+        # 6 middle base
+        # 7 ring base
         # 8 pointer mid
         # 9 thumb base
-        # 10 ring mid
-        # 11 pinky mid
+        # 10 middle mid
+        # 11 ring mid
         # 12 pointer tip
         # 13 thumb tip
-        # 14 ring tip
-        # 15 pinky tip
+        # 14 middle tip
+        # 15 ring tip
 
-        # dest
-        # 0..4 finger twist and thumb rotate
-        # 4..8 finger first joint bend and thumb twist
-        # 8..12 finger second joint bend and thumb first joint bend
-        # 12..16 last joint bend
+        # right
 
-        # 0,4,8,12 -> thumb rotate, thumb twist, then bend
-        # 1,5,9,13 -> pinky twist and joint bends
-        # 2,6,10,14 -> ring twist and joint bends
-        # 3,7,11,15 -> pointer twist and joint bends
+        remap_right = {
+            0: 7,
+            1: 4,
+            2: 6,
+            3: 5,
 
-        remap = {
-            0: 3,
+            4: 15,
+            5: 12,
+            6: 14,
+            7: 13,
+
+            8: 23,
+            9: 20,
+            10: 22,
+            11: 21,
+
+            12: 33,
+            13: 30,
+            14: 32,
+            15: 31,
+        }
+
+        # left
+        remap_left = {
+            0: 1,
             1: 0,
             2: 2,
-            3: 1,
-            4: 7,
-            5: 4,
-            6: 6,
-            7: 5,
-            8: 11,
-            9: 8,
-            10: 10,
-            11: 9,
-            12: 15,
-            13: 12,
-            14: 14,
-            15: 13,
+            3: 3,
+            4: 9,
+            5: 8,
+            6: 10,
+            7: 11,
+            8: 17,
+            9: 16,
+            10: 18,
+            11: 19,
+            12: 27,
+            13: 26,
+            14: 28,
+            15: 29,
         }
 
         helper_state = self._mochi_helper_state
-        target_hand_pose = helper_state.target_hand_poses[arm_idx]
+        debug_pose = helper_state.debug_pose
 
-        start = 6
+        remap = remap_left if arm_idx == 0 else remap_right
+
         for src in remap:
             dest = remap[src]
-            target_hand_pose[dest] = metahand._target_joint_positions[src]
+            debug_pose[dest] = metahand._target_joint_positions[src]
 
     def handle_mochi_keys(self):
 
@@ -1825,6 +1843,44 @@ class AppStateIsaacSimViewer(AppState):
             # reset pose
             self._mochi_helper_state = AppStateIsaacSimViewer.MochiHelperState()
             helper_state = self._mochi_helper_state
+
+        if True:
+            num_dofs_to_adjust = 4
+            if gui_input.get_key_down(GuiInput.KeyNS.ONE):
+                helper_state.debug_dof_offset = (helper_state.debug_dof_offset - num_dofs_to_adjust) % len(helper_state.debug_pose)
+            if gui_input.get_key_down(GuiInput.KeyNS.TWO):
+                helper_state.debug_dof_offset = (helper_state.debug_dof_offset + num_dofs_to_adjust) % len(helper_state.debug_pose)
+
+            adjust_keys = [
+                GuiInput.KeyNS.THREE,
+                GuiInput.KeyNS.FOUR,
+                GuiInput.KeyNS.FIVE,
+                GuiInput.KeyNS.SIX,
+                GuiInput.KeyNS.SEVEN,
+                GuiInput.KeyNS.EIGHT,
+                GuiInput.KeyNS.NINE,
+                GuiInput.KeyNS.ZERO,
+            ]
+            assert len(adjust_keys) == num_dofs_to_adjust * 2
+
+            debug_pose = helper_state.debug_pose
+            for idx in range(num_dofs_to_adjust):
+                key_dec = adjust_keys[idx * 2]
+                key_inc = adjust_keys[idx * 2 + 1]
+
+                dof_idx = helper_state.debug_dof_offset + idx
+                if dof_idx >= len(debug_pose):
+                    break
+                dof_change = 0.3
+                do_print = False
+                if gui_input.get_key_down(key_dec):
+                    debug_pose[dof_idx] -= dof_change
+                    do_print = True
+                if gui_input.get_key_down(key_inc):
+                    debug_pose[dof_idx] += dof_change
+                    do_print = True
+                if do_print:
+                    print(f"dof_idx: {dof_idx}")
 
         if False:
             if gui_input.get_key_down(GuiInput.KeyNS.ONE):
@@ -1929,7 +1985,7 @@ class AppStateIsaacSimViewer(AppState):
             ik_helper = ik_helpers[arm_idx]
             clamp_min, clamp_max = ik_helper.get_position_clamp_range()
 
-            arm_root_names = ["hab_murp/left_base", "hab_murp/right_base"]
+            arm_root_names = ["hab_murp_copy/left_base", "hab_murp_copy/right_base"]
             arm_root_name = arm_root_names[arm_idx]
             handle = self._mochi_wrapper._object_handles[arm_root_name]
             mochi = self._mochi_wrapper._env._mochi
@@ -1953,7 +2009,7 @@ class AppStateIsaacSimViewer(AppState):
         num_base_dofs = 6
         num_joint_dofs = num_dofs - num_base_dofs
         murp_target_pose = []
-        murp_target_pose += [0, 0, 0]  # habitat_to_mochi_position(self._cursor_pos)
+        murp_target_pose += [1.0, 0, 0]  # habitat_to_mochi_position(self._cursor_pos)
         murp_target_pose += [-1.57079632679, 0.0, 0.0]  # rotation
         murp_target_pose += [0.0] * num_joint_dofs
 
@@ -1968,7 +2024,8 @@ class AppStateIsaacSimViewer(AppState):
                 murp_target_pose[dof_idx] = arm_pose[local_idx]
 
             num_arm_dofs = 7 * 2
-            num_debug_dofs = num_dofs - num_arm_dofs
+            start_dof_idx = num_arm_dofs + num_base_dofs
+            num_debug_dofs = num_dofs - start_dof_idx
             assert len(helper_state.debug_pose) == num_debug_dofs
             for local_idx in range(num_debug_dofs):
                 murp_target_pose[start_dof_idx + local_idx] = helper_state.debug_pose[local_idx]
@@ -1980,7 +2037,7 @@ class AppStateIsaacSimViewer(AppState):
             
         self._mochi_wrapper._env._mochi.set_agent_target_pose(murp_target_pose, agent_idx=1)
 
-        self._mochi_wrapper.step(self._dummy_metahand_wrappers[0])
+        self._mochi_wrapper.step(self._dummy_metahand_wrappers[1])
         self._mochi_wrapper.pre_render()
 
     def sim_update(self, dt, post_sim_update_dict):
