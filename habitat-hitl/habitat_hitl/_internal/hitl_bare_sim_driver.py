@@ -203,6 +203,9 @@ class HitlBareSimDriver(AppDriver):
 
             self._recording_keyframes.clear()
 
+            print(f"wrote {self._save_filepath_base} gfx replay file, exiting")
+            exit(0)
+
         assert self.get_sim().renderer is None        
 
 
