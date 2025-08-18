@@ -622,7 +622,7 @@ class AppStateIsaacSimViewer(AppState):
                         # "/home/eric/projects/mochi2/habitat_render_data/data/hssd-hab/hssd-hab.scene_dataset_config.json",
                         # "102344193.scene_instance.json",
                     )
-                if True:
+                if False:
                     # did you remember to gunzip the gz?
                     replay_filepath = "data/mochi_vr_data/gfx_replay/108294897_176710602_fridges_removed.scene_instance.json.gfx_replay.json"
                     # replay_filepath = "data/mochi_vr_data/gfx_replay/108294897_176710602_shifted.scene_instance.json.gfx_replay.json"
@@ -1711,8 +1711,8 @@ class AppStateIsaacSimViewer(AppState):
         arm_pose = ik_helper.step_until_progress(arm_pose, ee_target,
             min_pos_step=0.02,             # meters (X cm)
             min_rot_step_deg=10.0,         # degrees (Y)
-            max_iters=20, 
-            dt=0.05, gain_pos=1.0, gain_rot=1.0 # (Z)                                                 
+            max_iters=5, 
+            dt=0.1, gain_pos=1.0, gain_rot=1.0 # (Z)                                                 
             )
         
         # print(f"ee after:          {pretty(ik_helper.ee_pose(arm_pose))}")
@@ -1956,7 +1956,7 @@ class AppStateIsaacSimViewer(AppState):
             root_pose_mat = mn.Matrix4.from_(mn_rotation_quat.to_matrix(), mn_pos)
 
             line_render.push_transform(root_pose_mat)
-            self.draw_extents_box(clamp_min[0:3], clamp_max[0:3])
+            # self.draw_extents_box(clamp_min[0:3], clamp_max[0:3])
             line_render.pop_transform()
 
     def update_mochi(self):
@@ -1970,7 +1970,14 @@ class AppStateIsaacSimViewer(AppState):
         num_joint_dofs = num_dofs - num_base_dofs
         murp_target_pose = []
         murp_target_pose += habitat_to_mochi_position(self._cursor_pos)
-        murp_target_pose += [-1.57079632679, 0.0, 0.0]  # rotation
+        cam_yaw = self._camera_helper.lookat_offset_yaw
+
+        rot1 = rotvec_to_quat_wxyz([-1.57079632679, 0.0, 0.0])
+        rot2 = rotvec_to_quat_wxyz([0.0, -cam_yaw + np.pi, 0.0])
+        result_quat = quat_multiply(rot2, rot1)
+        result_rotvec = list(quat_to_rotvec(result_quat))
+
+        murp_target_pose += result_rotvec
         murp_target_pose += [0.0] * num_joint_dofs
 
         for arm_idx in range(2):
