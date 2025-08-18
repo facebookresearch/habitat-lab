@@ -662,6 +662,16 @@ class RobotAppWrapper:
         # NOTE: filtering contacts is relatively expensive so we'll only do so when necessary
         self._contact_sensors_active = True
 
+    def snap_to_navmesh(self, pathfinder):
+        """
+        Snaps the base position to the navmesh.
+        """
+        pos = self.get_root_pose()[0]
+        nav_pos = pathfinder.snap_point(pos)
+        if not np.isnan(nav_pos).any():
+            self.set_root_pose(pos=nav_pos)
+            self.target_base_height = nav_pos[1] + self.ground_to_base_offset
+
     @property
     def do_kin_fixed_base(self) -> bool:
         return self._do_kin_fixed_base
@@ -1060,6 +1070,8 @@ class RobotAppWrapper:
                     self.sim.pathfinder.snap_point(hab_base_pos)[1]
                     + self.ground_to_base_offset
                 )
+            else:
+                self.snap_to_navmesh(self.sim.pathfinder)
 
         self.base_vel_controller.apply(step_size)
 
@@ -1365,7 +1377,7 @@ class RobotAppWrapper:
             ]
         )
 
-    def draw_debug(self, dblr: DebugLineRender, forward_color=None):
+    def draw_debug(self, dblr: DebugLineRender):
         """
         Draw some representation of the robot state.
         """
@@ -1376,15 +1388,15 @@ class RobotAppWrapper:
         # debug_draw_axis(dblr, tform)
 
         # draw a line in the forward direction of the robot
-        if forward_color is None:
-            forward_color = mn.Color4(0.0, 1.0, 0.0, 1.0)
-        forward_dir = root_rot.transform_vector(mn.Vector3(1.0, 0, 0)) * 2.0
-        dblr.draw_transformed_line(
-            root_pos,
-            root_pos + forward_dir,
-            from_color=forward_color,
-            to_color=forward_color,
-        )
+        # if forward_color is None:
+        #     forward_color = mn.Color4(0.0, 1.0, 0.0, 1.0)
+        # forward_dir = root_rot.transform_vector(mn.Vector3(1.0, 0, 0)) * 2.0
+        # dblr.draw_transformed_line(
+        #     root_pos,
+        #     root_pos + forward_dir,
+        #     from_color=forward_color,
+        #     to_color=forward_color,
+        # )
 
         # draw the navmesh circle
         dblr.draw_circle(
