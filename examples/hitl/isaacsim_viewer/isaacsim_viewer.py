@@ -7,7 +7,7 @@
 # make sure we restore these flags after import (habitat_sim needs RTLD_GLOBAL but that breaks Isaac)
 import sys
 
-import torch  # hack: must import early, before habitat or isaac
+# import torch  # hack: must import early, before habitat or isaac
 
 original_flags = sys.getdlopenflags()
 import magnum
@@ -932,19 +932,12 @@ class AppStateIsaacSimViewer(AppState):
         controls_str += "mousewheel: cam zoom\n"
         controls_str += "H: toggle GUI\n"
 
-        controls_str += "N: next hand recording\n"
+        # controls_str += "N: next hand recording\n"
 
-        if self._isaac_wrapper:
-            controls_str += "WASD: move Spot\n"
-            controls_str += "G: toggle Spot control\n"
-            controls_str += "P: pause physics\n"
-            controls_str += "J: reset rigid objects\n"
-            controls_str += "Y: apply force at mouse\n"
+        controls_str += "Y: teleport user to cursor\n"
 
         controls_str += "T: reset Mochi\n"
 
-        controls_str += "K: start recording\n"
-        controls_str += "L: stop recording\n"
         if self._sps_tracker.get_smoothed_rate() is not None:
             controls_str += (
                 f"server SPS: {self._sps_tracker.get_smoothed_rate():.1f}\n"
@@ -1533,6 +1526,11 @@ class AppStateIsaacSimViewer(AppState):
         if gui_input.get_key_down(GuiInput.KeyNS.ESC):
             post_sim_update_dict["application_exit"] = True
 
+        if gui_input.get_key_down(GuiInput.KeyNS.Y):
+            client_message_manager = self._app_service.client_message_manager
+            if client_message_manager:
+                client_message_manager.change_humanoid_position(self._cursor_pos)
+
         # new_joint_pos = (self._app_service.get_anim_fraction() - 0.5) * 0.3
         # self._spot.set_all_joints(new_joint_pos)
 
@@ -1627,71 +1625,6 @@ class AppStateIsaacSimViewer(AppState):
     def init_mouse_raycaster(self):
         self._recent_mouse_ray_hit_info = None
 
-    def update_mouse_raycaster(self, dt):
-        self._recent_mouse_ray_hit_info = None
-
-        mouse_ray = self._app_service.gui_input.mouse_ray
-
-        if not mouse_ray:
-            return
-
-        origin_usd = isaac_prim_utils.habitat_to_usd_position(mouse_ray.origin)
-        dir_usd = isaac_prim_utils.habitat_to_usd_position(mouse_ray.direction)
-
-        from omni.physx import get_physx_scene_query_interface
-        from pxr import Gf
-
-        hit_info = get_physx_scene_query_interface().raycast_closest(
-            isaac_prim_utils.to_gf_vec3(origin_usd),
-            isaac_prim_utils.to_gf_vec3(dir_usd),
-            1000.0,
-        )
-
-        if not hit_info["hit"]:
-            return
-
-        # dist = hit_info['distance']
-        hit_pos_usd = hit_info["position"]
-        hit_normal_usd = hit_info["normal"]
-        hit_pos_habitat = mn.Vector3(
-            *isaac_prim_utils.usd_to_habitat_position(hit_pos_usd)
-        )
-        hit_normal_habitat = mn.Vector3(
-            *isaac_prim_utils.usd_to_habitat_position(hit_normal_usd)
-        )
-        # collision_name = hit_info['collision']
-        body_name = hit_info["rigidBody"]
-
-        line_render = self._app_service.line_render
-
-        hit_radius = 0.05
-        line_render.draw_circle(
-            hit_pos_habitat,
-            hit_radius,
-            mn.Color3(255, 0, 255),
-            16,
-            hit_normal_habitat,
-        )
-
-        self._recent_mouse_ray_hit_info = hit_info
-
-        gui_input = self._app_service.gui_input
-        if gui_input.get_key_down(GuiInput.KeyNS.Y):
-            force_mag = 200.0
-            import carb
-
-            # instead of hit_normal_usd, consider dir_usd
-            force_vec = carb.Float3(
-                hit_normal_usd[0] * force_mag,
-                hit_normal_usd[1] * force_mag,
-                hit_normal_usd[2] * force_mag,
-            )
-            from omni.physx import get_physx_interface
-
-            get_physx_interface().apply_force_at_pos(
-                body_name, force_vec, hit_pos_usd
-            )
-
     @dataclass
     class MochiHelperState:
         target_arm_poses = [
@@ -1735,8 +1668,7 @@ class AppStateIsaacSimViewer(AppState):
 
         rot_corrected =  quat_multiply(rot, self._metahand_murp_fixups[hand_idx])
 
-        # temp don't update arms
-        # self.update_murp_arm(hand_idx, metahand.target_base_position, rot_corrected)
+        self.update_murp_arm(hand_idx, metahand.target_base_position, rot_corrected)
 
         # updates helper_state.debug_pose
         self.update_murp_hand_from_metahand(hand_idx, metahand)
@@ -1767,12 +1699,17 @@ class AppStateIsaacSimViewer(AppState):
         ee_target = (target_pos_local, target_orientation_local_rotvec)
         
         # print(f"raw target ee:     {pretty(ee_target)}")
-        if True:  # do clamp?
+        if False:  # do clamp?
             ee_target = ik_helper.clamp_target(ee_target)
             # print(f"clamped target ee: {pretty(ee_target)}")
         # arm_pose = ik_helper.step(arm_pose, ee_target)
 
-        arm_pose = ik_helper.step_until_progress(arm_pose, ee_target)
+        arm_pose = ik_helper.step_until_progress(arm_pose, ee_target,
+            min_pos_step=0.02,             # meters (X cm)
+            min_rot_step_deg=10.0,         # degrees (Y)
+            max_iters=20, 
+            dt=0.05, gain_pos=1.0, gain_rot=1.0 # (Z)                                                 
+            )
         
         # print(f"ee after:          {pretty(ik_helper.ee_pose(arm_pose))}")
         helper_state.target_arm_poses[arm_idx] = arm_pose         
@@ -2028,7 +1965,7 @@ class AppStateIsaacSimViewer(AppState):
         num_base_dofs = 6
         num_joint_dofs = num_dofs - num_base_dofs
         murp_target_pose = []
-        murp_target_pose += [1.0, 0, 0]  # habitat_to_mochi_position(self._cursor_pos)
+        murp_target_pose += habitat_to_mochi_position(self._cursor_pos)
         murp_target_pose += [-1.57079632679, 0.0, 0.0]  # rotation
         murp_target_pose += [0.0] * num_joint_dofs
 
@@ -2048,11 +1985,6 @@ class AppStateIsaacSimViewer(AppState):
             assert len(helper_state.debug_pose) == num_debug_dofs
             for local_idx in range(num_debug_dofs):
                 murp_target_pose[start_dof_idx + local_idx] = helper_state.debug_pose[local_idx]
-
-            # hand_pose = helper_state.target_hand_poses[arm_idx]
-            # allegro_dof_start = 32 if arm_idx == 0 else 16
-            # for local_idx in range(len(hand_pose)):
-            #     murp_target_pose[allegro_dof_start + local_idx] = hand_pose[local_idx]
             
         self._mochi_wrapper._env._mochi.set_agent_target_pose(murp_target_pose, agent_idx=1)
 

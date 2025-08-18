@@ -9,7 +9,7 @@ This is an updated version of the IsaacSim Viewer with an alternate Mochi backen
 
 ## Installation
 
-1. See [habitat-hitl base install steps](habitat-hitl/README.md), but note custom Habitat-sim branch below.
+1. See [habitat-hitl base install steps](habitat-hitl/README.md). You need `habitat-sim` (custom branch, below) and `habitat-lab`. You do not need `habitat-baselines`.
 2. `pip install roboticstoolbox-python spatialmath-python`
 3. Build and install Mochi (below).
 

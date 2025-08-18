@@ -426,8 +426,8 @@ class MochiWrapper:
     def step(self, dummy_metahand):
         env = self._env
 
-        action = self._update_metahand_and_get_action(dummy_metahand)
-        # action = [0.0] * 16
+        # action = self._update_metahand_and_get_action(dummy_metahand)
+        action = [0.0] * 16
 
         # Send the computed action to the env.
         _, reward, terminated, truncated, info = env.step(action)
