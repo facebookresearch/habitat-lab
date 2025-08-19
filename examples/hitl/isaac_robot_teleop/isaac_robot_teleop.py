@@ -601,7 +601,7 @@ class AppStateIsaacSimViewer(AppStateBase):
         self._sim.pathfinder.load_nav_mesh(scene_navmesh_file)
         assert self._sim.pathfinder.is_loaded
         self._navmesh_lines = get_navmesh_lines(self._sim.pathfinder)
-        self._draw_navmesh = True
+        self._draw_navmesh = False
 
         # load or sample initial robot state
         self.set_robot_base_initial_state()
