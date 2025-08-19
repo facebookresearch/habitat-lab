@@ -40,13 +40,12 @@ def env_navigation(args):
     distance_model.eval()
 
 
-    # overrides = ["+habitat/task/measurements@habitat.task.measurements.top_down_map=top_down_map"]
-    # config = habitat.get_config(
-    #     config_path=os.path.join("benchmark/nav/", args.env_config),
-    #     overrides=overrides
-    # )
-
-    config = agent.get_config()
+    if args.env_config is not None:
+        config = habitat.get_config(
+            config_path=os.path.join("benchmark/nav/", args.env_config)
+        )
+    else:
+        config = agent.get_config()
 
     with read_write(config):
         config.habitat.dataset.split = args.split
@@ -167,8 +166,13 @@ def env_navigation(args):
                                             
                 observations, reward, done, info = env.step(action)
 
+            if bool(info['success']):
+                suffix = 'success'
+            else:
+                suffix = 'failure'
+
             episode_id = f"%0{len(str(len(env.episodes)))}d" % episode
-            images_to_video(images, args.save_dir, f"trajectory_{episode_id}", verbose=False)
+            images_to_video(images, args.save_dir, f"trajectory_{episode_id}_{suffix}", verbose=False)
 
 def main(args):
     env_navigation(args)
@@ -177,7 +181,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--save-dir", type=str, required=True)
     parser.add_argument("--policy_checkpoint", type=str, required=True)
-    parser.add_argument("--env-config", type=str, default="imagenav/imagenav_gibson.yaml")
+    parser.add_argument("--env-config", type=str, default=None)
     parser.add_argument("--split", type=str, default="val")
     parser.add_argument("--sample", type=float, default=0.0)
     parser.add_argument("--describe-goal", action="store_true", default=False)

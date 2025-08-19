@@ -16,6 +16,7 @@ defaults:
     - compass_sensor
     - gps_sensor
     - geometric_overlap_sensor
+    - geometric_overlap_seed_sensor
   - _self_
 
 type: Nav-v0
@@ -25,7 +26,7 @@ success_measure: "spl"
 goal_sensor_uuid: geometric_overlap_sensor
 measurements:
   success:
-    success_distance: 1.
+    success_distance: 1.0
 # lab_sensors:
 #   pointgoal_with_gps_compass_sensor:
 #     distance_norm: 6.5

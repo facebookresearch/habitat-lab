@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 from torchvision.transforms import ColorJitter, RandomResizedCrop, Compose
-from typing import Union, List, Dict
+from typing import Union, List, Dict, Optional
 from PIL import Image
 
 from vint_based import load_distance_model
@@ -162,7 +162,7 @@ class DistanceEstimator(nn.Module):
         self.dist_head = nn.Linear(last_dim, n_dist)
         self.conf_head = nn.Linear(last_dim, n_conf)
 
-    def forward(self, x, sample=False):
+    def forward(self, x, sample=False, seeds=None):
         z = self.backbone(x)
         dist_logits = self.dist_head(z)
         conf_logits = self.conf_head(z)
@@ -173,21 +173,35 @@ class DistanceEstimator(nn.Module):
         probs_dist = torch.softmax(dist_logits, dim=-1)
         probs_conf = torch.softmax(conf_logits, dim=-1)
 
-        dist = self.sample_from_bins(probs_dist)
-        conf = self.sample_from_bins(probs_conf)
+        dists, confs = [], []
+        for i, seed in enumerate(seeds):
+            gen_dist = self._make_local_gen(probs_dist.device, seed, None)
+            gen_conf = self._make_local_gen(probs_conf.device, seed + 1, None) if seed is not None else None
 
+            dist = self.sample_from_bins(probs_dist[i:i+1, :], generator=gen_dist)
+            conf = self.sample_from_bins(probs_conf[i:i+1, :], generator=gen_conf)
+
+            dists.append(dist)
+            confs.append(conf)
+
+        dists = torch.stack(dists, dim=0)
+        confs = torch.stack(confs, dim=0)
         out = torch.cat([
-            dist.unsqueeze(1),  # [B,1]
-            conf.unsqueeze(1)   # [B,1]
+            dists,  # [B,1]
+            confs   # [B,1]
         ], dim=1)
 
         return out
 
     @staticmethod
-    def sample_from_bins(probs: torch.Tensor) -> torch.Tensor:
+    def sample_from_bins(
+        probs: torch.Tensor,
+        *,
+        generator: Optional[torch.Generator] = None,
+    ) -> torch.Tensor:
         """
-        probs: torch tensor [B, n_bins], each row sums to 1
-        returns: torch tensor [B] with sampled values in [0, 1]
+        probs: [B, n_bins], rows sum to 1
+        returns: [B] sampled in [0,1] (Gaussian within chosen bin; ~99.7% mass in-bin)
         """
         B, n_bins = probs.shape
         device = probs.device
@@ -196,17 +210,29 @@ class DistanceEstimator(nn.Module):
         # Bin edges in normalized [0, 1]
         bin_edges = torch.linspace(0, 1, n_bins + 1, device=device, dtype=dtype)
 
-        # Sample bin indices from probs
-        bin_indices = torch.multinomial(probs, num_samples=1, replacement=True).squeeze(1)
+        # Sample bin indices using the provided local generator
+        bin_indices = torch.multinomial(probs, num_samples=1, replacement=True, generator=generator).squeeze(1)
 
-        # Get bin low/high edges
-        lows = bin_edges[bin_indices]
-        highs = bin_edges[bin_indices + 1]
-
-        # Gaussian sample inside chosen bin
         lows = bin_edges[bin_indices]
         highs = bin_edges[bin_indices + 1]
         mid = (lows + highs) / 2
-        std = (highs - lows) / 6  # ~99.7% of values within [lows, highs]
+        std = (highs - lows) / 6  # ~99.7% within [low, high] for N(mid, std)
 
-        return np.random.normal(mid, std)
+        # Gaussian draw with the same local generator
+        samples = torch.normal(mean=mid, std=std, generator=generator)
+        return samples
+
+    @staticmethod
+    def _make_local_gen(device: torch.device, seed: Optional[int], gen: Optional[torch.Generator]) -> Optional[torch.Generator]:
+        """
+        If `gen` provided, return it. Else if `seed` provided, create a local generator on `device`.
+        Else return None (falls back to global RNG).
+        """
+        if gen is not None:
+            return gen
+        if seed is None:
+            return None
+        # On CUDA, tie generator to the same device
+        g = torch.Generator(device=device) if device.type == "cuda" else torch.Generator()
+        g.manual_seed(int(seed))
+        return g

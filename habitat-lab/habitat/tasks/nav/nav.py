@@ -13,6 +13,7 @@ import cv2
 import math
 import numpy as np
 import quaternion
+import hashlib
 from gym import spaces
 
 from habitat.config import read_write
@@ -37,6 +38,7 @@ from habitat.core.spaces import ActionSpace
 from habitat.core.utils import not_none_validator
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.utils import cartesian_to_polar
+from habitat_sim.utils.common import quat_to_coeffs
 from habitat.utils.geometry_utils import (
     quaternion_from_coeff,
     quaternion_rotate_vector,
@@ -602,9 +604,7 @@ class GeometricOverlapSensor(Sensor):
 
     # Defines the size and range of the observations of the sensor
     def _get_observation_space(self, *args: Any, **kwargs: Any):
-        return spaces.Box(
-            shape=(13,), low=-np.inf, high=np.inf, dtype=np.float32
-        )
+        return spaces.Box(shape=(13,), low=-np.inf, high=np.inf, dtype=np.float32)
 
     def get_goal_info(self, observations, episode: NavigationEpisode, *args: Any, **kwargs: Any):
         """
@@ -669,7 +669,7 @@ class GeometricOverlapSensor(Sensor):
         R_rel, t_rel = self.relative_cam_T(world_T_cam_goal, world_T_cam_curr)
         t_rel_enc = self.sym_log(t_rel)
 
-        return np.concatenate([[ratio], R_rel.reshape(-1), t_rel_enc], axis=0)
+        return np.concatenate([[ratio], R_rel.reshape(-1), t_rel_enc], axis=0, dtype=np.float32)
     
     @staticmethod
     def K_from_fov(width: int, height: int, hfov_deg: float) -> np.ndarray:
@@ -765,6 +765,37 @@ class GeometricOverlapSensor(Sensor):
         dep_ok = np.abs(Z[ok] - Z_curr_img) < depth_thresh
         success = valid_curr & dep_ok
         return float(success.sum()) / float(total)
+
+@registry.register_sensor(name="GeometricOverlapSeedSensor")
+class GeometricOverlapSeedSensor(Sensor):
+    cls_uuid: str = "geometric_overlap_seed_sensor"
+
+    def __init__(self, sim: Simulator, config, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+
+    def _get_uuid(self, *args, **kwargs):
+        return self.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, **kwargs):
+        return spaces.Box(shape=(1,), low=-np.inf, high=np.inf, dtype=np.int32)
+
+    def get_observation(self, observations, *args, episode: NavigationEpisode, **kwargs):
+        cam_state = self._sim.get_agent_state().sensor_states["depth"]
+        seed = self.deterministic_seed_from_cam_state(episode.episode_id, cam_state)
+        return np.array([seed], dtype=np.int32)
+
+    @staticmethod
+    def deterministic_seed_from_cam_state(episode_id, cam_state):
+        # Convert episode_id+position+rotation to bytes
+        state_bytes = np.concatenate([[episode_id], np.round(cam_state.position, 2), np.round(quat_to_coeffs(cam_state.rotation), 2)]).tobytes()
+        # Hash to get a consistent integer seed
+        seed_int = int(hashlib.sha256(state_bytes).hexdigest(), 16) % (2**32)
+        return seed_int
+    
 
 
 @registry.register_measure
@@ -1276,7 +1307,7 @@ class _ProgressReward(Measure):
         
         # Constant hyper-parameters
         self.cs = 15.0               # bonus when reaching goal
-        self.ca = 5.0               # extra bonus if within angle threshold
+        self.ca = 10.0               # extra bonus if within angle threshold
         self.rg = 1.0               # goal radius
         self.theta_g = np.deg2rad(25.0)
         self.gamma = 0.01           # step cost
@@ -1303,7 +1334,11 @@ class _ProgressReward(Measure):
         self._update(episode, task)
 
     def update_metric(self, episode, task: EmbodiedTask, *args: Any, **kwargs: Any):
-        self._update(episode, task)
+        if 'observations' in kwargs and 'geometric_overlap_sensor' in kwargs['observations']:
+            ratio = kwargs['observations']['geometric_overlap_sensor'][0]
+        else:
+            ratio = 0.0  # Default to 0 if not provided
+        self._update(episode, task, ratio=ratio)
 
     # ---------------------------------------------------------------------
     # Internal helper ------------------------------------------------------
@@ -1334,11 +1369,11 @@ class _ProgressReward(Measure):
         cosang = float(np.clip(np.dot(forward_world, goal_vec), -1.0, 1.0))
         return float(np.arccos(cosang))
 
-    def _update(self, episode, task: EmbodiedTask):
+    def _update(self, episode, task: EmbodiedTask, ratio: float = 0.0):
         dist = self._get_dist(task)
         agent_state = self._sim.get_agent_state()
         core = self._reward_core(dist, agent_state, episode)
-        reward = core - self.gamma
+        reward = core - self.gamma * (1 - min(ratio, 0.90))
 
         # Manual success detection via helper method
         if self._check_success(task, dist):
@@ -1348,6 +1383,7 @@ class _ProgressReward(Measure):
             #     np.array(episode.goals[0].position, dtype=np.float32),
             # )
             reward += self.cs
+            reward += self.ca * ratio
             # if theta < self.theta_g:
             #     reward += self.ca
 

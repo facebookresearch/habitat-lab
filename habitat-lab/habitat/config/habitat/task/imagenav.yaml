@@ -18,6 +18,7 @@ defaults:
       - gps_sensor
       - pointgoal_with_gps_compass_sensor
       - geometric_overlap_sensor
+      - geometric_overlap_seed_sensor
   - _self_
 
 type: Nav-v0
@@ -27,17 +28,17 @@ success_measure: "spl"
 measurements:
   success:
     success_distance: 1.
-lab_sensors:
-  pointgoal_with_gps_compass_sensor:
-    distance_norm: 6.5
-    # noise
-    noise_enabled: False
-    noise_sigma: 0.55
-    noise_alpha: 0.99
-    noise_spike_prob: 0.10
-    noise_spike_scale: 2.5
-    # conf
-    return_confidence: False
-    confidence_coef: 0.25
-    confidence_sigma: 0.25
-    confidence_alpha: 0.50
+# lab_sensors:
+#   pointgoal_with_gps_compass_sensor:
+#     distance_norm: 6.5
+#     # noise
+#     noise_enabled: False
+#     noise_sigma: 0.55
+#     noise_alpha: 0.99
+#     noise_spike_prob: 0.10
+#     noise_spike_scale: 2.5
+#     # conf
+#     return_confidence: False
+#     confidence_coef: 0.25
+#     confidence_sigma: 0.25
+#     confidence_alpha: 0.50

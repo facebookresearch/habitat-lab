@@ -1,0 +1,39 @@
+data:
+  root: ${oc.env:TMPDIR}
+  train_path: ${data.root}/noisy_dist_data/noisy_dist_train
+  val_path: ${data.root}/noisy_dist_data/noisy_dist_val
+  doaug: null
+  rep: dist_decoder_conf_100max
+  max_dist: 100
+  step_size_dist: 2
+  step_size_conf: 0.05
+  batch_size: 32
+  num_workers: 16
+  pin_memory: true
+  prefetch_factor: 2
+model:
+  in_dim: 13
+  hidden:
+  - 256
+  - 128
+  - 64
+  dropout: 0.1
+optim:
+  lr: 0.001
+  weight_decay: 0.0001
+  betas:
+  - 0.9
+  - 0.999
+  grad_clip_norm: null
+  warmup_steps: 1000
+train:
+  total_steps: 100000
+  log_every: 100
+  val_every: 10000
+  ckpt_every: 10000
+  amp: false
+  device: cuda
+  seed: 42
+paths:
+  log_dir: runs/temporal_dist_conf
+  save_dir: checkpoints

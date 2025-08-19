@@ -13,6 +13,7 @@ from habitat.tasks.nav.nav import (
     HeadingSensor,
     ImageGoalSensor,
     GeometricOverlapSensor,
+    GeometricOverlapSeedSensor,
     PointGoalSensor,
     ProximitySensor,
 )
@@ -247,8 +248,15 @@ class GeometricOverlapDistanceNavNet(Net):
 
         assert GeometricOverlapSensor.cls_uuid in observations
         o = observations[GeometricOverlapSensor.cls_uuid]
+        if GeometricOverlapSeedSensor.cls_uuid in observations:
+            seeds = observations[GeometricOverlapSeedSensor.cls_uuid].int().squeeze().tolist()
+            if not isinstance(seeds, list):
+                seeds = [seeds]
+        else:
+            seeds = None
+
         with torch.no_grad():
-            o = self.dist_estimator(o, sample=True)
+            o = self.dist_estimator(o, sample=True, seeds=seeds)
 
         if self.use_confidence:
             features.append(self.tgt_emb(o[:, :2]))
