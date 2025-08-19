@@ -622,9 +622,11 @@ class AppStateIsaacSimViewer(AppState):
                         # "/home/eric/projects/mochi2/habitat_render_data/data/hssd-hab/hssd-hab.scene_dataset_config.json",
                         # "102344193.scene_instance.json",
                     )
-                if False:
+                if True:
                     # did you remember to gunzip the gz?
-                    replay_filepath = "data/mochi_vr_data/gfx_replay/108294897_176710602_fridges_removed.scene_instance.json.gfx_replay.json"
+                    # replay_filepath = "data/mochi_vr_data/gfx_replay/108294897_176710602_fridges_removed.scene_instance.json.gfx_replay.json"
+                    replay_filepath = "data/mochi_vr_data/gfx_replay/local_108294897_176710602_fridges_removed.scene_instance.json.gfx_replay.json"
+                    
                     # replay_filepath = "data/mochi_vr_data/gfx_replay/108294897_176710602_shifted.scene_instance.json.gfx_replay.json"
                     # replay_filepath = "data/mochi_vr_data/gfx_replay/106878915_174887025.scene_instance.json.gfx_replay.json"
                     sim = self._app_service.sim

@@ -47,12 +47,12 @@ habitat_hitl:
   #     do_headless: True
   # window: ~
   
-  target_sps: 500  # temp
+  target_sps: 60  # temp
 
   window:
     title: "IsaacSim Viewer"
-    width: 1920
-    height: 1080
+    width: 1280
+    height: 720
     # width: 900  # 960
     # height: 900
     display_font_size: 24
