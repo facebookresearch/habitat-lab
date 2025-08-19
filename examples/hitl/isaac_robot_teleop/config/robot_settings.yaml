@@ -123,6 +123,9 @@ link_subsets:
   #link ixs for finger tips on each hand
   left_hand: ["base_link_lhand"]
   right_hand: ["base_link_hand"]
+  # end effectors (empty link 0.107m from wrist)
+  left_ee: [left_fr3_link8]
+  right_ee: [right_fr3_link8]
   #[index, middle, ring]
   right_finger_tips: ["link_3_0_tip", "link_7_0_tip", "link_11_0_tip"]
   left_finger_tips: ["link_l3_0_tip", "link_l7_0_tip", "link_l11_0_tip"]

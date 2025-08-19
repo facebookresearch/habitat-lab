@@ -1224,6 +1224,24 @@ class RobotAppWrapper:
         hand_centers = hand_transforms[0]
         return hand_centers
 
+    def get_end_effectors(
+        self,
+    ) -> Tuple[
+        Tuple[mn.Vector3, mn.Quaternion], Tuple[mn.Vector3, mn.Quaternion]
+    ]:
+        """
+        Gets left and right end effector transformation matrices.
+        """
+        ee_ixs = (
+            self.link_subsets["left_ee"].link_ixs
+            + self.link_subsets["right_ee"].link_ixs
+        )
+        hand_transforms = self.get_link_world_poses(ee_ixs)
+        return (
+            (hand_transforms[0][0], hand_transforms[1][0]),
+            (hand_transforms[0][1], hand_transforms[1][1]),
+        )
+
     def set_cached_pose(
         self,
         pose_file: str = default_pose_cache_path,

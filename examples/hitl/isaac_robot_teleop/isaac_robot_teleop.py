@@ -1523,10 +1523,11 @@ class AppStateIsaacSimViewer(AppStateBase):
             pass
 
         if left.get_button_down(XRButton.TWO):
+            pass
             # toggle base lock and signal start of a task
-            self.lock_robot_base = not self.lock_robot_base
-            print(f"Toggled base lock {self.lock_robot_base}")
-            self.base_lock_event(self.lock_robot_base)
+            # self.lock_robot_base = not self.lock_robot_base
+            # print(f"Toggled base lock {self.lock_robot_base}")
+            # self.base_lock_event(self.lock_robot_base)
             # print("Resetting Robot Joint Positions")
             # self.robot.set_cached_pose(
             #     pose_name=self.robot.robot_cfg.initial_pose,
@@ -1539,8 +1540,9 @@ class AppStateIsaacSimViewer(AppStateBase):
             pass
 
         if left.get_button_down(XRButton.START):
-            print("pressed START left")
-            self._task_finished_signaled = True
+            pass
+            # print("pressed START left")
+            # self._task_finished_signaled = True
         if left.get_button_up(XRButton.START):
             pass
 
@@ -1552,7 +1554,8 @@ class AppStateIsaacSimViewer(AppStateBase):
             #    f"pressed one right, recording = {self._frame_recorder.recording}"
             # )
             # TODO: hook this up to pass/fail
-            self._view_task_prompt = True
+            # self._view_task_prompt = True
+            pass
 
         if right.get_button_up(XRButton.ONE):
             pass
