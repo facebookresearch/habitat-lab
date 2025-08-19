@@ -509,8 +509,12 @@ class AppStateIsaacSimViewer(AppStateBase):
         )
 
         self._rigid_objects: List["IsaacRigidObjectWrapper"] = []
-        self._object_targets: List[Tuple[str, mn.Matrix4]] = []
+        # maps object ids to transforms
+        self._object_targets: Dict[str, mn.Matrix4] = {}
         self._object_initials: List[mn.Vector3] = []
+
+        self._selected_object: "IsaacRigidObjectWrapper" = None
+        self._selected_point: mn.Vector3 = None
 
         from habitat.isaac_sim.isaac_rigid_object_manager import (
             IsaacRigidObjectManager,
@@ -717,8 +721,15 @@ class AppStateIsaacSimViewer(AppStateBase):
                     f"Object {obj_config_name} not found in paths {self.episode.additional_obj_config_paths}."
                 )
 
+        self.episode_object_handles = []
+        for _ix, (handle, _) in enumerate(
+            self.episode.name_to_receptacle.items()
+        ):
+            # collect index to handle map
+            self.episode_object_handles.append(handle)
+
         # load the targets
-        self._object_targets = []
+        self._object_targets = {}
         for obj_instance_handle, transform in self.episode.targets.items():
             try:
                 tar_t = mn.Matrix4(
@@ -727,7 +738,7 @@ class AppStateIsaacSimViewer(AppStateBase):
                 tar_t = mn.Matrix4.from_(
                     tar_t.rotation_normalized(), tar_t.translation
                 )
-                self._object_targets.append((obj_instance_handle, tar_t))
+                self._object_targets[obj_instance_handle] = tar_t
             except ValueError as e:
                 print(
                     f"Failed to load target for object '{obj_instance_handle}' with error: {e}"
@@ -824,6 +835,29 @@ class AppStateIsaacSimViewer(AppStateBase):
                 restitution=restitution,
             )
 
+    def move_obj(
+        self,
+        ro: "IsaacRigidObjectWrapper",
+        new_bottom_pos: mn.Vector3,
+        set_target: bool = False,
+    ):
+        """
+        Updates the object's to a new position using the com to translation offset.
+        If set_target, update the object's target location instead of its current location.
+        """
+        com_height = (ro.com - ro.translation)[1]
+        if set_target:
+            obj_index = self.episode_object_ids.index(ro.object_id)
+            obj_handle = self.episode_object_handles[obj_index]
+            if obj_handle in self._object_targets:
+                target_transform = self._object_targets[obj_handle]
+                target_transform.translation = new_bottom_pos
+                self._object_targets[obj_handle] = target_transform
+            else:
+                print("No target for this object, nothing updated.")
+        else:
+            ro.com = new_bottom_pos + mn.Vector3(0, com_height, 0)
+
     def highlight_added_objects(self, draw_targets: bool = True):
         """
         Uses debug drawing to highlight rigid objects with a circle.
@@ -841,101 +875,216 @@ class AppStateIsaacSimViewer(AppStateBase):
         #    destination_mask=Mask.ALL,
         # )
 
-        # TODO: replace circles with client highlights
-        for ro in self._rigid_objects:
+        if self._selected_point is not None:
             dblr.draw_circle(
-                ro.com,
-                0.15,
-                mn.Color4(0.7, 0.7, 0.3, 1.0),
-                normal=(self._cam_transform.translation - ro.com).normalized(),
+                self._selected_point,
+                0.05,
+                mn.Color4(0.4, 0.8, 0.4, 1.0),
+                normal=mn.Vector3(0, 1, 0),
             )
-            # draw lines to debug the CoM vs. translation of the object
-            # dblr.draw_transformed_line(
-            #     ro.translation,
-            #     self.robot.get_root_pose()[0],
-            #     mn.Color4(0.7, 0.7, 0.3, 1.0),
-            #     mn.Color4(0.7, 0.7, 0.3, 1.0),
-            # )
-            # dblr.draw_transformed_line(
-            #     ro.translation,
-            #     ro.com,
-            #     mn.Color4(0.1, 0.7, 0.3, 1.0),
-            #     mn.Color4(0.9, 0.7, 0.3, 1.0),
-            # )
-            # test linear vel by showing it here
-            # dblr.draw_transformed_line(
-            #    ro.translation,
-            #    ro.translation + ro.linear_velocity,
-            #    mn.Color3(1.0,0.5,1.0)
-            # )
-            # debug_draw_axis(dblr, mn.Matrix4.from_(mn.Matrix3(), ro.translation))
-            # ang_vel = ro.angular_velocity
-            # for axis in range(3):
-            #     #for each angular velocity component, draw a line from that axis to illustrate
-            #     axis_vec = mn.Vector3()
-            #     axis_vec[axis] = 1.0
-            #     color = mn.Color3(axis_vec)
-            #     start_from = mn.Vector3()
-            #     start_from[(axis+1)%3] = 1.0
-            #     go_to = mn.Vector3()
-            #     go_to[(axis+2)%3] = 1.0
+        if self._selected_object is not None:
+            dblr.draw_circle(
+                self._selected_object.com,
+                0.05,
+                mn.Color4(0.2, 0.2, 0.8, 1.0),
+                normal=mn.Vector3(0, 1, 0),
+            )
+            obj_index = self.episode_object_ids.index(
+                self._selected_object.object_id
+            )
+            obj_handle = self.episode_object_handles[obj_index]
+            if obj_handle in self._object_targets:
+                target_transform = self._object_targets[obj_handle]
+                dblr.draw_circle(
+                    target_transform.translation,
+                    0.1,
+                    mn.Color4.yellow(),
+                    normal=mn.Vector3(0, 1, 0),
+                )
+                dblr.draw_transformed_line(
+                    self._selected_object.com,
+                    target_transform.translation,
+                    mn.Color4(0.8, 0.8, 0.8, 0.8),
+                )
 
-            #     dblr.draw_transformed_line(
-            #         ro.translation+start_from,
-            #         ro.translation+start_from+go_to*ang_vel[axis],
-            #         color
-            #     )
+        ro_hand_points = self.robot.get_hand_centers()
+        # for hand_point in ro_hand_points:
+        #     dblr.draw_circle(
+        #         hand_point,
+        #         0.05,
+        #         mn.Color4(0.4, 0.8, 0.4, 1.0),
+        #         normal=mn.Vector3(0,1,0),
+        #     )
+        dist_eps = 0.2
+        ro_in_hand = [
+            ro
+            for ro in self._rigid_objects
+            if (
+                (ro.com - ro_hand_points[0]).length() < dist_eps
+                or (ro.com - ro_hand_points[1]).length() < dist_eps
+            )
+        ]
+
+        # TODO: replace circles with client highlights
+        if len(ro_in_hand) == 0:
+            for ro in self._rigid_objects:
+                obj_index = self.episode_object_ids.index(ro.object_id)
+                obj_handle = self.episode_object_handles[obj_index]
+                if obj_handle in self._object_targets:
+                    target_transform = self._object_targets[obj_handle]
+                    placement_success = validate_target_placement_position(
+                        ro,
+                        target_transform.translation,
+                        max_distance=0.05,
+                        horizontal_only=True,
+                    )
+                    highlight_color = mn.Color4.yellow()
+                    if placement_success:
+                        highlight_color = mn.Color4.green()
+                    dblr.draw_circle(
+                        ro.com,
+                        0.15,
+                        highlight_color,
+                        normal=(
+                            self._cam_transform.translation - ro.com
+                        ).normalized(),
+                    )
+                # draw lines to debug the CoM vs. translation of the object
+                # dblr.draw_transformed_line(
+                #     ro.translation,
+                #     self.robot.get_root_pose()[0],
+                #     mn.Color4(0.7, 0.7, 0.3, 1.0),
+                #     mn.Color4(0.7, 0.7, 0.3, 1.0),
+                # )
+                # dblr.draw_transformed_line(
+                #     ro.translation,
+                #     ro.com,
+                #     mn.Color4(0.1, 0.7, 0.3, 1.0),
+                #     mn.Color4(0.9, 0.7, 0.3, 1.0),
+                # )
+                # test linear vel by showing it here
+                # dblr.draw_transformed_line(
+                #    ro.translation,
+                #    ro.translation + ro.linear_velocity,
+                #    mn.Color3(1.0,0.5,1.0)
+                # )
+                # debug_draw_axis(dblr, mn.Matrix4.from_(mn.Matrix3(), ro.translation))
+                # ang_vel = ro.angular_velocity
+                # for axis in range(3):
+                #     #for each angular velocity component, draw a line from that axis to illustrate
+                #     axis_vec = mn.Vector3()
+                #     axis_vec[axis] = 1.0
+                #     color = mn.Color3(axis_vec)
+                #     start_from = mn.Vector3()
+                #     start_from[(axis+1)%3] = 1.0
+                #     go_to = mn.Vector3()
+                #     go_to[(axis+2)%3] = 1.0
+
+                #     dblr.draw_transformed_line(
+                #         ro.translation+start_from,
+                #         ro.translation+start_from+go_to*ang_vel[axis],
+                #         color
+                #     )
 
         if draw_targets:
             # TODO: should be able to draw multiple targets with distinctions for different objects.
             # NOTE: currently draws all targets in the same color
-            for ix, (_obj_instance_handle, target_transform) in enumerate(
-                self._object_targets
-            ):
-                placement_success = validate_target_placement_position(
-                    self._rigid_objects[ix],
-                    target_transform.translation,
-                    max_distance=0.05,
-                    horizontal_only=True,
-                )
-                if placement_success:
-                    target_color = mn.Color4.green()
-                else:
-                    target_color = mn.Color4.yellow()
 
-                tilt_success = validate_tilt_angle(self._rigid_objects[ix])
-                if tilt_success:
-                    tilt_target_color = mn.Color4.green()
-                else:
-                    tilt_target_color = mn.Color4.red()
-
-                dblr.draw_transformed_line(
-                    self._rigid_objects[ix].com,
-                    self._rigid_objects[ix].com
-                    + self._rigid_objects[ix].transformation.transform_vector(
-                        mn.Vector3(0, 0, 1)
+            for ro in ro_in_hand:
+                obj_index = self.episode_object_ids.index(ro.object_id)
+                obj_handle = self.episode_object_handles[obj_index]
+                if obj_handle in self._object_targets:
+                    target_transform = self._object_targets[obj_handle]
+                    placement_success = validate_target_placement_position(
+                        ro,
+                        target_transform.translation,
+                        max_distance=0.05,
+                        horizontal_only=True,
                     )
-                    * 0.25,
-                    tilt_target_color,
-                )
 
-                # draw the target as a circle
-                dblr.draw_circle(
-                    target_transform.translation,
-                    0.1,
-                    target_color,
-                    normal=mn.Vector3(0, 1, 0),
-                )
+                    if placement_success:
+                        target_color = mn.Color4.green()
+                    else:
+                        target_color = mn.Color4.yellow()
 
-                # draw the initial position of the object
-                dblr.draw_circle(
-                    self._object_initials[ix],
-                    0.05,
-                    mn.Color4.blue(),
-                    normal=mn.Vector3(0, 1, 0),
-                )
+                    tilt_success = validate_tilt_angle(ro)
+                    if tilt_success:
+                        tilt_target_color = mn.Color4.green()
+                    else:
+                        tilt_target_color = mn.Color4.red()
 
-                # debug_draw_axis(dblr, self._rigid_objects[ix].transformation)
+                    dblr.draw_transformed_line(
+                        ro.com,
+                        ro.com
+                        + ro.transformation.transform_vector(
+                            mn.Vector3(0, 0, 1)
+                        )
+                        * 0.25,
+                        tilt_target_color,
+                    )
+
+                    dblr.draw_transformed_line(
+                        ro.com,
+                        target_transform.translation,
+                        mn.Color4(0.8, 0.8, 0.8, 0.4),
+                    )
+
+                    # draw the target as a circle
+                    dblr.draw_circle(
+                        target_transform.translation,
+                        0.1,
+                        target_color,
+                        normal=mn.Vector3(0, 1, 0),
+                    )
+
+            # for ix, (_obj_instance_handle, target_transform) in enumerate(
+            #     self._object_targets
+            # ):
+            #     if ix in self.episode_object_ids
+            #     placement_success = validate_target_placement_position(
+            #         self._rigid_objects[ix],
+            #         target_transform.translation,
+            #         max_distance=0.05,
+            #         horizontal_only=True,
+            #     )
+            #     if placement_success:
+            #         target_color = mn.Color4.green()
+            #     else:
+            #         target_color = mn.Color4.yellow()
+
+            #     tilt_success = validate_tilt_angle(self._rigid_objects[ix])
+            #     if tilt_success:
+            #         tilt_target_color = mn.Color4.green()
+            #     else:
+            #         tilt_target_color = mn.Color4.red()
+
+            #     dblr.draw_transformed_line(
+            #         self._rigid_objects[ix].com,
+            #         self._rigid_objects[ix].com
+            #         + self._rigid_objects[ix].transformation.transform_vector(
+            #             mn.Vector3(0, 0, 1)
+            #         )
+            #         * 0.25,
+            #         tilt_target_color,
+            #     )
+
+            #     # draw the target as a circle
+            #     dblr.draw_circle(
+            #         target_transform.translation,
+            #         0.1,
+            #         target_color,
+            #         normal=mn.Vector3(0, 1, 0),
+            #     )
+
+            #     # draw the initial position of the object
+            #     # dblr.draw_circle(
+            #     #     self._object_initials[ix],
+            #     #     0.05,
+            #     #     mn.Color4.blue(),
+            #     #     normal=mn.Vector3(0, 1, 0),
+            #     # )
+
+            #     # debug_draw_axis(dblr, self._rigid_objects[ix].transformation)
 
     def draw_frustum(self):
         """
@@ -1758,11 +1907,15 @@ class AppStateIsaacSimViewer(AppStateBase):
             # NOTE: would be nice to turn physics subsets off, but this disables the robot state updates for some reason
             # self.set_physics_paused(True)
 
-        if gui_input.get_key_down(KeyCode.P):
-            # self.set_physics_paused(not self._do_pause_physics)
-            self.lock_robot_base = not self.lock_robot_base
-            print(f"Toggled base lock {self.lock_robot_base}")
-            self.base_lock_event(self.lock_robot_base)
+        if gui_input.get_key_down(KeyCode.P) and (
+            self._selected_object is not None
+            and self._selected_point is not None
+        ):
+            self.move_obj(
+                self._selected_object,
+                self._selected_point,
+                set_target=True,
+            )
 
         if gui_input.get_key_down(KeyCode.H):
             self._hide_gui = not self._hide_gui
@@ -1770,21 +1923,59 @@ class AppStateIsaacSimViewer(AppStateBase):
         if (
             gui_input.get_key_down(KeyCode.O)
             and self._recent_mouse_ray_hit_info is not None
+        ) and (
+            self._selected_object is not None
+            and self._selected_point is not None
         ):
-            # place an object at the mouse raycast endpoint
-            hab_hit_pos = mn.Vector3(
-                *isaac_prim_utils.usd_to_habitat_position(
-                    self._recent_mouse_ray_hit_info["position"]
-                )
+            self.move_obj(self._selected_object, self._selected_point)
+
+        # self.add_rigid_object(
+        #     handle="data/objects/ycb/configs/035_power_drill.object_config.json",
+        #     bottom_pos=hab_hit_pos,
+        #     static_friction=self._app_cfg.object_static_friction,
+        #     dynamic_friction=self._app_cfg.object_dynamic_friction,
+        #     restitution=self._app_cfg.object_restitution,
+        # )
+
+        if gui_input.get_key_down(KeyCode.E):
+            # TODO: save the episode with modified contents
+            dataset_output_filepath = (
+                "data/datasets/hitl_teleop_demo_episodes.json.gz"
             )
 
-            self.add_rigid_object(
-                handle="data/objects/ycb/configs/035_power_drill.object_config.json",
-                bottom_pos=hab_hit_pos,
-                static_friction=self._app_cfg.object_static_friction,
-                dynamic_friction=self._app_cfg.object_dynamic_friction,
-                restitution=self._app_cfg.object_restitution,
-            )
+            # modify the episode contents
+
+            # modify the initial transforms
+            for ep_obj_ix in range(len(self.episode.rigid_objs)):
+                obj_transform = self._rigid_objects[ep_obj_ix].transformation
+                # NOTE: this transform corrects for isaac's different internal coordinate system
+                isaac_correction = mn.Matrix4.from_(
+                    mn.Quaternion.rotation(
+                        -mn.Deg(90), mn.Vector3.x_axis()
+                    ).to_matrix(),
+                    mn.Vector3(),
+                )
+                ro_t = mn.Matrix4.from_(
+                    obj_transform.rotation_normalized(), mn.Vector3()
+                )
+                ro_t = ro_t @ isaac_correction.inverted()
+                ro_t.translation = self._rigid_objects[ep_obj_ix].com
+                self.episode.rigid_objs[ep_obj_ix][1] = np.array(ro_t)
+
+            # modify the target transforms
+            for ep_tar_handle in self.episode.targets.keys():
+                self.episode.targets[ep_tar_handle] = np.array(
+                    self._object_targets[ep_tar_handle]
+                )
+
+            self.episode_dataset.episodes = [self.episode]
+
+            # serialize the dataset
+            import gzip
+
+            with gzip.open(dataset_output_filepath, "wt") as f:
+                f.write(self.episode_dataset.to_json())
+            print(f"saved dataset to {dataset_output_filepath}")
 
         if gui_input.get_key_down(KeyCode.N):
             self.robot.set_root_pose(
@@ -1918,12 +2109,29 @@ class AppStateIsaacSimViewer(AppStateBase):
         ):
             body_name = self._recent_mouse_ray_hit_info["rigidBody"]
             print(body_name)
+            matching_ep_object = None
+            for ro in self._rigid_objects:
+                if ro._prim.GetPath() == body_name:
+                    matching_ep_object = ro
+            self._selected_object = matching_ep_object
             # if the robot joint is clicked try to create a DofEditor
             joint_for_rigid = self.robot.get_joint_for_rigid_prim(body_name)
             if joint_for_rigid is not None:
                 from scripts.DoFeditor import DoFEditor
 
                 self.dof_editor = DoFEditor(self.robot, joint_for_rigid)
+
+        if (
+            self._app_service.gui_input.get_mouse_button_down(
+                MouseButton.RIGHT
+            )
+            and self._recent_mouse_ray_hit_info is not None
+        ):
+            self._selected_point = mn.Vector3(
+                *isaac_prim_utils.usd_to_habitat_position(
+                    self._recent_mouse_ray_hit_info["position"]
+                )
+            )
 
         # mouse release
         if self._app_service.gui_input.get_mouse_button_up(MouseButton.LEFT):
@@ -2073,7 +2281,7 @@ class AppStateIsaacSimViewer(AppStateBase):
         # check object position is correct
         placement_success = validate_target_placement_position(
             self._rigid_objects[0],
-            self._object_targets[0][1].translation,
+            list(self._object_targets.values())[0][1].translation,
             max_distance=0.05,
             horizontal_only=True,
         )

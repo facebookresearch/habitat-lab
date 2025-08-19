@@ -1212,6 +1212,18 @@ class RobotAppWrapper:
         )
         self.set_root_pose(rot=rot)
 
+    def get_hand_centers(self) -> List[mn.Vector3]:
+        """
+        Get points for the left and right hand representing the center of the palm.
+        """
+        hand_ixs = (
+            self.link_subsets["left_hand"].link_ixs
+            + self.link_subsets["right_hand"].link_ixs
+        )
+        hand_transforms = self.get_link_world_poses(hand_ixs)
+        hand_centers = hand_transforms[0]
+        return hand_centers
+
     def set_cached_pose(
         self,
         pose_file: str = default_pose_cache_path,
