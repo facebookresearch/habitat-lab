@@ -52,12 +52,10 @@ def shortest_path_navigation(args):
     with read_write(config):
         config.habitat.dataset.split = args.split
 
-    if args.every_view:
-        with read_write(config):
+        if args.every_view:
             config.habitat.environment.max_episode_steps = 100000
 
-    if args.collect_surface_points:
-        with read_write(config):
+        if args.collect_surface_points:
             config.habitat.simulator.agents.main_agent.sim_sensors.depth_sensor.normalize_depth = False
 
     if args.describe_goal:
