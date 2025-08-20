@@ -24,6 +24,7 @@ from tqdm.auto import tqdm
 from transformers import BlipProcessor, BlipForConditionalGeneration
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.figure import Figure
+from habitat_sim.utils.common import quat_to_coeffs, quat_from_angle_axis
 
 from vint_based import load_distance_model
 from vip import load_vip
@@ -103,35 +104,20 @@ def average_min_distance(goal_feat: torch.Tensor, current_feat: torch.Tensor, k:
     return avg_min_dist
 
 
-def rotate_agent_state(agent_state, turn_angle_degrees):
+def rotate_agent_state(agent_state, angle_degrees, axis=np.array([0.0, 1.0, 0.0])):
     """
-    Return a new agent state with its rotation rotated by `turn_angle_degrees` around the up-axis.
-    This example assumes that the up-axis is (0, 1, 0) and that agent_state.rotation is a quaternion.
+    Rotate the agent's orientation by `angle_rad` around `axis` (world up by default).
+    Returns a shallow copy with updated rotation.
     """
-    # Convert turn angle to radians.
-    turn_angle = math.radians(turn_angle_degrees)
-    
-    # Define up-axis vector.
-    up_axis = np.array([0, 1, 0])
-    
-    # Compute the quaternion representing a rotation by turn_angle about up_axis.
-    # One common approach is to compute the coefficients for a quaternion rotation:
-    # q = [x, y, z, w] where (x,y,z) = axis * sin(theta/2) and w = cos(theta/2)
-    sin_half_angle = math.sin(turn_angle / 2)
-    cos_half_angle = math.cos(turn_angle / 2)
-    q_coeffs = [up_axis[0] * sin_half_angle, up_axis[1] * sin_half_angle, up_axis[2] * sin_half_angle, cos_half_angle]
-    
-    # Create a quaternion from coefficients using habitat's helper.
-    turn_quat = quaternion_from_coeff(q_coeffs)
-    
-    # Multiply the turn quaternion with the agent's current rotation.
-    # Note: Depending on the quaternion library, the order of multiplication matters.
-    new_rotation = turn_quat * agent_state.rotation
+    # build an incremental rotation Δq from angle-axis
+    dq = quat_from_angle_axis(np.radians(angle_degrees), axis)  # unit quaternion
+    # compose with current orientation (left-multiply applies Δq in world frame)
+    q_new = dq * agent_state.rotation
 
-    # Create a deep copy of the agent state to avoid mutating the original.
-    new_agent_state = copy.deepcopy(agent_state)
-    new_agent_state.rotation = new_rotation
-    return new_agent_state
+    rotated = type(agent_state)()
+    rotated.position = agent_state.position.copy()  # keep position unless you also want to orbit
+    rotated.rotation = q_new
+    return rotated
 
 
 def get_default_transform(normalize=True):

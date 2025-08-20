@@ -9,6 +9,7 @@ import pickle
 import torch
 import matplotlib.pyplot as plt
 import zipfile
+import copy
 
 import utils
 import agent
@@ -52,8 +53,8 @@ def shortest_path_navigation(args):
     with read_write(config):
         config.habitat.dataset.split = args.split
 
-        if args.every_view:
-            config.habitat.environment.max_episode_steps = 100000
+        # if args.every_view:
+        #     config.habitat.environment.max_episode_steps = 100000
 
         if args.collect_surface_points:
             config.habitat.simulator.agents.main_agent.sim_sensors.depth_sensor.normalize_depth = False
@@ -185,28 +186,18 @@ def shortest_path_navigation(args):
                     fov_points.append({'depth': curr_depth, 'se3': world_T_cam_curr, 'K': K})
                     
                 if args.every_view and best_action == HabitatSimActions.move_forward:
-                    original_state = env.habitat_env.sim.get_agent_state()  # Save current agent state
+                    original_state = copy.deepcopy(env.habitat_env.sim.get_agent_state())  # Save current agent state
                     position_views = []
-                    turn_angle = config.habitat.simulator.turn_angle  # For instance, 30 degrees
-                    num_views = 360 // turn_angle
 
-                    for _ in range(num_views):
-                        # Compute the new agent state rotated by 'turn_angle'
-                        new_state = utils.rotate_agent_state(original_state, turn_angle)
+                    for angle in range(0, 360, 90):
+                        # Compute the new agent state rotated by 'angle'
+                        new_state = utils.rotate_agent_state(original_state, angle)
                         
-                        # Update the simulation state (this does not count as a step in the usual sense)
-                        env.habitat_env.sim.set_agent_state(new_state.position, new_state.rotation)
-                        
-                        # Get new observations; this call should trigger a re-render based on the updated state.
-                        obs = env.habitat_env.sim.get_sensor_observations()
+                         # Get new observations at rotated position
+                        obs = env.habitat_env.sim.get_observations_at(new_state.position, new_state.rotation)                        
                         position_views.append(obs["rgb"][:, :, :3])
-                        
-                        # Update original_state so that rotations accumulate if that’s the desired behavior.
-                        original_state = new_state
 
                     views.append(position_views)
-                    # Restore the original state if required.
-                    env.habitat_env.sim.set_agent_state(original_state.position, original_state.rotation)
                                             
                 observations, reward, done, info = env.step(best_action)
 
