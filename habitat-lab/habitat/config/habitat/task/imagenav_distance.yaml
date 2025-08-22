@@ -22,7 +22,8 @@ reward_measure: "distance_to_goal_reward"
 success_measure: "spl"
 measurements:
   success:
-    success_distance: 1.
+    success_distance: 2.5
+    success_ratio: 0.4
 
 
 #   distance_to_goal:

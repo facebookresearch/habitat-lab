@@ -765,7 +765,8 @@ class SuccessMeasurementConfig(MeasurementConfig):
     """
     type: str = "Success"
     success_distance: float = 0.2
-
+    success_ratio: float = 0.0
+    turn_angle_degrees: float = 30.0
 
 @dataclass
 class SPLMeasurementConfig(MeasurementConfig):

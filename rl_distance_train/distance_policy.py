@@ -74,7 +74,7 @@ class TemporalDistanceNavPolicy(NetPolicy):
 
         super().__init__(net, action_space, policy_config=policy_config)
 
-        if pretrained_weights is not None:
+        if (pretrained_weights is not None) and len(pretrained_weights) > 0:
             try:
                 print(f"Loading pretrained weights from: {pretrained_weights}")
                 checkpoint = torch.load(pretrained_weights, map_location="cpu", weights_only=False)

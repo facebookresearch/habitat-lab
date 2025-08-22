@@ -14,6 +14,7 @@ import math
 import numpy as np
 import quaternion
 import hashlib
+import copy
 from gym import spaces
 
 from habitat.config import read_write
@@ -38,7 +39,7 @@ from habitat.core.spaces import ActionSpace
 from habitat.core.utils import not_none_validator
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.utils import cartesian_to_polar
-from habitat_sim.utils.common import quat_to_coeffs
+from habitat_sim.utils.common import quat_to_coeffs, quat_from_angle_axis
 from habitat.utils.geometry_utils import (
     quaternion_from_coeff,
     quaternion_rotate_vector,
@@ -797,7 +798,6 @@ class GeometricOverlapSeedSensor(Sensor):
         return seed_int
     
 
-
 @registry.register_measure
 class Success(Measure):
     r"""Whether or not the agent succeeded at its task
@@ -813,6 +813,18 @@ class Success(Measure):
         self._sim = sim
         self._config = config
         self._success_distance = self._config.success_distance
+        self._success_ratio = getattr(config, "success_ratio", 0.0)
+        self._turn_angle_degrees = getattr(config, "turn_angle_degrees", 30.0)
+        assert self._success_distance >= 0, (
+            "Success distance must be non-negative, "
+            f"got {self._success_distance}"
+        )
+        assert 0 <= self._success_ratio <= 1, (
+            "Success ratio must be in [0, 1], "
+            f"got {self._success_ratio}"
+        )
+
+        self.geometric_overlap_sensor = GeometricOverlapSensor(sim=self._sim, config=self._config)
 
         super().__init__()
 
@@ -826,7 +838,7 @@ class Success(Measure):
         self.update_metric(episode=episode, task=task, *args, **kwargs)  # type: ignore
 
     def update_metric(
-        self, episode, task: EmbodiedTask, *args: Any, **kwargs: Any
+        self, episode: NavigationEpisode, task: EmbodiedTask, *args: Any, **kwargs: Any
     ):
         distance_to_target = task.measurements.measures[
             DistanceToGoal.cls_uuid
@@ -837,9 +849,56 @@ class Success(Measure):
             and task.is_stop_called  # type: ignore
             and distance_to_target < self._success_distance
         ):
-            self._metric = 1.0
+            if self._success_ratio == 0.0:
+                self._metric = 1.0
+            else:
+                self._check_ratio_success(episode)
         else:
             self._metric = 0.0
+
+    def _check_ratio_success(self, episode: NavigationEpisode):
+        agent_state = copy.deepcopy(self._sim.get_agent_state())
+        for angle in range(0, 360, int(self._turn_angle_degrees)):
+            rotated_agent_state = self.rotate_agent_state(
+                agent_state, angle
+            )
+            new_observations = self._sim.get_observations_at(
+                position=rotated_agent_state.position,
+                rotation=rotated_agent_state.rotation,
+            )
+            self._sim.set_agent_state(
+                rotated_agent_state.position, rotated_agent_state.rotation
+            )
+            # Get the geometric overlap ratio for the rotated agent state
+            ratio = self.geometric_overlap_sensor.get_observation(new_observations, episode=episode)[0]
+            if hasattr(ratio, "__len__"):  # means it's array-like
+                ratio = ratio[0]
+            
+            if ratio > self._success_ratio:
+                # If any orientation has a ratio above the threshold, we consider it a success
+                self._metric = 1.0
+                break
+        else:
+            # If no orientation had a sufficient ratio, we consider it a failure
+            self._metric = 0.0
+
+        self._sim.set_agent_state(agent_state.position, agent_state.rotation)
+
+    @staticmethod
+    def rotate_agent_state(agent_state, angle_degrees, axis=np.array([0.0, 1.0, 0.0])):
+        """
+        Rotate the agent's orientation by `angle_rad` around `axis` (world up by default).
+        Returns a shallow copy with updated rotation.
+        """
+        # build an incremental rotation Δq from angle-axis
+        dq = quat_from_angle_axis(np.radians(angle_degrees), axis)  # unit quaternion
+        # compose with current orientation (left-multiply applies Δq in world frame)
+        q_new = dq * agent_state.rotation
+
+        rotated = type(agent_state)()
+        rotated.position = agent_state.position.copy()  # keep position unless you also want to orbit
+        rotated.rotation = q_new
+        return rotated
 
 
 @registry.register_measure
