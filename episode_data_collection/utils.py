@@ -148,7 +148,7 @@ def load_embedding(rep: str):
         model = model.to('cuda')
         transform = get_default_transform()
     # Distance decoders, Vint distance, and one-scene quasi MSE
-    elif rep.startswith(('one_scene_decoder', 'dist_decoder', 'vint_dist', 'one_scene_quasi', 'quasi')):
+    elif rep.startswith(('one_scene_decoder', 'dist_decoder', 'vint_dist', 'one_scene_quasi', 'quasi', 'dist_vld')):
         model = load_distance_model(modelid=rep)
         transform = get_default_transform()
     # Standard ResNet
@@ -395,28 +395,30 @@ def _default_pixel_set(h: int, w: int) -> np.ndarray:
 
     return np.concatenate([strip_upper, strip_lower, centre_pt], axis=0)
 
-def make_mini_plot(gt, pred, size=256):
+def make_mini_plot(pred, conf, size=256):
     # Normalize by the first value (avoid zero division)
-    gt = np.array(gt, dtype=np.float32)
     pred = np.array(pred, dtype=np.float32)
-    if gt[0] == 0: gt[0] = 1
+    conf = np.array(conf, dtype=np.float32)
     if pred[0] == 0: pred[0] = 1
-    gt_norm = gt / gt[0]
     pred_norm = pred / pred[0]
 
     fig = Figure(figsize=(1.3, 1.3), dpi=size//1.3)
     canvas = FigureCanvas(fig)
     ax = fig.add_subplot(111)
-    ax.plot(gt_norm, label='GT', lw=1)
-    ax.plot(pred_norm, label='Pred', lw=1)
+    ax.plot(pred_norm, label='VLD', lw=1)
+    ax.plot(conf, label='Conf.', lw=1)
     # Remove axis ticks and spines for minimalism
-    ax.set_xticks([])
-    ax.set_yticks([])
-    for spine in ax.spines.values():
-        spine.set_visible(False)
+    # ax.set_xticks([])
+    # ax.set_yticks([])
+    # for spine in ax.spines.values():
+    #     spine.set_visible(False)
+
+    # Set tick font sizes
+    ax.tick_params(axis='both', labelsize=6)
+
     # Add a legend
-    ax.legend(fontsize=6, loc='upper right', frameon=False)
-    fig.tight_layout(pad=0.05)
+    ax.legend(fontsize=6, loc='upper right', frameon=True)
+    fig.tight_layout(pad=0.1)
     canvas.draw()
     # Get image as np array (RGB)
     plot_img = np.frombuffer(canvas.tostring_rgb(), dtype='uint8')

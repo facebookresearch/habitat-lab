@@ -36,7 +36,8 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 def env_navigation(args):
     agent = PPOAgent.from_config(args.policy_checkpoint)
-    distance_model, img_transform = load_embedding(agent.get_config().habitat_baselines.rl.ddppo.encoder_backbone)
+    distance_model_rep = agent.get_config().habitat_baselines.rl.ddppo.encoder_backbone
+    distance_model, img_transform = load_embedding(distance_model_rep)
     distance_model.eval()
 
 
@@ -60,7 +61,10 @@ def env_navigation(args):
                 "pointgoal_with_gps_compass_sensor"
             ] = PointGoalWithGPSCompassSensorConfig()
 
-    distance_norm = config.habitat.task.lab_sensors.pointgoal_with_gps_compass_sensor.distance_norm
+    try:
+        distance_norm = config.habitat.task.lab_sensors.pointgoal_with_gps_compass_sensor.distance_norm
+    except:
+        distance_norm = 1.0
 
     if args.describe_goal:
         describer = utils.ImageDescriber()
@@ -125,7 +129,7 @@ def env_navigation(args):
             if goal_image is not None and args.describe_goal:
                 goal_description = describer.describe_image(goal_image, goal_category)
 
-            images, gt_distances, temporal_distances = [], [], []
+            images, gt_distances, temporal_distances, confs = [], [], [], []
             while not env.habitat_env.episode_over:
                 # copy observations to avoid modifying the original
                 try:
@@ -147,32 +151,58 @@ def env_navigation(args):
                 if goal_image is not None:
                     with torch.no_grad():
                         transformed_imgs = torch.stack([img_transform(Image.fromarray(f)) for f in [observations['rgb'], goal_image]]).to('cuda')
-                        temporal_dist, conf = distance_model(transformed_imgs[:1], transformed_imgs[1:])
+                        if distance_model_rep.startswith("dist_vld"):
+                            temporal_dist, conf = distance_model(transformed_imgs[:1], goal_image=transformed_imgs[1:])
+                        else:
+                            temporal_dist, conf = distance_model(transformed_imgs[:1], transformed_imgs[1:])
                         temporal_dist = temporal_dist.cpu().numpy()[0]
+                        conf = conf.cpu().numpy()[0]
                     print(f"Predicted distance {temporal_dist:2f}")
                     temporal_distances.append(temporal_dist)
+                    confs.append(conf)
                 else:
                     temporal_distances.append(0)
 
                 # collect current view and state
-                plot_img = make_mini_plot(gt_distances, temporal_distances, size=observations['rgb'].shape[0])
+                plot_img = make_mini_plot(temporal_distances, confs, size=observations['rgb'].shape[0])
 
                 top_down_map = draw_top_down_map(info, observations['rgb'].shape[0])
-                if goal_image is not None:
-                    combined_image = cv2.hconcat([observations["rgb"], top_down_map, goal_image, plot_img.astype(np.uint8)])
-                else:
-                    combined_image = cv2.hconcat([observations["rgb"], top_down_map, plot_img.astype(np.uint8)])
+                h, w, _ = observations["rgb"].shape
+                def resize(img):
+                    return cv2.resize(img, (w, h))
+
+                rgb = resize(observations["rgb"])
+                tdm = resize(top_down_map)
+                goal = resize(goal_image) if goal_image is not None else np.zeros_like(rgb)
+                plot = resize(plot_img.astype(np.uint8))
+
+                def add_label(img, text):
+                    labeled = img.copy()
+                    cv2.putText(
+                        labeled, text, (10, 30),              # top-left corner
+                        cv2.FONT_HERSHEY_SIMPLEX, 1.0,        # font + scale
+                        (0, 0, 0), 2, cv2.LINE_AA       # black text, bold
+                    )
+                    return labeled
+
+                rgb = add_label(rgb, "Obs")
+                goal = add_label(goal, "Goal Img")
+                tdm = add_label(tdm, "Map")
+
+                # Arrange into 2x2 grid
+                top_row = cv2.hconcat([rgb, goal])
+                bottom_row = cv2.hconcat([tdm, plot])
+                combined_image = cv2.vconcat([top_row, bottom_row])
                 images.append(combined_image)
                                             
                 observations, reward, done, info = env.step(action)
 
-            if bool(info['success']):
-                suffix = 'success'
-            else:
-                suffix = 'failure'
+            is_success = bool(info['success'])
+            suffix = 'success' if is_success else 'failure'
+            fps = 10 if is_success else 50
 
             episode_id = f"%0{len(str(len(env.episodes)))}d" % episode
-            images_to_video(images, args.save_dir, f"trajectory_{episode_id}_{suffix}", verbose=False)
+            images_to_video(images, args.save_dir, f"trajectory_{episode_id}_{suffix}", verbose=False, fps=fps)
 
 def main(args):
     env_navigation(args)
