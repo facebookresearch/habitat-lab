@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from contextlib import nullcontext
 
 from torchvision.transforms import ColorJitter, RandomResizedCrop, Compose
 from typing import Union, List, Dict, Optional
@@ -33,6 +34,7 @@ class TemporalDistanceEncoder(nn.Module):
         assert mode in ("dense", "sparse"), "mode must be 'dense' or 'sparse'"
         self.mode = mode
         self.distance_scale = distance_scale
+        self.encoder_base = encoder_base
 
         # 1) load the pretrained Distance+Confidence model
         dm = load_distance_model(modelid=encoder_base)
@@ -108,11 +110,12 @@ class TemporalDistanceEncoder(nn.Module):
         goals = self.base.preprocess(goals)
 
         return_last_hidden_state = self.mode == "dense"
-        if self.freeze:
-            with torch.no_grad():
+        context = torch.no_grad() if self.freeze else nullcontext()
+        with context:
+            if self.encoder_base.startswith("dist_vld"):
+                output = self.base(observations, goal_image=goals, return_last_hidden_state=return_last_hidden_state)
+            else:
                 output = self.base(observations, goals, return_last_hidden_state=return_last_hidden_state)
-        else:
-            output = self.base(observations, goals, return_last_hidden_state=return_last_hidden_state)
 
         # Base model forward pass
         if return_last_hidden_state:

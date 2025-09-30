@@ -67,6 +67,8 @@ class GeometricOverlapNavPolicy(NetPolicy):
 
         super().__init__(net, action_space, policy_config=policy_config)
 
+        # self.load_state_dict(torch.load('/cluster/home/lmilikic/rl_distance_nav/habitat-lab/data/overlap_dist_vision_pre_noise_conf_checkpoints/ckpt.21.pth', weights_only=False)["state_dict"])
+
     @classmethod
     def from_config(
         cls,
