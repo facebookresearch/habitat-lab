@@ -169,8 +169,8 @@ class GeometricDistanceNavNet(Net):
 
             if self.use_pretrained_encoder:
                 self.visual_encoder = EfficientNet.from_name(backbone, in_channels=3, num_classes=self._hidden_size)
-                self.visual_encoder.load_state_dict(torch.load('/cluster/home/lmilikic/rl_distance_nav/habitat-lab/data/checkpoints/visual_encoder.pth', weights_only=False))
-
+                self.visual_encoder.load_state_dict(
+                                torch.load('/cluster/work/rsl/lmilikic/rl_base_pretrained/visual_encoder/model.pth', weights_only=False))
                 # Freeze all backbone layers
                 for param in self.visual_encoder.parameters():
                     param.requires_grad = False
