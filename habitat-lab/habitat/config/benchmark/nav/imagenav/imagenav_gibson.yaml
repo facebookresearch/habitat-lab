@@ -17,6 +17,7 @@ habitat:
           rgb_sensor:
             width: 256
             height: 256
+            hfov: 90
           depth_sensor:
             width: 256
             height: 256
