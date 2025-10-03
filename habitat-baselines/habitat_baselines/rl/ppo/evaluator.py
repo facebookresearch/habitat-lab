@@ -34,6 +34,9 @@ class Evaluator(abc.ABC):
         obs_transforms: List[ObservationTransformer],
         env_spec: EnvironmentSpec,
         rank0_keys: Set[str],
+        vla_model: Any = None,
+        vla_processor: Any = None,
+        vla_config: Any = None,
     ) -> None:
         """
         :param agent: Loaded policy to evaluate.
@@ -88,6 +91,7 @@ def pause_envs(
 
         if rgb_frames is not None:
             rgb_frames = [rgb_frames[i] for i in state_index]
+
         # actor_critic.do_pause(state_index)
 
     return (
