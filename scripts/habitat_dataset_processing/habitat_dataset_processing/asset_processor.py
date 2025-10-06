@@ -112,9 +112,13 @@ def process_model(args: AssetProcessorArgs):
         "additional_dest_paths": [],
     }
 
+    if not os.path.isfile(job.source_path):
+        print(f"Invalid source file: {job.source_path}")
+        result["status"] = "error"
+        return result
     if os.path.isfile(job.dest_path):
         if verbose:
-            print(f"Skipping:   {job.source_path}")
+            print(f"Skipping: {job.source_path}")
         result["status"] = "skipped"
         return result
 
@@ -152,11 +156,11 @@ def process_model(args: AssetProcessorArgs):
                 sloppy=False,
                 simplify=job.simplify,
             )
-        except Exception:
+        except Exception as e:
             try:
                 magnum_decimation.close()
                 print(
-                    f"Unable to decimate: {job.source_path}. Trying without decimation."
+                    f"Unable to decimate: '{job.source_path}': '{e}'. Trying without decimation."
                 )
                 (
                     source_tris,
@@ -209,6 +213,31 @@ def process_model(args: AssetProcessorArgs):
 
     return result
 
+
+def postprocess_models(jobs: list[Job]):
+    import trimesh
+    for job in jobs:
+        if "hssd" in job.dest_path or "fpss" in job.dest_path:
+            if job.dest_path.endswith(".glb"):
+                if os.path.exists(job.dest_path):
+                    scene = trimesh.load(job.dest_path)
+                    dirty = False
+                    for key, model in scene.geometry.items():
+                        visual = model.visual
+                        if hasattr(visual, "material"):
+                            material = visual.material
+                            if material is not None:
+                                if material.name not in ["FP_GLASS", "MIRROR"]:
+                                    if material.metallicFactor is not None:
+                                        if material.metallicFactor > 0.95:
+                                            material.metallicFactor = 0.3
+                                            dirty = True
+                                    else:
+                                        material.metallicFactor = 0.1
+                                        material.roughnessFactor = 0.8
+                                        dirty = True
+                    if dirty:
+                        scene.export(job.dest_path)
 
 def process_models(jobs: list[Job], config: Config):
     start_time = time.time()

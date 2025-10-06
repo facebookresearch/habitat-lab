@@ -111,6 +111,7 @@ class HabitatDatasetSource:
         scene_whitelist: Optional[list[str]] = None,
         scene_blacklist: Optional[list[str]] = None,
         include_orphan_assets=True,
+        allow_errors=False,
     ):
         self.name = name
         self.dataset_config = dataset_config
@@ -120,6 +121,7 @@ class HabitatDatasetSource:
         self.scene_whitelist = scene_whitelist
         self.scene_blacklist = scene_blacklist
         self.include_orphan_assets = include_orphan_assets
+        self.allow_errors = allow_errors
 
 
 @dataclass
@@ -142,6 +144,8 @@ class AssetSource:
     """
 
     settings: ProcessingSettings
+
+    allow_errors: bool = False
 
 
 @dataclass

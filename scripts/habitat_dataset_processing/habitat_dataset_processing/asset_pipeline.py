@@ -15,6 +15,7 @@ from typing import Any, Optional
 from habitat_dataset_processing.asset_processor import (
     create_metadata_file,
     process_models,
+    postprocess_models,
 )
 from habitat_dataset_processing.configs import (
     AssetSource,
@@ -103,10 +104,11 @@ class AssetDatabase:
     Helps track Habitat-specific IDs like template names.
     """
 
-    def __init__(self, database_name: str):
+    def __init__(self, database_name: str, allow_errors: bool):
         self._unresolved_assets: set[str] = set()
         self._template_name_to_asset: dict[str, Asset] = {}
         self._database_name = database_name
+        self._allow_errors = allow_errors
 
     def register_asset(
         self,
@@ -115,9 +117,13 @@ class AssetDatabase:
         settings: ProcessingSettings,
     ):
         """Add an asset to the collection."""
-        assert os.path.exists(
-            asset_path
-        ), f"Could not find asset path: {asset_path}. Aborting."
+        asset_path = asset_path.strip()
+        exists = os.path.exists(asset_path)
+        if not exists and self._allow_errors:
+            print(f"Warning: Asset '{asset_path}' does not exist! Skipping asset.")
+            return
+        assert exists, f"Could not find asset path: {asset_path}. Aborting."
+
         self._template_name_to_asset[asset_template_name] = Asset(
             path=asset_path,
             settings=settings,
@@ -136,6 +142,9 @@ class AssetDatabase:
             render_asset_file_name = data["render_asset"]
         elif "urdf_filepath" in data and data["urdf_filepath"] != "":
             render_asset_file_name = data["urdf_filepath"]
+        else:
+            print(f"Config does not specify a render asset: '{config_path}'.")
+            return
         render_asset_path = os.path.join(object_dir, render_asset_file_name)
         template_name = get_template_name(config_path)
         self.register_asset(template_name, render_asset_path, settings)
@@ -225,7 +234,7 @@ class AssetPipeline:
         assert (
             data is not None
         ), f"Invalid dataset config: {dataset_config_path}"
-        database = AssetDatabase(source.name)
+        database = AssetDatabase(source.name, source.allow_errors)
 
         whitelist = source.scene_whitelist
         blacklist = source.scene_blacklist
@@ -260,13 +269,24 @@ class AssetPipeline:
             for path in paths:
                 database.register_asset_from_config(path, source.objects)
         if "articulated_objects" in data:
-            dirs = get_asset_dirs(
-                data["articulated_objects"]["paths"][".json"]
-            )
-            paths = get_configs(dirs, "ao_config.json")
-            for path in paths:
-                database.register_asset_from_config(
-                    path, source.articulated_objects
+            paths_dict = data["articulated_objects"]["paths"]
+            if ".json" in paths_dict:
+                dirs = get_asset_dirs(
+                    data["articulated_objects"]["paths"][".json"]
+                )
+                paths = get_configs(dirs, "ao_config.json")
+                for path in paths:
+                    database.register_asset_from_config(
+                        path, source.articulated_objects
+                    )
+            elif ".urdf" in paths_dict:
+                self._load_assets(
+                    AssetSource(
+                        name=source.name + "_urdf",
+                        assets=paths_dict[".urdf"],
+                        settings=source.articulated_objects,
+                        allow_errors=source.allow_errors,
+                    )
                 )
         if "scene_instances" in data:
             dirs = get_asset_dirs(data["scene_instances"]["paths"][".json"])
@@ -312,6 +332,9 @@ class AssetPipeline:
                 template_names = get_all_template_names_in_scene(scene_path)
                 for template_name in template_names:
                     asset = database.find_asset_by_template_name(template_name)
+                    if source.allow_errors and asset is None:
+                        f"Template name {template_name} could not be resolved."
+                        continue
                     assert (
                         asset is not None
                     ), f"Template name {template_name} could not be resolved."
@@ -339,7 +362,7 @@ class AssetPipeline:
 
     def _load_assets(self, source: AssetSource):
         database_name = source.name
-        database = AssetDatabase(database_name)
+        database = AssetDatabase(database_name, source.allow_errors)
 
         def split_string_at_first_asterisk(s: str) -> tuple[str, str]:
             index = s.find("*")
@@ -458,4 +481,5 @@ class AssetPipeline:
                                 chunk_index += 1
 
         process_models(jobs, config)
+        postprocess_models(jobs)
         create_metadata_file(groups, output_dir)

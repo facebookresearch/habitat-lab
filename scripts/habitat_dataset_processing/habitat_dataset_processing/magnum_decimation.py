@@ -222,8 +222,11 @@ def decimate(
 
 
 def close():
-    converter.end_file()
-    importer.close()
+    try:
+        converter.end_file()
+        importer.close()
+    except:
+        pass
 
 
 def main():
