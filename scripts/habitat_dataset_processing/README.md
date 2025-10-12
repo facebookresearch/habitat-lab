@@ -26,13 +26,14 @@ The processed datasets retain the directory structure of the input (e.g. `data/d
 ```
 conda create -n datasets python=3.10
 conda activate datasets
+pip install uv
 ```
 
 2. Install the project.
 
 ```
 cd scripts/habitat_dataset_processing
-pip install -e .
+uv pip install -e . --config-settings editable_mode=compat
 ```
 
 3. Install Magnum. See the section below.

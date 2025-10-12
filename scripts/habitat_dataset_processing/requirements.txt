@@ -1,2 +1,4 @@
 pycollada
 trimesh[easy]
+fast-simplification
+tqdm

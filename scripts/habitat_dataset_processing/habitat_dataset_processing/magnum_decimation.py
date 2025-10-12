@@ -153,7 +153,7 @@ def decimate(
             target_size0 = 0.1
             target_count0 = 1000
             target_size1 = 1.0
-            target_count1 = 5000
+            target_count1 = 20000
             size = (dim.x + dim.y + dim.z) / 3
             lerp_fraction = math.lerp_inverted(
                 target_size0, target_size1, size

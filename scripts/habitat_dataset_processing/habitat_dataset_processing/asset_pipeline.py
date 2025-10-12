@@ -212,7 +212,7 @@ class AssetPipeline:
 
         assert os.path.exists(
             args.input
-        ), f"The specified `--data` directory does not exist: `{args.data}`."
+        ), f"The specified `--data` directory does not exist: `{args.input}`."
 
         self._config = Config(
             input_dir=args.input,

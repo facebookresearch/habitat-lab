@@ -1,12 +1,15 @@
 import json
 import os
+import re
 import shutil
+import struct
 import time
 from dataclasses import dataclass
 from multiprocessing import Manager, Pool
 from multiprocessing.managers import ValueProxy
 from pathlib import Path
 from threading import Lock
+from tqdm import tqdm
 from typing import Any
 
 import collada
@@ -214,15 +217,118 @@ def process_model(args: AssetProcessorArgs):
     return result
 
 
+def clean_json_string(json_bytes):
+    """Remove or escape invalid control characters"""
+    try:
+        # Try to decode as UTF-8
+        json_str = json_bytes.decode('utf-8')
+    except UnicodeDecodeError:
+        # Try with error handling
+        json_str = json_bytes.decode('utf-8', errors='replace')
+    
+    # Remove invalid control characters (keep \n, \r, \t)
+    json_str = re.sub(r'[\x00-\x08\x0b-\x0c\x0e-\x1f]', '', json_str)
+    
+    return json_str
+
+def fix_glb(input_path, output_path):
+    with open(input_path, 'rb') as f:
+        # Read header
+        magic, version, length = struct.unpack('<4sII', f.read(12))
+        
+        # Read JSON chunk
+        json_length, json_type = struct.unpack('<II', f.read(8))
+        json_data = f.read(json_length)
+        
+        # Clean and parse JSON
+        json_str = clean_json_string(json_data)
+        json_obj = json.loads(json_str)
+        
+        # Update byteLength properties if needed
+        if 'buffers' in json_obj:
+            # Read binary chunk to get actual size
+            current_pos = f.tell()
+            if current_pos < length:
+                bin_length, bin_type = struct.unpack('<II', f.read(8))
+                binary_data = f.read(bin_length)
+                
+                # Update buffer byteLength
+                if len(json_obj['buffers']) > 0:
+                    json_obj['buffers'][0]['byteLength'] = len(binary_data)
+            else:
+                binary_data = b''
+        else:
+            binary_data = b''
+        
+        # Re-encode JSON as clean UTF-8
+        new_json = json.dumps(json_obj, ensure_ascii=False, separators=(',', ':')).encode('utf-8')
+        
+        # Pad to 4-byte alignment
+        while len(new_json) % 4 != 0:
+            new_json += b' '
+
+    if input_path == output_path:
+        os.remove(input_path)
+
+    # Write new GLB
+    with open(output_path, 'wb') as out:
+        new_length = 12 + 8 + len(new_json)
+        if binary_data:
+            new_length += 8 + len(binary_data)
+        
+        out.write(struct.pack('<4sII', magic, version, new_length))
+        out.write(struct.pack('<II', len(new_json), 0x4E4F534A))  # JSON chunk type
+        out.write(new_json)
+        
+        if binary_data:
+            out.write(struct.pack('<II', len(binary_data), 0x004E4942))  # BIN chunk type
+            out.write(binary_data)
+
 def postprocess_models(jobs: list[Job]):
     import trimesh
-    for job in jobs:
-        if "hssd" in job.dest_path or "fpss" in job.dest_path:
-            if job.dest_path.endswith(".glb"):
-                if os.path.exists(job.dest_path):
+    for job in tqdm(jobs, "Postprocessing"):
+        if job.dest_path.endswith(".glb"):
+            if os.path.exists(job.dest_path):
+                try:
                     scene = trimesh.load(job.dest_path)
-                    dirty = False
-                    for key, model in scene.geometry.items():
+                except json.JSONDecodeError:
+                    fix_glb(job.dest_path, job.dest_path)
+                    try:
+                        scene = trimesh.load(job.dest_path)
+                    except Exception as e:
+                        print(e)
+                        continue
+                except Exception as e:
+                    print(e)
+                    continue
+                dirty = False
+                for key, model in scene.geometry.items():
+                    if isinstance(model, trimesh.Trimesh):
+                        #if job.simplify and len(mesh.faces) > 1000:
+                        #    target_faces = len(mesh.faces) // 2
+                        #    mesh = mesh.simplify_quadric_decimation(target_faces)
+                        face_count = len(model.faces)
+                        #if face_count > 1000:
+                        target_face_count = face_count // 2
+                        #model = model.simplify_quadric_decimation(percent=0.9, aggression=0)
+
+                        #model.merge_vertices()
+                        #model.remove_duplicate_faces()
+                        #model.remove_degenerate_faces()
+                        #model.remove_unreferenced_vertices()
+                        #model.remove_infinite_values()
+                        #model.fix_normals()
+
+                        model = model.process(validate=True)
+
+                        # Force normal recalculation
+                        model._cache.clear() 
+                        _ = model.vertex_normals
+
+                        scene.geometry[key] = model
+                        dirty = True
+                    
+                    if "hssd" in job.dest_path or "fpss" in job.dest_path or "Fremont-Knuckles" in job.dest_path:
                         visual = model.visual
                         if hasattr(visual, "material"):
                             material = visual.material
@@ -236,8 +342,9 @@ def postprocess_models(jobs: list[Job]):
                                         material.metallicFactor = 0.1
                                         material.roughnessFactor = 0.8
                                         dirty = True
-                    if dirty:
-                        scene.export(job.dest_path)
+                    
+                if dirty:
+                    scene.export(job.dest_path)
 
 def process_models(jobs: list[Job], config: Config):
     start_time = time.time()
