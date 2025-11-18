@@ -221,7 +221,7 @@ def load_resume_state(
     if rank0_only():
         logger.info(f"Loading resume state: {filename}")
 
-    return torch.load(filename, map_location="cpu")
+    return torch.load(filename, map_location="cpu", weights_only=False)
 
 
 def requeue_job():

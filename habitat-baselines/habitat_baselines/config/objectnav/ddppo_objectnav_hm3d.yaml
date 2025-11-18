@@ -33,6 +33,7 @@ habitat_baselines:
 
   eval:
     split: "val"
+    video_option: ["disk", "tensorboard"]
 
   rl:
     policy:
