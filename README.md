@@ -32,7 +32,7 @@ Deep RL: VLM-Guided Subgoal Planning for Indoor Navigation in Habitat-Lab
 1. **pip install habitat-lab stable version**.
 
       ```bash
-      git clone --branch stable https://github.com/facebookresearch/habitat-lab.git
+      git clone https://github.com/meganmlee/HabitatLab_VLM_PPO.git
       cd habitat-lab
       pip install -e habitat-lab  # install habitat_lab
       ```
@@ -46,9 +46,29 @@ Deep RL: VLM-Guided Subgoal Planning for Indoor Navigation in Habitat-Lab
 
 ## Datasets
 
+Install HM3D scenes
+      ```bash  
+      pip install -e habitat-baselines  # install habitat_baselines
+      ```
+
+Install Objectnav dataset
+      ```bash
+      pip install -e habitat-baselines  # install habitat_baselines
+      ```
+
 [Common task and episode datasets used with Habitat-Lab](DATASETS.md).
 
 ## Baselines
+
+To train. Change what you need to:
+      ```bash
+      python habitat-baselines/habitat_baselines/run.py habitat_baselines.num_updates=25000 habitat_baselines.num_environments=16 --config-name="objectnav/ddppo_objectnav_hm3d.yaml"
+      ```
+To evaluate. Change what you need to:
+      ```bash
+      python habitat-baselines/habitat_baselines/run.py habitat_baselines.evaluate=True habitat_baselines.eval_ckpt_path_dir="data/new_checkpoints/ckpt.21.pth" habitat_baselines.checkpoint_folder="data/eval_temp" habitat_baselines.num_environments=16  habitat_baselines.test_episode_count=2000 --config-name="objectnav/ddppo_objectnav_hm3d.yaml"
+      ```
+
 Habitat-Lab includes reinforcement learning (via PPO) baselines. For running PPO training on sample data and more details refer [habitat_baselines/README.md](habitat-baselines/habitat_baselines/README.md).
 
 
