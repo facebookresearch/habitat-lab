@@ -46,17 +46,13 @@ Deep RL: VLM-Guided Subgoal Planning for Indoor Navigation in Habitat-Lab
 
 ## Datasets
 
-Install HM3D scenes
+Install HM3D scenes:
+
       ```bash  
       pip install -e habitat-baselines  # install habitat_baselines
       ```
 
-Install Objectnav dataset
-      ```bash
-      pip install -e habitat-baselines  # install habitat_baselines
-      ```
-
-[Common task and episode datasets used with Habitat-Lab](DATASETS.md).
+Install Objectnav dataset from here (Object goal navigation zip file for HM3DSem-v0.1). [Common task and episode datasets used with Habitat-Lab](DATASETS.md).
 
 ## Baselines
 
