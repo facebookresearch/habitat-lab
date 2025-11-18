@@ -46,10 +46,10 @@ Deep RL: VLM-Guided Subgoal Planning for Indoor Navigation in Habitat-Lab
 
 ## Datasets
 
-Install HM3D scenes:
+Install HM3D scenes by following [these instructions](https://github.com/facebookresearch/habitat-sim/blob/main/DATASETS.md#habitat-matterport-3d-research-dataset-hm3d):
 
       ```bash  
-      pip install -e habitat-baselines  # install habitat_baselines
+      python -m habitat_sim.utils.datasets_download --username <api-token-id> --password <api-token-secret> --uids hm3d_full
       ```
 
 Install Objectnav dataset from here (Object goal navigation zip file for HM3DSem-v0.1). [Common task and episode datasets used with Habitat-Lab](DATASETS.md).
@@ -57,10 +57,13 @@ Install Objectnav dataset from here (Object goal navigation zip file for HM3DSem
 ## Baselines
 
 To train. Change what you need to:
+
       ```bash
       python habitat-baselines/habitat_baselines/run.py habitat_baselines.num_updates=25000 habitat_baselines.num_environments=16 --config-name="objectnav/ddppo_objectnav_hm3d.yaml"
       ```
+      
 To evaluate. Change what you need to:
+
       ```bash
       python habitat-baselines/habitat_baselines/run.py habitat_baselines.evaluate=True habitat_baselines.eval_ckpt_path_dir="data/new_checkpoints/ckpt.21.pth" habitat_baselines.checkpoint_folder="data/eval_temp" habitat_baselines.num_environments=16  habitat_baselines.test_episode_count=2000 --config-name="objectnav/ddppo_objectnav_hm3d.yaml"
       ```
