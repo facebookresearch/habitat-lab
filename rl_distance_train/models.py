@@ -7,7 +7,7 @@ from typing import Union, List, Dict, Optional
 from PIL import Image
 
 from vint_based import load_distance_model
-
+from vip import load_vip
 
 class TemporalDistanceEncoder(nn.Module):
     """
@@ -37,7 +37,10 @@ class TemporalDistanceEncoder(nn.Module):
         self.encoder_base = encoder_base
 
         # 1) load the pretrained Distance+Confidence model
-        dm = load_distance_model(modelid=encoder_base)
+        if encoder_base.startswith("vip"):
+            dm = load_vip(modelid=encoder_base)
+        else:
+            dm = load_distance_model(modelid=encoder_base)
         # unwrap DataParallel if present
         self.base: nn.Module = getattr(dm, "module", dm)
 
@@ -49,7 +52,10 @@ class TemporalDistanceEncoder(nn.Module):
 
         # 3) grab the embedding size
         #    DistanceConfidenceModel inherits embed_dim from DistanceModel
-        self.embed_dim = self.base.embed_dim
+        if self.mode == "dense":
+            self.embed_dim = self.base.embed_dim
+        else:
+            self.embed_dim = 0
 
         transform_list = []
 
@@ -112,7 +118,17 @@ class TemporalDistanceEncoder(nn.Module):
         return_last_hidden_state = self.mode == "dense"
         context = torch.no_grad() if self.freeze else nullcontext()
         with context:
-            if self.encoder_base.startswith("dist_vld"):
+            if self.encoder_base.startswith("vip"):
+                obs_embd = self.base(observations)
+                goal_embd = self.base(goals)
+                dist = torch.norm(obs_embd - goal_embd, dim=1)
+                output = (dist, torch.ones_like(dist))
+                return_last_hidden_state = False
+            elif self.encoder_base.startswith("vint"):
+                dist = self.base(observations, goals, observations.unsqueeze(1).expand(-1, 5, -1, -1, -1))
+                output = (dist, torch.ones_like(dist))
+                return_last_hidden_state = False
+            elif self.encoder_base.startswith("dist_vld"):
                 output = self.base(observations, goal_image=goals, return_last_hidden_state=return_last_hidden_state)
             else:
                 output = self.base(observations, goals, return_last_hidden_state=return_last_hidden_state)

@@ -28,7 +28,7 @@ from habitat.config.default_structured_configs import (
 )
 from episode_data_collection.env import SimpleRLEnv
 import episode_data_collection.utils as utils
-from episode_data_collection.utils import draw_top_down_map, load_embedding, transform_rgb_bgr, se3_world_T_cam_plusZ, K_from_fov, make_mini_plot
+from episode_data_collection.utils import draw_top_down_map, load_embedding, transform_rgb_bgr, se3_world_T_cam_plusZ, K_from_fov, make_mini_plot, get_goal_info
 from episode_data_collection.agent import ImageNavShortestPathFollower, PPOAgent
 
 from rl_distance_train import distance_policy, dataset, distance_policy_gt, geometric_distance_policy
@@ -39,7 +39,6 @@ def env_navigation(args):
     distance_model_rep = agent.get_config().habitat_baselines.rl.ddppo.encoder_backbone
     distance_model, img_transform = load_embedding(distance_model_rep)
     distance_model.eval()
-
 
     if args.env_config is not None:
         config = habitat.get_config(
@@ -78,12 +77,16 @@ def env_navigation(args):
         if goal_radius is None:
             goal_radius = config.habitat.simulator.forward_step_size
         
+        outcome = {'success': 0, 'time_out': 0, 'near_goal': 0, 'wrong_goal': 0}
         for episode in tqdm(range(len(env.episodes))):
             observations, info = env.reset(return_info=True)
             current_scene = env.habitat_env.current_episode.scene_id
             agent.reset()
 
             if random.random() < args.sample:
+                continue
+
+            if episode != 7:
                 continue
 
             goal = env.habitat_env.current_episode.goals[0]
@@ -128,6 +131,9 @@ def env_navigation(args):
             goal_description = ""
             if goal_image is not None and args.describe_goal:
                 goal_description = describer.describe_image(goal_image, goal_category)
+
+            # episode id (used both for per-step images and final video)
+            episode_id = f"%0{len(str(len(env.episodes)))}d" % episode
 
             images, gt_distances, temporal_distances, confs = [], [], [], []
             while not env.habitat_env.episode_over:
@@ -176,6 +182,33 @@ def env_navigation(args):
                 goal = resize(goal_image) if goal_image is not None else np.zeros_like(rgb)
                 plot = resize(plot_img.astype(np.uint8))
 
+                step_dir = os.path.join(args.save_dir, episode_id)
+                os.makedirs(step_dir, exist_ok=True)
+                step_idx = len(images)
+                step_path = os.path.join(step_dir, f"{step_idx}.pdf")
+
+                fig, axes = plt.subplots(1, 4, figsize=(16, 4), dpi=150)
+
+                axes[0].imshow(rgb)
+                axes[0].set_title("Observation", fontsize=16)
+                axes[0].axis('off')
+
+                axes[1].imshow(goal)
+                axes[1].set_title("Goal Image", fontsize=16)
+                axes[1].axis('off')
+
+                axes[2].imshow(top_down_map)
+                axes[2].set_title("Top-Down Map", fontsize=16)
+                axes[2].axis('off')
+
+                axes[3].imshow(plot)
+                axes[3].set_title("VLD over Time", fontsize=16)
+                axes[3].axis('off')
+
+                plt.tight_layout()
+                fig.savefig(step_path, bbox_inches="tight", pad_inches=0.1)
+                plt.close(fig)
+
                 def add_label(img, text):
                     labeled = img.copy()
                     cv2.putText(
@@ -198,11 +231,30 @@ def env_navigation(args):
                 observations, reward, done, info = env.step(action)
 
             is_success = bool(info['success'])
-            suffix = 'success' if is_success else 'failure'
-            fps = 10 if is_success else 50
+            if is_success:
+                suffix = 'success'
+            elif len(temporal_distances) > 995:
+                suffix = 'time_out'
+            elif info['distance_to_goal'] < 4 and temporal_distances[-1] < 5:
+                suffix = 'near_goal'
+            else:
+                suffix = 'wrong_goal'
 
-            episode_id = f"%0{len(str(len(env.episodes)))}d" % episode
+            outcome[suffix] += 1
+
+            if not is_success:
+                suffix += "_failure"
+
+            fps = 10 if is_success else 50
             images_to_video(images, args.save_dir, f"trajectory_{episode_id}_{suffix}", verbose=False, fps=fps)
+
+        total = outcome['success'] + outcome['time_out'] + outcome['near_goal'] + outcome['wrong_goal']
+        print(f"Success: {outcome['success']}/{total} = {outcome['success'] / total * 100:.2f}%")
+        print(f"Time Out Failure: {outcome['time_out']}/{total} = {outcome['time_out'] / total * 100:.2f}%")
+        print(f"Near Goal Failure: {outcome['near_goal']}/{total} = {outcome['near_goal'] / total * 100:.2f}%")
+        print(f"Wrong Goal Failure: {outcome['wrong_goal']}/{total} = {outcome['wrong_goal'] / total * 100:.2f}%")
+
+
 
 def main(args):
     env_navigation(args)

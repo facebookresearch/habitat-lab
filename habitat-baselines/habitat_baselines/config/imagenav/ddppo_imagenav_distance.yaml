@@ -14,12 +14,12 @@ habitat_baselines:
   verbose: False
   trainer_name: "ddppo"
   torch_gpu_id: 0
-  tensorboard_dir: "tb/image_nav_dist_conf_vis_overlap_policy_no_pre"
+  tensorboard_dir: "tb/image_nav_dist_vis_VIP_overlap_policy"
   video_dir: "video_dir"
   test_episode_count: -1
-  eval_ckpt_path_dir: "data/image_nav_dist_vis_conf_overlap_policy_no_pre_checkpoints"
-  num_environments: 6
-  checkpoint_folder: "data/image_nav_dist_vis_conf_overlap_policy_no_pre_checkpoints"
+  eval_ckpt_path_dir: "data/image_nav_dist_vis_VIP_overlap_policy_checkpoints"
+  num_environments: 4
+  checkpoint_folder: "data/image_nav_dist_vis_VIP_overlap_policy_checkpoints"
   num_updates: -1
   total_num_steps: 1e9
   log_interval: 100
@@ -69,7 +69,7 @@ habitat_baselines:
       # The PyTorch distributed backend to use
       distrib_backend: NCCL
       # Visual encoder backbone
-      pretrained_weights: ''
+      pretrained_weights: 'data/overlap_dist_vision_pre_noise_checkpoints/ckpt.47.pth'
       # Initialize with pretrained weights
       pretrained: False
       # Whether the visual encoder backbone will be trained.
@@ -80,11 +80,11 @@ habitat_baselines:
       reset_critic: True
 
       # Model parameters
-      encoder_backbone: dist_decoder_conf_100max
+      encoder_backbone: vip-resnet50-nav
       encoder_mode: sparse
       freeze_encoder: True
       distance_scale: 100
-      use_confidence: True
+      use_confidence: False
       rnn_type: LSTM
       use_vision: True
       num_recurrent_layers: 2

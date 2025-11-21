@@ -10,6 +10,7 @@ import imageio
 import zipfile
 import quaternion
 import matplotlib
+import habitat
 matplotlib.use('Agg')
 
 import torch
@@ -415,6 +416,7 @@ def make_mini_plot(pred, conf, size=256):
 
     # Set tick font sizes
     ax.tick_params(axis='both', labelsize=6)
+    plt.xlabel("Step", fontsize=6)
 
     # Add a legend
     ax.legend(fontsize=6, loc='upper right', frameon=True)
@@ -713,3 +715,95 @@ def add_projection_legend(
         y += line_h
 
     return img
+
+def get_goal_info(env: habitat.RLEnv):    
+    goal = env.habitat_env.current_episode.goals[0]
+    if hasattr(goal, "view_points"):
+        init_agent_state = env.habitat_env.sim.get_agent_state()
+        init_agent_pos = np.array(init_agent_state.position)
+        
+        min_dist = float("inf")
+        view_n = 0
+        # choose the closest view for the goal
+        for i, view in enumerate(goal.view_points):
+            view_pos = np.array(view.agent_state.position)
+            dist = np.linalg.norm(view_pos - init_agent_pos)
+            if dist < min_dist:
+                min_dist = dist
+                view_n = i
+
+        env.habitat_env.current_episode.goals[0].position = env.habitat_env.current_episode.goals[0].view_points[view_n].agent_state.position
+        env.habitat_env.current_episode.goals[0].rotation = env.habitat_env.current_episode.goals[0].view_points[view_n].agent_state.rotation
+        
+        goal = env.habitat_env.current_episode.goals[0].view_points[view_n].agent_state
+        goal_source_rotation = env.habitat_env.current_episode.goals[0].view_points[view_n].agent_state.rotation
+    elif hasattr(goal, "rotation") and goal.rotation is not None:
+        goal_source_rotation = goal.rotation
+    else:
+        seed = abs(hash(env.habitat_env.current_episode.episode_id)) % (2**32)
+        rng = np.random.RandomState(seed)
+        angle = rng.uniform(0, 2 * np.pi)
+        goal_source_rotation = [0, np.sin(angle / 2), 0, np.cos(angle / 2)]
+
+    # Set the simulator state to the goal state.
+    original_agent_state = copy.deepcopy(env.habitat_env.sim.get_agent_state())
+    env.habitat_env.sim.set_agent_state(goal.position, goal_source_rotation)
+    goal_obs = env.habitat_env.sim.get_sensor_observations()
+    goal_state = env.habitat_env.sim.get_agent_state()
+
+    # Restore the original agent state.
+    env.habitat_env.sim.set_agent_state(original_agent_state.position, original_agent_state.rotation)
+
+    return goal_obs, goal_state
+
+def random_yaw_quat():
+    """Return a random yaw-only quaternion [x,y,z,w] about +Y."""
+    theta = np.random.uniform(0.0, 2.0 * np.pi)
+    return [0.0, np.sin(theta / 2.0), 0.0, np.cos(theta / 2.0)]
+
+def sample_safe_pose_by_depth(sim, min_forward_clearance_m=2.0, max_trials=200):
+    """
+    Try random (position, yaw) pairs. For each candidate:
+      - temporarily place agent there
+      - grab depth sensor
+      - accept if max depth >= min_forward_clearance_m
+
+    Returns (np.ndarray position, list rotation_quat) or (None, None)
+    """
+    pf = sim.pathfinder
+
+    best_pose = (None, None)
+    best_max_depth = -1.0
+
+    for _ in range(max_trials):
+        # 1. Random navigable point
+        cand_pos = pf.get_random_navigable_point()
+
+        # Convert to numpy array (Magnum vector → np.array)
+        cand_pos_np = np.array([cand_pos[0], cand_pos[1], cand_pos[2]], dtype=np.float32)
+
+        # 2. Random yaw quaternion
+        cand_rot = random_yaw_quat()
+
+        # 3. Temporarily set agent there
+        sim.set_agent_state(cand_pos_np, cand_rot)
+
+        # 4. Render depth
+        obs = sim.get_sensor_observations()
+        cand_depth = np.squeeze(obs["depth"]).astype(np.float32)
+
+        # 5. Check max visible distance
+        max_depth_val = float(np.max(cand_depth))
+
+        if max_depth_val > best_max_depth:
+            best_max_depth = max_depth_val
+            best_pose = (cand_pos_np, cand_rot)
+
+        if max_depth_val >= min_forward_clearance_m:
+            # Restore original before returning
+            sim.set_agent_state(cand_pos_np, cand_rot)
+            return cand_pos_np, cand_rot
+
+    # Set new pose to best found
+    sim.set_agent_state(best_pose[0], best_pose[1])
+    return best_pose

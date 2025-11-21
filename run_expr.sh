@@ -13,8 +13,8 @@ export TORCH_NUM_THREADS=1
 torchrun \
   --standalone \
   --nnodes=1 \
-  --nproc_per_node=8 \
+  --nproc_per_node=4 \
   --master_addr=127.0.0.1 \
   --master_port=15244 \
   -m habitat_baselines.run \
-    --config-name=imagenav/ddppo_distance_gt.yaml habitat_baselines.evaluate=False
+    --config-name=imagenav/ddppo_imagenav_distance.yaml habitat_baselines.evaluate=False

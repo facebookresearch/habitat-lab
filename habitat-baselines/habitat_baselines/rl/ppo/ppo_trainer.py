@@ -739,6 +739,16 @@ class PPOTrainer(BaseRLTrainer):
                 profiling_wrapper.range_push("rollouts loop")
 
                 profiling_wrapper.range_push("_collect_rollout_step")
+
+                if rank0_only():
+                    self.save_checkpoint(
+                        f"ckpt.-1.pth",
+                        dict(
+                            step=self.num_steps_done,
+                            wall_time=(time.time() - self.t_start) + prev_time,
+                        ),
+                    )
+
                 with g_timer.avg_time("trainer.rollout_collect"):
                     for buffer_index in range(self._agent.nbuffers):
                         self._compute_actions_and_step_envs(buffer_index)

@@ -14,12 +14,12 @@ habitat_baselines:
   verbose: False
   trainer_name: "ddppo"
   torch_gpu_id: 0
-  tensorboard_dir: "tb/gt_nav_dist_vision_pre_noise_conf"
+  tensorboard_dir: "tb/gt_nav_dist_vision"
   video_dir: "video_dir"
   test_episode_count: -1
-  eval_ckpt_path_dir: "data/gt_dist_vision_pre_noise_conf_checkpoints"
-  num_environments: 8
-  checkpoint_folder: "data/gt_dist_vision_pre_noise_conf_checkpoints"
+  eval_ckpt_path_dir: "data/gt_dist_vision_checkpoints"
+  num_environments: 4
+  checkpoint_folder: "data/gt_dist_vision_checkpoints"
   num_updates: -1
   total_num_steps: 1e9
   log_interval: 100
@@ -80,6 +80,6 @@ habitat_baselines:
       # Model parameters
       rnn_type: LSTM
       num_recurrent_layers: 2
-      use_confidence: True
+      use_confidence: False
       use_vision: True
       use_pretrained_encoder: True
