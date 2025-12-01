@@ -3,7 +3,7 @@
 defaults:
   - /habitat: habitat_config_base
   - /habitat/task: objectnav_thinking
-  - /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: rgbd_agent
+  - /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: rgb_agent
   - /habitat/dataset/objectnav: hm3d
   - _self_
 
@@ -19,13 +19,6 @@ habitat:
             width: 640
             height: 480
             hfov: 79
-            position: [0, 0.88, 0]
-          depth_sensor:
-            width: 640
-            height: 480
-            hfov: 79
-            min_depth: 0.5
-            max_depth: 5.0
             position: [0, 0.88, 0]
         height: 0.88
         radius: 0.18

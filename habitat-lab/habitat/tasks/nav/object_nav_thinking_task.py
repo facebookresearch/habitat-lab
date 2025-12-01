@@ -4,7 +4,7 @@
 
 import os
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
-
+import cv2
 import attr
 import numpy as np
 from gym import spaces
@@ -27,8 +27,10 @@ from habitat.tasks.nav.nav import (
     NavigationTask,
 )
 from habitat.tasks.nav.object_nav_task import (
+    ObjectGoal,
     ObjectGoalNavEpisode,
     ObjectNavigationTask,
+    ObjectViewLocation,
 )
 try:
     from habitat.datasets.object_nav.object_nav_dataset import (
@@ -53,59 +55,6 @@ class ObjectGoalNavThinkingEpisode(NavigationEpisode):
     def goals_key(self) -> str:
         r"""The key to retrieve the goals"""
         return f"{os.path.basename(self.scene_id)}_{self.object_category}"
-
-
-@attr.s(auto_attribs=True)
-class ObjectViewLocation:
-    r"""ObjectViewLocation provides information about a position around an object goal
-    usually that is navigable and the object is visible with specific agent
-    configuration that episode's dataset was created.
-     that is target for
-    navigation. That can be specify object_id, position and object
-    category. An important part for metrics calculation are view points that
-     describe success area for the navigation.
-
-    Args:
-        agent_state: navigable AgentState with a position and a rotation where
-        the object is visible.
-        iou: an intersection of a union of the object and a rectangle in the
-        center of view. This metric is used to evaluate how good is the object
-        view form current position. Higher iou means better view, iou equals
-        1.0 if whole object is inside of the rectangle and no pixel inside
-        the rectangle belongs to anything except the object.
-    """
-    agent_state: AgentState
-    iou: Optional[float]
-
-
-@attr.s(auto_attribs=True, kw_only=True)
-class ObjectGoal(NavigationGoal):
-    r"""Object goal provides information about an object that is target for
-    navigation. That can be specify object_id, position and object
-    category. An important part for metrics calculation are view points that
-     describe success area for the navigation.
-
-    Args:
-        object_id: id that can be used to retrieve object from the semantic
-        scene annotation
-        object_name: name of the object
-        object_category: object category name usually similar to scene semantic
-        categories
-        room_id: id of a room where object is located, can be used to retrieve
-        room from the semantic scene annotation
-        room_name: name of the room, where object is located
-        view_points: navigable positions around the object with specified
-        proximity of the object surface used for navigation metrics calculation.
-        The object is visible from these positions.
-    """
-
-    object_id: str = attr.ib(default=None, validator=not_none_validator)
-    object_name: Optional[str] = None
-    object_name_id: Optional[int] = None
-    object_category: Optional[str] = None
-    room_id: Optional[str] = None
-    room_name: Optional[str] = None
-    view_points: Optional[List[ObjectViewLocation]] = None
 
 
 @registry.register_sensor
@@ -190,25 +139,31 @@ class ObjectGoalSensor(Sensor):
 
 @registry.register_sensor(name="ThoughtSensor")
 class ThoughtSensor(Sensor):
-    def __init__(self, **kwargs):
-        self.uuid = "instruction"
-        self.observation_space = spaces.Dict()
+    cls_uuid: str = "instruction"
+
+    def __init__(self, sim, config: "DictConfig", *args: Any, **kwargs: Any):
+        self._sim = sim
+        super().__init__(config=config)
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return self.uuid
+        return self.cls_uuid
 
-    def _get_observation(
+    def _get_sensor_type(self, *args: Any, **kwargs: Any):
+        return SensorTypes.SEMANTIC
+
+    def _get_observation_space(self, *args: Any, **kwargs: Any):
+        return spaces.Box(low=-np.inf, high=np.inf, shape=(512,), dtype=np.float32)
+
+    def get_observation(
         self,
         observations: Dict[str, Observations],
         episode: ObjectGoalNavThinkingEpisode,
-        **kwargs
+        *args: Any,
+        **kwargs: Any
     ):
-        return {
-            "text": "This is the thought."
-        }
-
-    def get_observation(self, **kwargs):
-        return self._get_observation(**kwargs)
+        # Return a float32 array to be compatible with PyTorch
+        # TODO: Use task.thought if available from ThinkAction
+        return np.random.normal(size=(512,)).astype(np.float32)
 
 @registry.register_task(name="ObjectNavThinking-v1")
 class ObjectNavigationThinkingTask(ObjectNavigationTask):
@@ -222,10 +177,19 @@ class ObjectNavigationThinkingTask(ObjectNavigationTask):
         dataset: Optional[Dataset] = None,
     ) -> None:
         super().__init__(config=config, sim=sim, dataset=dataset)
-        self.thought: Optional[str] = None
+        self.thought: Optional[np.ndarray] = None
+        self.last_image: Optional[np.ndarray] = None
+
     def reset(self, episode):
-        super().reset(episode)
+        observations = super().reset(episode)
         self.thought = None
+        return observations
+
+    def step(self, action: Dict[str, Any], episode: Episode):
+        observation = super().step(action, episode)
+        self.last_image = observation["rgb"]
+        return observation
+
 
 @registry.register_task_action
 class ThinkAction(SimulatorTaskAction):
@@ -238,4 +202,6 @@ class ThinkAction(SimulatorTaskAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        task.thought = "This is a placeholder thought used to test the action of thinking. The LLM would be called here with the observation."
+        # TODO: Call VLM here to generate thought from task.last_image
+        # For now, just generate random thought embedding
+        task.thought = np.random.normal(size=(512,))

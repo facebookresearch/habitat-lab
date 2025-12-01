@@ -8,3 +8,6 @@ from .resnet_policy import (  # noqa: F401.
     PointNavResNetNet,
     PointNavResNetPolicy,
 )
+from .resnet_thinking_policy import (  # noqa: F401.
+    PointNavResNetThinkingPolicy,
+)
