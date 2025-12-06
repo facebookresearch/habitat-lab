@@ -168,6 +168,8 @@ class ThoughtSensor(Sensor):
         import sys
         # Return the thought embedding from the task if available
         if task.thought is not None:
+            sys.stderr.write(f"[THOUGHT_SENSOR] Returning thought embedding with shape {task.thought.shape}\n")
+            sys.stderr.flush()
             return task.thought.astype(np.float32)
         else:
             # Complain when thought is not available
