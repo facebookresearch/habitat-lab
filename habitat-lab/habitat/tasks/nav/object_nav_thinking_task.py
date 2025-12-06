@@ -161,12 +161,19 @@ class ThoughtSensor(Sensor):
         self,
         observations: Dict[str, Observations],
         episode: ObjectGoalNavThinkingEpisode,
+        task: ObjectNavigationThinkingTask,
         *args: Any,
         **kwargs: Any
     ):
-        # Return a float32 array to be compatible with PyTorch
-        # TODO: Use task.thought if available from ThinkAction
-        return np.random.normal(size=(512,)).astype(np.float32)
+        import sys
+        # Return the thought embedding from the task if available
+        if task.thought is not None:
+            return task.thought.astype(np.float32)
+        else:
+            # Complain when thought is not available
+            sys.stderr.write(f"[THOUGHT_SENSOR] WARNING: task.thought is None! Returning zeros.\n")
+            sys.stderr.flush()
+            return np.zeros(512, dtype=np.float32)
 
 @registry.register_task(name="ObjectNavThinking-v1")
 class ObjectNavigationThinkingTask(ObjectNavigationTask):
