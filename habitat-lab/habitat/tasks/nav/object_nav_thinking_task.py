@@ -240,9 +240,9 @@ class ThinkAction(SimulatorTaskAction):
         sys.stderr.write(f"[THINK_ACTION_INIT] CLIP model loaded successfully on {self.device}\n")
         sys.stderr.flush()
         self.vlm = Qwen3VLForConditionalGeneration.from_pretrained(
-            "Qwen/Qwen3-VL-8B-Instruct", dtype="auto", device_map="auto"
+            "Qwen/Qwen3-VL-2B-Instruct", dtype="auto", device_map="auto"
         )
-        self.processor = AutoProcessor.from_pretrained("Qwen/Qwen3-VL-8B-Instruct")
+        self.processor = AutoProcessor.from_pretrained("Qwen/Qwen3-VL-2B-Instruct")
 
     def think(self, observation_image, target_object):
         import sys
