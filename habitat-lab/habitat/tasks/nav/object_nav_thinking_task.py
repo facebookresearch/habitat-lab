@@ -161,7 +161,7 @@ class ThoughtSensor(Sensor):
         self,
         observations: Dict[str, Observations],
         episode: ObjectGoalNavThinkingEpisode,
-        task: ObjectNavigationThinkingTask,
+        task: "ObjectNavigationThinkingTask",
         *args: Any,
         **kwargs: Any
     ):
