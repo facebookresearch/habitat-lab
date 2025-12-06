@@ -259,7 +259,7 @@ class ThinkAction(SimulatorTaskAction):
             {
                 "role": "system",
                 "content": [
-                    {"type": "text", "text": "You are a guide for a robot that is navigating a home. Yourr job is to provide subgoals for the robot's navigation. You will be given an image and a target object to find. You have to reply with the next step for the robot, such as find the bedroom door."},
+                    {"type": "text", "text": "You are a guide for a robot that is navigating a home. Yourr job is to provide subgoals for the robot's navigation. You will be given an image and a target object to find. You have to reply with the next step for the robot, such as find the bedroom door. Be brief, do NOT report your thinking or observations. ONLY report succinctly what the robot must do next in a single sentence."},
                 ],
             },
             {
