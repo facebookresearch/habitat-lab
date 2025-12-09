@@ -68,8 +68,8 @@ habitat_baselines:
       sync_frac: 0.6
       # The PyTorch distributed backend to use
       distrib_backend: NCCL
-      # Visual encoder backbone
-      pretrained_weights: 'data/overlap_dist_vision_pre_noise_checkpoints/ckpt.47.pth'
+      # Path to pretrained policy weights (for policy transfer to be used with VLD)
+      pretrained_weights: 'path/to/data/point_nav_overlap_policy_checkpoints/checkpoint_xxx.pth'  # noqa
       # Initialize with pretrained weights
       pretrained: False
       # Whether the visual encoder backbone will be trained.
@@ -80,7 +80,7 @@ habitat_baselines:
       reset_critic: True
 
       # Model parameters
-      encoder_backbone: vip-resnet50-nav
+      encoder_backbone: dist_decoder_conf_100max
       encoder_mode: sparse
       freeze_encoder: True
       distance_scale: 100

@@ -262,12 +262,11 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--save-dir", type=str, required=True)
-    parser.add_argument("--policy_checkpoint", type=str, required=True)
-    parser.add_argument("--env-config", type=str, default=None)
-    parser.add_argument("--split", type=str, default="val")
-    parser.add_argument("--sample", type=float, default=0.0)
-    parser.add_argument("--describe-goal", action="store_true", default=False)
-
+    parser.add_argument("--policy_checkpoint", type=str, required=True, help="Path to trained distance policy checkpoint.")
+    parser.add_argument("--env-config", type=str, default=None, help="Path to environment configuration file.")
+    parser.add_argument("--split", type=str, default="val", help="Dataset split to use (train/val/test).")
+    parser.add_argument("--sample", type=float, default=0.0, help="Fraction of episodes to sample.")
+    parser.add_argument("--describe-goal", action="store_true", default=False, help="Whether to generate descriptions for goal images.")
     args = parser.parse_args()
 
     main(args)

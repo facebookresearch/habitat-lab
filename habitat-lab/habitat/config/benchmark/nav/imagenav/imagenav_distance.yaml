@@ -12,7 +12,6 @@ habitat:
   simulator:
     turn_angle: 30
     forward_step_size: 0.25
-    # scene_dataset: "/cluster/work/rsl/lmilikic/hm3d/hm3d_annotated_basis.scene_dataset_config.json"
     agents:
       main_agent:
         sim_sensors:
@@ -30,5 +29,4 @@ habitat:
     habitat_sim_v0:
       allow_sliding: False
   dataset:
-    scenes_dir: "/cluster/work/rsl/lmilikic/gibson"
-    # scenes_dir: "/cluster/work/rsl/lmilikic/hm3d"
+    scenes_dir: "/path/to/gibson"

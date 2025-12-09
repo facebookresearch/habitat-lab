@@ -28,4 +28,4 @@ habitat:
     habitat_sim_v0:
       allow_sliding: False
   dataset:
-    scenes_dir: "/cluster/work/rsl/lmilikic/gibson"
+    scenes_dir: "/path/to/gibson"
