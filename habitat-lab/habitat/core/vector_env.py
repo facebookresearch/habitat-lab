@@ -243,6 +243,9 @@ class VectorEnv:
         parent_pipe: Optional[Connection] = None,
     ) -> None:
         r"""process worker for creating and interacting with the environment."""
+        import traceback
+        import sys
+
         if mask_signals:
             signal.signal(signal.SIGINT, signal.SIG_IGN)
             signal.signal(signal.SIGTERM, signal.SIG_IGN)
@@ -250,7 +253,15 @@ class VectorEnv:
             signal.signal(signal.SIGUSR1, signal.SIG_IGN)
             signal.signal(signal.SIGUSR2, signal.SIG_IGN)
 
-        env = EnvCountEpisodeWrapper(EnvObsDictWrapper(env_fn(*env_fn_args)))
+        try:
+            env = EnvCountEpisodeWrapper(EnvObsDictWrapper(env_fn(*env_fn_args)))
+        except Exception as e:
+            logger.error(f"Worker process failed to create environment: {e}")
+            logger.error(traceback.format_exc())
+            sys.stderr.write(f"WORKER ERROR during env creation:\n{traceback.format_exc()}\n")
+            sys.stderr.flush()
+            raise
+
         if parent_pipe is not None:
             parent_pipe.close()
         try:
@@ -295,6 +306,12 @@ class VectorEnv:
 
         except KeyboardInterrupt:
             logger.info("Worker KeyboardInterrupt")
+        except Exception as e:
+            logger.error(f"Worker process crashed with exception: {e}")
+            logger.error(traceback.format_exc())
+            sys.stderr.write(f"WORKER ERROR in main loop:\n{traceback.format_exc()}\n")
+            sys.stderr.flush()
+            raise
         finally:
             if child_pipe is not None:
                 child_pipe.close()

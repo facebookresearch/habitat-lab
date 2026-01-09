@@ -208,6 +208,12 @@ class HabitatEvaluator(Evaluator):
             next_episodes_info = envs.current_episodes()
             envs_to_pause = []
             n_envs = envs.num_envs
+            category = [
+                "chair", "bed", "plant", "toilet", "tv_monitor", "sofa",
+                "table", "cabinet", "refrigerator", "book", "clock", "vase",
+                "cup", "bottle", "sink", "microwave", "oven", "toaster",
+                "storage_bin", "couch", "desk"
+            ]
             for i in range(n_envs):
                 if (
                     ep_eval_count[
@@ -224,6 +230,14 @@ class HabitatEvaluator(Evaluator):
                 disp_info = {
                     k: v for k, v in infos[i].items() if k not in rank0_keys
                 }
+
+                if 'objectgoal' in batch:
+                    goal_id = batch['objectgoal'][i].item()
+                    goal_text = category[goal_id] if goal_id < len(category) else f"object_{goal_id}"
+                else:
+                    goal_text = "Unknown"
+
+                disp_info['goal'] = goal_text
 
                 if len(config.habitat_baselines.eval.video_option) > 0:
                     # TODO move normalization / channel changing out of the policy and undo it here

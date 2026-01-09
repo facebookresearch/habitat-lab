@@ -29,6 +29,7 @@ __all__ = [
     "TurnRightActionConfig",
     "LookUpActionConfig",
     "LookDownActionConfig",
+    "ThinkActionConfig",
     # NAVIGATION MEASURES
     "NumStepsMeasurementConfig",
     "DistanceToGoalMeasurementConfig",
@@ -46,6 +47,7 @@ __all__ = [
     "HumanoidDetectorSensorConfig",
     "ArmDepthBBoxSensorConfig",
     "SpotHeadStereoDepthSensorConfig",
+    "ThoughtSensorConfig",
     # REARRANGEMENT ACTIONS
     "EmptyActionConfig",
     "ArmActionConfig",
@@ -150,6 +152,14 @@ class EmptyActionConfig(ActionConfig):
     In Navigation tasks only, the pass action. The robot will do nothing.
     """
     type: str = "EmptyAction"
+
+
+@dataclass
+class ThinkActionConfig(ActionConfig):
+    r"""
+    In Navigation tasks only, the think action. The agent generates a thought/reasoning step.
+    """
+    type: str = "ThinkAction"
 
 
 # -----------------------------------------------------------------------------
@@ -446,6 +456,11 @@ class ObjectGoalSensorConfig(LabSensorConfig):
     type: str = "ObjectGoalSensor"
     goal_spec: str = "TASK_CATEGORY_ID"
     goal_spec_max_val: int = 50
+
+
+@dataclass
+class ThoughtSensorConfig(LabSensorConfig):
+    type: str = "ThoughtSensor"
 
 
 @dataclass
@@ -1930,6 +1945,12 @@ cs.store(
     node=LookDownActionConfig,
 )
 cs.store(
+    package="habitat.task.actions.think",
+    group="habitat/task/actions",
+    name="think",
+    node=ThinkActionConfig,
+)
+cs.store(
     package="habitat.task.actions.arm_action",
     group="habitat/task/actions",
     name="arm_action",
@@ -2170,6 +2191,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="objectgoal_sensor",
     node=ObjectGoalSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.thought_sensor",
+    group="habitat/task/lab_sensors",
+    name="thought_sensor",
+    node=ThoughtSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.imagegoal_sensor",

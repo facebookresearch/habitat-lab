@@ -6,6 +6,7 @@ defaults:
     - move_forward
     - turn_left
     - turn_right
+    - think
     # - look_up
     # - look_down
   - measurements:
@@ -16,6 +17,7 @@ defaults:
     - distance_to_goal_reward
   - lab_sensors:
     - objectgoal_sensor
+    - thought_sensor
     - compass_sensor
     - gps_sensor
   - _self_
@@ -26,7 +28,7 @@ defaults:
 #   look_down:
 #     tilt_angle: 30
 
-type: ObjectNav-v1
+type: ObjectNavThinking-v1
 end_on_success: True
 reward_measure: "distance_to_goal_reward"
 success_measure: "success"

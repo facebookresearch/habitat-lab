@@ -20,3 +20,22 @@ exclude = '''
   )/
 )
 '''
+
+[tool.ty.environment]
+extra-paths = [
+    "habitat-lab",
+    "habitat-baselines"
+]
+root = [
+    "habitat-lab",
+    "habitat-baselines"
+]
+
+[tool.ty.rules]
+unresolved-attribute = "ignore"
+
+[tool.pyrefly]
+search-path = [
+    "habitat-lab",
+    "habitat-baselines"
+]
