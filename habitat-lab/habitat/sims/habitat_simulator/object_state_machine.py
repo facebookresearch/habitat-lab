@@ -159,6 +159,61 @@ class ObjectStateSpec:
         :param camera_transform: The Matrix4 camera transform.
         """
 
+    def get_state_of_obj(
+        self, obj: Union[ManagedArticulatedObject, ManagedRigidObject]
+    ) -> Any:
+        """
+        Retrieves the state of a given object for this state.
+
+        :param obj: The object to retrieve the state for.
+        :return: The state of the object for this state, or None if the object does not afford this state.
+        :rtype: Any
+        """
+        if not self.is_affordance_of_obj(obj):
+            return None
+
+        if "object_states" in obj.user_attributes.get_subconfig_keys():
+            obj_states_config = obj.user_attributes.get_subconfig(
+                "object_states"
+            )
+            if obj_states_config.has_value(self.name):
+                return self.deserialize_value(obj_states_config.get(self.name))
+        return self.default_value()
+
+    def set_state_of_obj(
+        self,
+        obj: Union[ManagedArticulatedObject, ManagedRigidObject],
+        value: Any,
+    ) -> None:
+        """
+        Sets the state of a given object for this state spec.
+
+        :param obj: The object to set the state for.
+        :param value: The value of the state to set.
+        """
+        user_attr = obj.user_attributes
+        obj_state_config = user_attr.get_subconfig("object_states")
+        obj_state_config.set(self.name, self.serialize_value(value))
+        user_attr.save_subconfig("object_states", obj_state_config)
+
+    def serialize_value(self, value: Any) -> Any:
+        """
+        Serializes the value of the state to be stored in the object states configuration.
+        Should be overridden by subclasses for complex/non-primitive state types.
+        :param value: The value of the state to set.
+        """
+        return value
+
+    def deserialize_value(self, config_value: Any) -> Any:
+        """
+        Deserializes the value of the state loaded from the user_attributes config
+        Should be overridden by subclasses for complex/non-primitive state types.
+
+        :param config_value: The value loaded from the user_attributes config.
+        :return: The deserialize value of the state.
+        """
+        return config_value
+
 
 class BooleanObjectState(ObjectStateSpec):
     """
@@ -218,6 +273,9 @@ class BooleanObjectState(ObjectStateSpec):
         new_state = not cur_state
         set_state_of_obj(obj, self.name, new_state)
         return new_state
+
+    def deserialize_value(self, config_value: Any) -> bool:
+        return bool(config_value)
 
 
 class ObjectIsClean(BooleanObjectState):
@@ -317,6 +375,55 @@ class ObjectStateMachine:
                 for state in states:
                     state.update_state(sim, obj, dt)
 
+    def _get_state_spec_from_name(self, state_name: str) -> ObjectStateSpec:
+        """
+        Retrieves the state specification for a given state name.
+
+        :param state_name: The name of the state.
+        :return: The state specification for the given state name.
+        """
+        for state in self.active_states:
+            if state.name == state_name:
+                return state
+        raise ValueError(f"State {state_name} not found in active states.")
+
+    def get_state_of_obj(
+        self,
+        obj: Union[ManagedArticulatedObject, ManagedRigidObject],
+        state_name: str,
+    ) -> Any:
+        """
+        Retrieves the state of a given object for a specific state name.
+
+        :param obj: The object to retrieve the state for.
+        :param state_name: The name of the state.
+        :return: The state of the object for the given state name, or None if the object does not afford this state.
+        :rtype: Any
+        """
+        object_state_spec = self._get_state_spec_from_name(state_name)
+        if object_state_spec in self.objects_with_states[obj.handle]:
+            return object_state_spec.get_state_of_obj(obj)
+        else:
+            # Return none if the object does not afford this state
+            return None
+
+    def set_state_of_obj(
+        self,
+        obj: Union[ManagedArticulatedObject, ManagedRigidObject],
+        state_name: str,
+        value: Any,
+    ) -> None:
+        """
+        Sets the state of a given object for a specific state name. Does nothing if the object does not afford the state.
+
+        :param obj: The object to set the state for.
+        :param state_name: The name of the state.
+        :param value: The value of the state to set.
+        """
+        object_state_spec = self._get_state_spec_from_name(state_name)
+        if object_state_spec in self.objects_with_states[obj.handle]:
+            object_state_spec.set_state_of_obj(obj, value)
+
     def get_snapshot_dict(
         self, sim: habitat_sim.Simulator
     ) -> Dict[str, Dict[str, Any]]:
@@ -344,7 +451,7 @@ class ObjectStateMachine:
         for object_handle, states in self.objects_with_states.items():
             obj = sutils.get_obj_from_handle(sim, object_handle)
             for state in states:
-                obj_state = get_state_of_obj(obj, state.name)
+                obj_state = self.get_state_of_obj(obj, state.name)
                 snapshot[state.name][object_handle] = (
                     obj_state
                     if obj_state is not None
