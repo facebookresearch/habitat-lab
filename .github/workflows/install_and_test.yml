@@ -72,7 +72,7 @@ jobs:
     - name: Build, install habitat-sim
       run: |-
         #give cmake ownership to the runner for installation
-        sudo chown runner -R /opt/cmake312/
+        sudo chown runner -R /opt/cmake328/
         #activate conda env
         export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
         conda activate habitat
@@ -104,7 +104,7 @@ jobs:
     - name: Run sim benchmark
       run: |-
         #give cmake ownership to the runner for installation
-        sudo chown runner -R /opt/cmake312/
+        sudo chown runner -R /opt/cmake328/
         #activate conda env
         export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
         conda activate habitat
@@ -182,14 +182,24 @@ jobs:
       uses: conda-incubator/setup-miniconda@v3.0.1
       with:
         miniconda-version: "latest"
-        python-version: "3.9"
+        python-version: "3.12"
         activate-environment: "non-editable-install"
     - name: Ensure non-editable mode works
       run: |-
         export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
         cd habitat-lab
         conda activate non-editable-install
-        conda install -y -c conda-forge -c aihabitat-nightly habitat-sim
+        # Install habitat-sim from source (main branch) since conda builds are not yet available for Python 3.12
+        conda install -y pytorch torchvision pytorch-cuda=12.4 -c pytorch -c nvidia
+        conda install -y -c conda-forge ninja numpy=1.26.4 cmake
+        if [ ! -d ../habitat-sim-non-editable ]; then
+          git clone https://github.com/facebookresearch/habitat-sim.git ../habitat-sim-non-editable --recursive
+        fi
+        cd ../habitat-sim-non-editable
+        pip install -r requirements.txt --progress-bar off
+        git submodule update --init --recursive --jobs 8
+        pip install . --no-build-isolation
+        cd ../habitat-lab
         pip install habitat-lab/
         python -c 'import habitat; print("habitat version:", habitat.__version__)'
         pip install habitat-baselines/
@@ -200,7 +210,7 @@ jobs:
       uses: conda-incubator/setup-miniconda@v3.0.1
       with:
         miniconda-version: "latest"
-        python-version: "3.9"
+        python-version: "3.12"
         activate-environment: "build-env"
     - name: Build lab and baselines packages
       run: |-
@@ -214,14 +224,24 @@ jobs:
       uses: conda-incubator/setup-miniconda@v3.0.1
       with:
         miniconda-version: "latest"
-        python-version: "3.9"
+        python-version: "3.12"
         activate-environment: "bdist-install"
     - name: Ensure bdist install works and build sdist
       run: |-
         export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
         cd habitat-lab
         conda activate bdist-install
-        conda install -y -c conda-forge -c aihabitat-nightly habitat-sim
+        # Install habitat-sim from source (main branch) since conda builds are not yet available for Python 3.12
+        conda install -y pytorch torchvision pytorch-cuda=12.4 -c pytorch -c nvidia
+        conda install -y -c conda-forge ninja numpy=1.26.4 cmake
+        if [ ! -d ../habitat-sim-bdist ]; then
+          git clone https://github.com/facebookresearch/habitat-sim.git ../habitat-sim-bdist --recursive
+        fi
+        cd ../habitat-sim-bdist
+        pip install -r requirements.txt --progress-bar off
+        git submodule update --init --recursive --jobs 8
+        pip install . --no-build-isolation
+        cd ../habitat-lab
         #create the sdist for testing in the next job
         conda create -n sdist-install --clone bdist-install
         pip install habitat-lab/dist/habitat_lab*.whl
