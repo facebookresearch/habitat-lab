@@ -104,7 +104,9 @@ class Users:
 
     def deactivate_user(self, user_index: int) -> None:
         """Deactivate an user."""
-        self._active_user_mask &= ~Mask.from_index(user_index)
+        # Use XOR instead of AND with NOT to avoid Python 3.12+ IntFlag issues
+        # with negative numbers from the ~ operator
+        self._active_user_mask &= Mask(Mask._full_mask() ^ (1 << user_index))
 
     def to_index_list(self, user_mask: Mask) -> List[int]:
         """Returns a list of user indices from the specified Mask."""
