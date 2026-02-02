@@ -72,7 +72,7 @@ jobs:
     - name: Build, install habitat-sim
       run: |-
         #give cmake ownership to the runner for installation
-        sudo chown runner -R /opt/cmake312/
+        sudo chown runner -R /opt/cmake328/
         #activate conda env
         export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
         conda activate habitat
@@ -104,7 +104,7 @@ jobs:
     - name: Run sim benchmark
       run: |-
         #give cmake ownership to the runner for installation
-        sudo chown runner -R /opt/cmake312/
+        sudo chown runner -R /opt/cmake328/
         #activate conda env
         export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
         conda activate habitat
@@ -182,7 +182,7 @@ jobs:
       uses: conda-incubator/setup-miniconda@v3.0.1
       with:
         miniconda-version: "latest"
-        python-version: "3.9"
+        python-version: "3.12"
         activate-environment: "non-editable-install"
     - name: Ensure non-editable mode works
       run: |-
@@ -200,7 +200,7 @@ jobs:
       uses: conda-incubator/setup-miniconda@v3.0.1
       with:
         miniconda-version: "latest"
-        python-version: "3.9"
+        python-version: "3.12"
         activate-environment: "build-env"
     - name: Build lab and baselines packages
       run: |-
@@ -214,7 +214,7 @@ jobs:
       uses: conda-incubator/setup-miniconda@v3.0.1
       with:
         miniconda-version: "latest"
-        python-version: "3.9"
+        python-version: "3.12"
         activate-environment: "bdist-install"
     - name: Ensure bdist install works and build sdist
       run: |-

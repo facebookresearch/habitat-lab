@@ -25,6 +25,11 @@ class Mask(IntFlag):
     MAX_VALUE: Final[int] = 32
 
     @staticmethod
+    def _full_mask() -> int:
+        """Return a mask with all MAX_VALUE bits set (as a positive integer)."""
+        return (1 << Mask.MAX_VALUE) - 1
+
+    @staticmethod
     def from_index(index: int) -> Mask:
         """Create a Mask from an index."""
         return Mask(1 << index)
@@ -40,12 +45,19 @@ class Mask(IntFlag):
     @staticmethod
     def all_except_index(index: int) -> Mask:
         """Create a Mask for all indices except one."""
-        return Mask(~Mask.from_index(index))
+        # Use XOR with a bounded full mask to avoid Python 3.12+ IntFlag issues
+        # with negative numbers from the ~ operator
+        return Mask(Mask._full_mask() ^ (1 << index))
 
     @staticmethod
     def all_except_indices(indices: List[int]) -> Mask:
         """Create a Mask for all indices except a list of indices."""
-        return Mask(~Mask.from_indices(indices))
+        # Use XOR with a bounded full mask to avoid Python 3.12+ IntFlag issues
+        # with negative numbers from the ~ operator
+        exclude_mask = 0
+        for index in indices:
+            exclude_mask |= 1 << index
+        return Mask(Mask._full_mask() ^ exclude_mask)
 
 
 class Users:
@@ -94,7 +106,9 @@ class Users:
 
     def deactivate_user(self, user_index: int) -> None:
         """Deactivate an user."""
-        self._active_user_mask &= ~Mask.from_index(user_index)
+        # Use XOR instead of AND with NOT to avoid Python 3.12+ IntFlag issues
+        # with negative numbers from the ~ operator
+        self._active_user_mask &= Mask(Mask._full_mask() ^ (1 << user_index))
 
     def to_index_list(self, user_mask: Mask) -> List[int]:
         """Returns a list of user indices from the specified Mask."""
