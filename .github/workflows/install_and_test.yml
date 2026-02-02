@@ -189,17 +189,7 @@ jobs:
         export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
         cd habitat-lab
         conda activate non-editable-install
-        # Install habitat-sim from source (main branch) since conda builds are not yet available for Python 3.12
-        conda install -y pytorch torchvision pytorch-cuda=12.4 -c pytorch -c nvidia
-        conda install -y -c conda-forge ninja numpy=1.26.4 cmake
-        if [ ! -d ../habitat-sim-non-editable ]; then
-          git clone https://github.com/facebookresearch/habitat-sim.git ../habitat-sim-non-editable --recursive
-        fi
-        cd ../habitat-sim-non-editable
-        pip install -r requirements.txt --progress-bar off
-        git submodule update --init --recursive --jobs 8
-        pip install . --no-build-isolation
-        cd ../habitat-lab
+        conda install -y -c conda-forge -c aihabitat-nightly habitat-sim
         pip install habitat-lab/
         python -c 'import habitat; print("habitat version:", habitat.__version__)'
         pip install habitat-baselines/
@@ -231,17 +221,7 @@ jobs:
         export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
         cd habitat-lab
         conda activate bdist-install
-        # Install habitat-sim from source (main branch) since conda builds are not yet available for Python 3.12
-        conda install -y pytorch torchvision pytorch-cuda=12.4 -c pytorch -c nvidia
-        conda install -y -c conda-forge ninja numpy=1.26.4 cmake
-        if [ ! -d ../habitat-sim-bdist ]; then
-          git clone https://github.com/facebookresearch/habitat-sim.git ../habitat-sim-bdist --recursive
-        fi
-        cd ../habitat-sim-bdist
-        pip install -r requirements.txt --progress-bar off
-        git submodule update --init --recursive --jobs 8
-        pip install . --no-build-isolation
-        cd ../habitat-lab
+        conda install -y -c conda-forge -c aihabitat-nightly habitat-sim
         #create the sdist for testing in the next job
         conda create -n sdist-install --clone bdist-install
         pip install habitat-lab/dist/habitat_lab*.whl
