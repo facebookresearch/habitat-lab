@@ -338,7 +338,7 @@ class PPOTrainer(BaseRLTrainer):
         Returns:
             dict containing checkpoint info
         """
-        return torch.load(checkpoint_path, *args, **kwargs)
+        return torch.load(checkpoint_path, *args, weights_only=False, **kwargs)
 
     def _compute_actions_and_step_envs(self, buffer_index: int = 0):
         num_envs = self.envs.num_envs
@@ -426,6 +426,10 @@ class PPOTrainer(BaseRLTrainer):
                 device=self.current_episode_reward.device,
             )
             rewards = rewards.unsqueeze(1)
+
+            for i, info in enumerate(infos):
+                if info.get('success', 0.0) > 0.5:
+                    rewards[i] += 2.5
 
             not_done_masks = torch.tensor(
                 [[not done] for done in dones],

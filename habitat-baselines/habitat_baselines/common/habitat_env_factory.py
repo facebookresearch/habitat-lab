@@ -4,6 +4,7 @@
 
 import os
 import random
+import sys
 from typing import TYPE_CHECKING, Any, List, Type
 
 from habitat import ThreadedVectorEnv, VectorEnv, logger, make_dataset
@@ -108,10 +109,14 @@ class HabitatVectorEnvFactory(VectorEnvFactory):
         else:
             vector_env_cls = VectorEnv
 
+        # Use 'spawn' method on macOS to avoid OpenGL/fork issues
+        multiprocessing_start_method = "spawn" if sys.platform == "darwin" else "forkserver"
+
         envs = vector_env_cls(
             make_env_fn=make_gym_from_config,
             env_fn_args=tuple((c,) for c in configs),
             workers_ignore_signals=workers_ignore_signals,
+            multiprocessing_start_method=multiprocessing_start_method,
         )
 
         if config.habitat.simulator.renderer.enable_batch_renderer:
