@@ -5,25 +5,23 @@
 # LICENSE file in the root directory of this source tree.
 
 from typing import (
-    TYPE_CHECKING,
     Any,
     Callable,
+    cast,
     Dict,
     List,
     Optional,
     Sequence,
     Set,
+    TYPE_CHECKING,
     Union,
-    cast,
 )
 
+import habitat_sim
 import magnum as mn
 import numpy as np
 from gym import spaces
 from gym.spaces.box import Box
-from omegaconf import DictConfig
-
-import habitat_sim
 from habitat.config.default import get_agent_config
 from habitat.core.batch_rendering.env_batch_renderer_constants import (
     KEYFRAME_OBSERVATION_KEY,
@@ -44,11 +42,11 @@ from habitat.core.simulator import (
     VisualObservation,
 )
 from habitat.core.spaces import Space
+from omegaconf import DictConfig
 
 if TYPE_CHECKING:
-    from torch import Tensor
-
     from habitat.config.default_structured_configs import SimulatorConfig
+    from torch import Tensor
 
 
 def overwrite_config(
@@ -71,9 +69,7 @@ def overwrite_config(
     def if_config_to_lower(config):
         if isinstance(config, DictConfig):
             return {
-                key.lower(): val
-                for key, val in config.items()
-                if isinstance(key, str)
+                key.lower(): val for key, val in config.items() if isinstance(key, str)
             }
         else:
             return config
@@ -181,9 +177,7 @@ class HabitatSimDepthSensor(DepthSensor, HabitatSimSensor):
         if isinstance(obs, np.ndarray):
             obs = np.clip(obs, self.min_depth_value, self.max_depth_value)
 
-            obs = np.expand_dims(
-                obs, axis=2
-            )  # make depth observation a 3D array
+            obs = np.expand_dims(obs, axis=2)  # make depth observation a 3D array
         else:
             obs = obs.clamp(self.min_depth_value, self.max_depth_value)  # type: ignore[attr-defined, unreachable]
 
@@ -258,9 +252,7 @@ class HabitatSimFisheyeSemanticSensor(HabitatSimSemanticSensor):
     _get_default_spec = habitat_sim.FisheyeSensorDoubleSphereSpec
 
 
-def check_sim_obs(
-    obs: Union[np.ndarray, "Tensor", None], sensor: Sensor
-) -> None:
+def check_sim_obs(obs: Union[np.ndarray, "Tensor", None], sensor: Sensor) -> None:
     assert obs is not None, (
         "Observation corresponding to {} not present in "
         "simulator's observations".format(sensor.uuid)
@@ -285,9 +277,9 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             for sensor_cfg in agent_config.sim_sensors.values():
                 sensor_type = registry.get_sensor(sensor_cfg.type)
 
-                assert (
-                    sensor_type is not None
-                ), "invalid sensor type {}".format(sensor_cfg.type)
+                assert sensor_type is not None, "invalid sensor type {}".format(
+                    sensor_cfg.type
+                )
                 sim_sensors.append(sensor_type(sensor_cfg))
 
         self._sensor_suite = SensorSuite(sim_sensors)
@@ -323,9 +315,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             # Ignore key as it gets propagated to sensor below
             ignore_keys={"gpu_gpu"},
         )
-        sim_config.scene_dataset_config_file = (
-            self.habitat_config.scene_dataset
-        )
+        sim_config.scene_dataset_config_file = self.habitat_config.scene_dataset
         sim_config.scene_id = self.habitat_config.scene
         lab_agent_config = get_agent_config(self.habitat_config)
         agent_config = habitat_sim.AgentConfiguration()
@@ -360,12 +350,8 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             sim_config.navmesh_settings.set_defaults()
             sim_config.navmesh_settings.agent_radius = agent_config.radius
             sim_config.navmesh_settings.agent_height = agent_config.height
-            sim_config.navmesh_settings.agent_max_climb = (
-                lab_agent_config.max_climb
-            )
-            sim_config.navmesh_settings.agent_max_slope = (
-                lab_agent_config.max_slope
-            )
+            sim_config.navmesh_settings.agent_max_climb = lab_agent_config.max_climb
+            sim_config.navmesh_settings.agent_max_slope = lab_agent_config.max_slope
             sim_config.navmesh_settings.include_static_objects = (
                 self.habitat_config.navmesh_include_static_objects
             )
@@ -385,23 +371,17 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
                     "sensor_model_type": lambda v: getattr(
                         habitat_sim.FisheyeSensorModelType, v
                     ),
-                    "sensor_subtype": lambda v: getattr(
-                        habitat_sim.SensorSubType, v
-                    ),
+                    "sensor_subtype": lambda v: getattr(habitat_sim.SensorSubType, v),
                 },
             )
             sim_sensor_cfg.uuid = sensor.uuid
-            sim_sensor_cfg.resolution = list(
-                sensor.observation_space.shape[:2]
-            )
+            sim_sensor_cfg.resolution = list(sensor.observation_space.shape[:2])
 
             # TODO(maksymets): Add configure method to Sensor API to avoid
             # accessing child attributes through parent interface
             # We know that the Sensor has to be one of these Sensors
             sim_sensor_cfg.sensor_type = sensor.sim_sensor_type
-            sim_sensor_cfg.gpu2gpu_transfer = (
-                self.habitat_config.habitat_sim_v0.gpu_gpu
-            )
+            sim_sensor_cfg.gpu2gpu_transfer = self.habitat_config.habitat_sim_v0.gpu_gpu
             sensor_specifications.append(sim_sensor_cfg)
 
         agent_config.sensor_specifications = sensor_specifications
@@ -410,21 +390,15 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             0: habitat_sim.ActionSpec("stop"),
             1: habitat_sim.ActionSpec(
                 "move_forward",
-                habitat_sim.ActuationSpec(
-                    amount=self.habitat_config.forward_step_size
-                ),
+                habitat_sim.ActuationSpec(amount=self.habitat_config.forward_step_size),
             ),
             2: habitat_sim.ActionSpec(
                 "turn_left",
-                habitat_sim.ActuationSpec(
-                    amount=self.habitat_config.turn_angle
-                ),
+                habitat_sim.ActuationSpec(amount=self.habitat_config.turn_angle),
             ),
             3: habitat_sim.ActionSpec(
                 "turn_right",
-                habitat_sim.ActuationSpec(
-                    amount=self.habitat_config.turn_angle
-                ),
+                habitat_sim.ActuationSpec(amount=self.habitat_config.turn_angle),
             ),
         }
 
@@ -444,9 +418,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
 
     def _update_agents_state(self) -> bool:
         is_updated = False
-        for agent_id, agent_name in enumerate(
-            self.habitat_config.agents_order
-        ):
+        for agent_id, agent_name in enumerate(self.habitat_config.agents_order):
             agent_cfg = self.habitat_config.agents[agent_name]
             if agent_cfg.is_set_start_state:
                 self.set_agent_state(
@@ -470,9 +442,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         else:
             return self._sensor_suite.get_observations(sim_obs)
 
-    def step(
-        self, action: Optional[Union[str, np.ndarray, int]]
-    ) -> Observations:
+    def step(self, action: Optional[Union[str, np.ndarray, int]]) -> Observations:
         if action is None:
             sim_obs = self.get_sensor_observations()
         else:
@@ -528,9 +498,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
     def geodesic_distance(
         self,
         position_a: Union[Sequence[float], np.ndarray],
-        position_b: Union[
-            Sequence[float], Sequence[Sequence[float]], np.ndarray
-        ],
+        position_b: Union[Sequence[float], Sequence[Sequence[float]], np.ndarray],
         episode: Optional[Episode] = None,
     ) -> float:
         if episode is None or episode._shortest_path_cache is None:
@@ -538,9 +506,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             if isinstance(position_b[0], (Sequence, np.ndarray)):
                 path.requested_ends = np.array(position_b, dtype=np.float32)
             else:
-                path.requested_ends = np.array(
-                    [np.array(position_b, dtype=np.float32)]
-                )
+                path.requested_ends = np.array([np.array(position_b, dtype=np.float32)])
         else:
             path = episode._shortest_path_cache
 
@@ -678,9 +644,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         if position is None or rotation is None:
             success = True
         else:
-            success = self.set_agent_state(
-                position, rotation, reset_sensors=False
-            )
+            success = self.set_agent_state(position, rotation, reset_sensors=False)
 
         if success:
             sim_obs = self.get_sensor_observations()
@@ -701,9 +665,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
     def distance_to_closest_obstacle(
         self, position: np.ndarray, max_search_radius: float = 2.0
     ) -> float:
-        return self.pathfinder.distance_to_closest_obstacle(
-            position, max_search_radius
-        )
+        return self.pathfinder.distance_to_closest_obstacle(position, max_search_radius)
 
     def island_radius(self, position: Sequence[float]) -> float:
         return self.pathfinder.island_radius(position)
@@ -741,6 +703,6 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
                 transform.translation,
                 rotation,
             )
-        observations[
-            KEYFRAME_OBSERVATION_KEY
-        ] = self.gfx_replay_manager.extract_keyframe()
+        observations[KEYFRAME_OBSERVATION_KEY] = (
+            self.gfx_replay_manager.extract_keyframe()
+        )

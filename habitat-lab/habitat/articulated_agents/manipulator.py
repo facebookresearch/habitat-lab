@@ -7,7 +7,6 @@ from typing import Dict, List, Optional, Tuple
 
 import magnum as mn
 import numpy as np
-
 from habitat.articulated_agents.articulated_agent_interface import (
     ArticulatedAgentInterface,
 )
@@ -90,12 +89,10 @@ class Manipulator(ArticulatedAgentInterface):
             # automatic joint limit clamping after each call to sim.step_physics()
             self.sim_obj.auto_clamp_joint_limits = True
         for link_id in self.sim_obj.get_link_ids():
-            self.joint_pos_indices[
-                link_id
-            ] = self.sim_obj.get_link_joint_pos_offset(link_id)
-            self.joint_dof_indices[link_id] = self.sim_obj.get_link_dof_offset(
+            self.joint_pos_indices[link_id] = self.sim_obj.get_link_joint_pos_offset(
                 link_id
             )
+            self.joint_dof_indices[link_id] = self.sim_obj.get_link_dof_offset(link_id)
         self.joint_limits = self.sim_obj.joint_position_limits
 
         # remove any default damping motors
@@ -174,14 +171,12 @@ class Manipulator(ArticulatedAgentInterface):
                             mn.Vector3(0, 1, 0),
                         )
                     cam_transform = (
-                        link_trans
-                        @ cam_transform
-                        @ cam_info.relative_transform
+                        link_trans @ cam_transform @ cam_info.relative_transform
                     )
                     cam_transform = inv_T @ cam_transform
 
-                    sens_obj.node.transformation = (
-                        orthonormalize_rotation_shear(cam_transform)
+                    sens_obj.node.transformation = orthonormalize_rotation_shear(
+                        cam_transform
                     )
 
         if self._fix_joint_values is not None:
@@ -252,9 +247,7 @@ class Manipulator(ArticulatedAgentInterface):
         """Gets the joint states necessary to achieve the desired end-effector
         configuration.
         """
-        raise NotImplementedError(
-            "Currently no implementation for generic IK."
-        )
+        raise NotImplementedError("Currently no implementation for generic IK.")
 
     def ee_transform(self, ee_index: int = 0) -> mn.Matrix4:
         """Gets the transformation of the end-effector location. This is offset
@@ -276,9 +269,7 @@ class Manipulator(ArticulatedAgentInterface):
         )
         return ef_link_transform
 
-    def clip_ee_to_workspace(
-        self, pos: np.ndarray, ee_index: int = 0
-    ) -> np.ndarray:
+    def clip_ee_to_workspace(self, pos: np.ndarray, ee_index: int = 0) -> np.ndarray:
         """Clips a 3D end-effector position within region the robot can reach."""
         return np.clip(
             pos,
@@ -320,9 +311,7 @@ class Manipulator(ArticulatedAgentInterface):
                     self.params.gripper_closed_state[i]
                     - self.params.gripper_open_state[i]
                 )
-                target = (
-                    self.params.gripper_open_state[i] + delta * gripper_state
-                )
+                target = self.params.gripper_open_state[i] + delta * gripper_state
                 self._set_motor_pos(jidx, target)
 
     def close_gripper(self) -> None:
@@ -339,8 +328,7 @@ class Manipulator(ArticulatedAgentInterface):
         return (
             np.amax(
                 np.abs(
-                    self.gripper_joint_pos
-                    - np.array(self.params.gripper_open_state)
+                    self.gripper_joint_pos - np.array(self.params.gripper_open_state)
                 )
             )
             < self.params.gripper_state_eps
@@ -352,8 +340,7 @@ class Manipulator(ArticulatedAgentInterface):
         return (
             np.amax(
                 np.abs(
-                    self.gripper_joint_pos
-                    - np.array(self.params.gripper_closed_state)
+                    self.gripper_joint_pos - np.array(self.params.gripper_closed_state)
                 )
             )
             < self.params.gripper_state_eps

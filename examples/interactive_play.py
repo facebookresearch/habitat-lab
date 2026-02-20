@@ -51,11 +51,10 @@ import time
 from collections import defaultdict
 from typing import Any, Dict, List
 
-import magnum as mn
-import numpy as np
-
 import habitat
 import habitat.tasks.rearrange.rearrange_task
+import magnum as mn
+import numpy as np
 from habitat.articulated_agent_controllers import HumanoidRearrangeController
 from habitat.config.default import get_agent_config
 from habitat.config.default_structured_configs import (
@@ -67,10 +66,7 @@ from habitat.core.logging import logger
 from habitat.tasks.rearrange.actions.actions import ArmEEAction
 from habitat.tasks.rearrange.rearrange_sensors import GfxReplayMeasure
 from habitat.tasks.rearrange.utils import euler_to_quat, write_gfx_replay
-from habitat.utils.visualizations.utils import (
-    observations_to_image,
-    overlay_frame,
-)
+from habitat.utils.visualizations.utils import observations_to_image, overlay_frame
 from habitat_sim.utils import viz_utils as vut
 
 try:
@@ -123,9 +119,7 @@ def get_input_vel_ctlr(
         base_key = "base_vel"
 
     if arm_action_name in env.action_space.spaces:
-        arm_action_space = env.action_space.spaces[arm_action_name].spaces[
-            arm_key
-        ]
+        arm_action_space = env.action_space.spaces[arm_action_name].spaces[arm_key]
         arm_ctrlr = env.task.actions[arm_action_name].arm_ctrlr
         base_action = None
     elif "stretch" in cfg:
@@ -342,14 +336,11 @@ def get_input_vel_ctlr(
     if keys[pygame.K_PERIOD]:
         # Print the current position of the articulated agent, useful for debugging.
         pos = [
-            float("%.3f" % x)
-            for x in env._sim.articulated_agent.sim_obj.translation
+            float("%.3f" % x) for x in env._sim.articulated_agent.sim_obj.translation
         ]
         rot = env._sim.articulated_agent.sim_obj.rotation
         ee_pos = env._sim.articulated_agent.ee_transform().translation
-        logger.info(
-            f"Agent state: pos = {pos}, rotation = {rot}, ee_pos = {ee_pos}"
-        )
+        logger.info(f"Agent state: pos = {pos}, rotation = {rot}, ee_pos = {ee_pos}")
     elif keys[pygame.K_COMMA]:
         # Print the current arm state of the articulated agent, useful for debugging.
         joint_state = [
@@ -447,12 +438,8 @@ class FreeCamHelper:
                 self._free_xyz = np.zeros(3)
 
             quat = euler_to_quat(self._free_rpy)
-            trans = mn.Matrix4.from_(
-                quat.to_matrix(), mn.Vector3(*self._free_xyz)
-            )
-            env._sim.get_sensor(
-                "third_rgb"
-            ).sensor_object.node.transformation = trans
+            trans = mn.Matrix4.from_(quat.to_matrix(), mn.Vector3(*self._free_xyz))
+            env._sim.get_sensor("third_rgb").sensor_object.node.transformation = trans
             step_result = env._sim.get_sensor_observations()
             return step_result
         return step_result
@@ -474,9 +461,7 @@ def play_env(env, args, config):
     if not args.no_render:
         draw_obs = observations_to_image(obs, {})
         pygame.init()
-        screen = pygame.display.set_mode(
-            [draw_obs.shape[1], draw_obs.shape[0]]
-        )
+        screen = pygame.display.set_mode([draw_obs.shape[1], draw_obs.shape[0]])
 
     update_idx = 0
     target_fps = 60.0
@@ -487,9 +472,7 @@ def play_env(env, args, config):
     agent_to_control = 0
 
     free_cam = FreeCamHelper()
-    gfx_measure = env.task.measurements.measures.get(
-        GfxReplayMeasure.cls_uuid, None
-    )
+    gfx_measure = env.task.measurements.measures.get(GfxReplayMeasure.cls_uuid, None)
     is_multi_agent = len(env._sim.agents_mgr) > 1
 
     humanoid_controller = None
@@ -498,10 +481,7 @@ def play_env(env, args, config):
         humanoid_controller.reset(env._sim.articulated_agent.base_pos)
 
     while True:
-        if (
-            args.save_actions
-            and len(all_arm_actions) > args.save_actions_count
-        ):
+        if args.save_actions and len(all_arm_actions) > args.save_actions_count:
             # quit the application when the action recording queue is full
             break
         if render_steps_limit is not None and update_idx > render_steps_limit:
@@ -522,9 +502,7 @@ def play_env(env, args, config):
         step_result, arm_action, end_ep = get_input_vel_ctlr(
             args.no_render,
             args.cfg,
-            use_arm_actions[update_idx]
-            if use_arm_actions is not None
-            else None,
+            use_arm_actions[update_idx] if use_arm_actions is not None else None,
             env,
             not free_cam.is_free_cam_mode,
             agent_to_control,
@@ -553,14 +531,10 @@ def play_env(env, args, config):
             step_env(env, "pddl_apply_action", {"pddl_action": ac})
 
         if not args.no_render and keys[pygame.K_g]:
-            pred_list = env.task.sensor_suite.sensors[
-                "all_predicates"
-            ]._predicates_list
+            pred_list = env.task.sensor_suite.sensors["all_predicates"]._predicates_list
             pred_values = step_result["all_predicates"]
             logger.info("\nPredicate Truth Values:")
-            for i, (pred, pred_value) in enumerate(
-                zip(pred_list, pred_values)
-            ):
+            for i, (pred, pred_value) in enumerate(zip(pred_list, pred_values)):
                 logger.info(f"{i}: {pred.compact_str} = {pred_value}")
 
         if step_result is None:
@@ -650,9 +624,7 @@ def play_env(env, args, config):
         )
     if gfx_measure is not None:
         gfx_str = gfx_measure.get_metric(force_get=True)
-        write_gfx_replay(
-            gfx_str, config.habitat.task, env.current_episode.episode_id
-        )
+        write_gfx_replay(gfx_str, config.habitat.task, env.current_episode.episode_id)
 
     if not args.no_render:
         pygame.quit()
@@ -668,9 +640,7 @@ if __name__ == "__main__":
     parser.add_argument("--save-obs", action="store_true", default=False)
     parser.add_argument("--save-obs-fname", type=str, default="play.mp4")
     parser.add_argument("--save-actions", action="store_true", default=False)
-    parser.add_argument(
-        "--save-actions-fname", type=str, default="play_actions.txt"
-    )
+    parser.add_argument("--save-actions-fname", type=str, default="play_actions.txt")
     parser.add_argument(
         "--save-actions-count",
         type=int,
@@ -682,9 +652,7 @@ if __name__ == "__main__":
             """,
     )
     parser.add_argument("--play-cam-res", type=int, default=512)
-    parser.add_argument(
-        "--skip-render-text", action="store_true", default=False
-    )
+    parser.add_argument("--skip-render-text", action="store_true", default=False)
     parser.add_argument(
         "--same-task",
         action="store_true",
@@ -737,15 +705,11 @@ if __name__ == "__main__":
         nargs=argparse.REMAINDER,
         help="Modify config options from command line",
     )
-    parser.add_argument(
-        "--walk-pose-path", type=str, default=DEFAULT_POSE_PATH
-    )
+    parser.add_argument("--walk-pose-path", type=str, default=DEFAULT_POSE_PATH)
 
     args = parser.parse_args()
     if not has_pygame() and not args.no_render:
-        raise ImportError(
-            "Need to install PyGame (run `pip install pygame==2.0.1`)"
-        )
+        raise ImportError("Need to install PyGame (run `pip install pygame==2.0.1`)")
 
     config = habitat.get_config(args.cfg, args.opts)
     with habitat.config.read_write(config):
@@ -771,9 +735,7 @@ if __name__ == "__main__":
                 )
             if "force_terminate" in task_config.measurements:
                 task_config.measurements.force_terminate.max_accum_force = -1.0
-                task_config.measurements.force_terminate.max_instant_force = (
-                    -1.0
-                )
+                task_config.measurements.force_terminate.max_instant_force = -1.0
 
         if args.gfx:
             sim_config.habitat_sim_v0.enable_gfx_replay_save = True
