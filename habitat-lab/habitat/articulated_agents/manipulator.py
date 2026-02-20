@@ -71,7 +71,7 @@ class Manipulator(ArticulatedAgentInterface):
         if hasattr(self.params, "cameras"):
             self._cameras = defaultdict(list)
             for camera_prefix in self.params.cameras:
-                for sensor_name in self._sim._sensors:
+                for sensor_name in self._sim.sensors:
                     if sensor_name.startswith(camera_prefix):
                         self._cameras[camera_prefix].append(sensor_name)
 
@@ -149,7 +149,7 @@ class Manipulator(ArticulatedAgentInterface):
             # update the cameras
             for cam_prefix, sensor_names in self._cameras.items():
                 for sensor_name in sensor_names:
-                    sens_obj = self._sim._sensors[sensor_name]._sensor_object
+                    sens_obj = self._sim.get_sensor(sensor_name).sensor_object
                     cam_info = self.params.cameras[cam_prefix]
 
                     if cam_info.attached_link_id == -1:

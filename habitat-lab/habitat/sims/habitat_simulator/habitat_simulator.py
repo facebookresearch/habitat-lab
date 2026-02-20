@@ -732,8 +732,8 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         assert self.config.enable_batch_renderer
 
         assert KEYFRAME_OBSERVATION_KEY not in observations
-        for _sensor_uuid, sensor in self._sensors.items():
-            node = sensor._sensor_object.node
+        for _sensor_uuid, sensor in self.sensors.items():
+            node = sensor.node
             transform = node.absolute_transformation()
             rotation = mn.Quaternion.from_matrix(transform.rotation())
             self.gfx_replay_manager.add_user_transform_to_keyframe(

@@ -35,21 +35,21 @@ def test_debug_visualizer():
     hab_cfg = make_cfg(sim_settings)
     with habitat_sim.Simulator(hab_cfg) as sim:
         # at first sim should have only the initial default rgb sensor and agent
-        assert len(sim._Simulator__sensors) == 1
+        assert len(sim.sensors) == 1
         assert len(sim.agents) == 1
 
         # initialize the dbv
         dbv = DebugVisualizer(sim)
 
         # before initializing nothing changes
-        assert len(sim._Simulator__sensors) == 1
+        assert len(sim.sensors) == 1
         assert len(sim.agents) == 1
 
         # create and register the agent/sensor
         dbv.create_dbv_agent()
 
         # now we should have two sensors and agents
-        assert len(sim._Simulator__sensors) == 2
+        assert len(sim.sensors) == 2
         assert len(sim.agents) == 2
 
         # collect all the debug visualizer observations for showing later
@@ -60,12 +60,12 @@ def test_debug_visualizer():
 
         # test removing the agent/sensor
         dbv.remove_dbv_agent()
-        assert len(sim._Simulator__sensors) == 1
+        assert len(sim.sensors) == 1
         assert len(sim.agents) == 1
 
         # test switching modes
         dbv.create_dbv_agent()
-        assert len(sim._Simulator__sensors) == 2
+        assert len(sim.sensors) == 2
         assert len(sim.agents) == 2
         assert dbv.agent is not None
         assert dbv.equirect == False

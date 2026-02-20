@@ -168,15 +168,7 @@ class InstanceImageGoalSensor(RGBSensor):
         )
 
     def _remove_sensor(self, sensor_uuid: str) -> None:
-        agent = self._sim.get_agent(0)
-        del self._sim._sensors[sensor_uuid]
-        hsim.SensorFactory.delete_subtree_sensor(agent.scene_node, sensor_uuid)
-        del agent._sensors[sensor_uuid]
-        agent.agent_config.sensor_specifications = [
-            s
-            for s in agent.agent_config.sensor_specifications
-            if s.uuid != sensor_uuid
-        ]
+        self._sim.remove_sensor(sensor_uuid)
 
     def _get_instance_image_goal(
         self, img_params: InstanceImageParameters
@@ -188,8 +180,9 @@ class InstanceImageGoalSensor(RGBSensor):
         sensor_uuid = f"{self.cls_uuid}_sensor"
         self._add_sensor(img_params, sensor_uuid)
 
-        self._sim._sensors[sensor_uuid].draw_observation()
-        img = self._sim._sensors[sensor_uuid].get_observation()[:, :, :3]
+        sensor = self._sim.get_sensor(sensor_uuid)
+        sensor.draw_observation()
+        img = sensor.get_observation()[:, :, :3]
 
         self._remove_sensor(sensor_uuid)
         return img

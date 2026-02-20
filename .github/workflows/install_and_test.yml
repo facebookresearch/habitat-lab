@@ -76,10 +76,10 @@ jobs:
         #activate conda env
         export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
         conda activate habitat
-        #install habitat-sim
+        #install habitat-sim from the agent-sensor-decoupling PR branch
         if [ ! -d ./habitat-sim ]
         then
-          git clone https://github.com/facebookresearch/habitat-sim.git --recursive
+          git clone --branch agent-sensor-decoupling https://github.com/facebookresearch/habitat-sim.git --recursive
         fi
         cd habitat-sim
         pip install -r requirements.txt --progress-bar off

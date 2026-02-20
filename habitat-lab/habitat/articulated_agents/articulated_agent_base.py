@@ -77,7 +77,7 @@ class ArticulatedAgentBase(ArticulatedAgentInterface):
         if hasattr(self.params, "cameras"):
             self._cameras = defaultdict(list)
             for camera_prefix in self.params.cameras:
-                for sensor_name in self._sim._sensors:
+                for sensor_name in self._sim.sensors:
                     if sensor_name.startswith(camera_prefix):
                         self._cameras[camera_prefix].append(sensor_name)
 
