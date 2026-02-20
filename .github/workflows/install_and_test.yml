@@ -83,6 +83,7 @@ jobs:
         fi
         cd habitat-sim
         pip install -r requirements.txt --progress-bar off
+        pip install scikit-build-core pybind11 --progress-bar off
         git submodule update --init --recursive --jobs 8
         HABITAT_BUILD_GUI_VIEWERS=OFF HABITAT_WITH_CUDA=ON HABITAT_WITH_BULLET=ON pip install . --no-build-isolation
     - name: Download test data
