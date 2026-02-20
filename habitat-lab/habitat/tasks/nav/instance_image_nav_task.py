@@ -3,15 +3,21 @@
 # LICENSE file in the root directory of this source tree.
 
 import os
-from typing import Any, List, Optional, Tuple, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union
 
 import attr
-import habitat_sim
 import numpy as np
 from gym import Space, spaces
+
+import habitat_sim
 from habitat.core.logging import logger
 from habitat.core.registry import registry
-from habitat.core.simulator import RGBSensor, Sensor, SensorTypes, VisualObservation
+from habitat.core.simulator import (
+    RGBSensor,
+    Sensor,
+    SensorTypes,
+    VisualObservation,
+)
 from habitat.core.utils import not_none_validator
 from habitat.tasks.nav.nav import NavigationEpisode
 from habitat.tasks.nav.object_nav_task import ObjectGoal, ObjectNavigationTask
@@ -56,7 +62,9 @@ class InstanceImageGoalNavEpisode(NavigationEpisode):
 class InstanceImageParameters:
     position: List[float] = attr.ib(default=None, validator=not_none_validator)
     rotation: List[float] = attr.ib(default=None, validator=not_none_validator)
-    hfov: Union[int, float] = attr.ib(default=None, validator=not_none_validator)
+    hfov: Union[int, float] = attr.ib(
+        default=None, validator=not_none_validator
+    )
     image_dimensions: Tuple[int, int] = attr.ib(
         default=None, validator=not_none_validator
     )
@@ -123,7 +131,11 @@ class InstanceImageGoalSensor(RGBSensor):
         return self.cls_uuid
 
     def _get_observation_space(self, *args: Any, **kwargs: Any) -> Space:
-        H, W = next(iter(self._dataset.goals.values())).image_goals[0].image_dimensions
+        H, W = (
+            next(iter(self._dataset.goals.values()))
+            .image_goals[0]
+            .image_dimensions
+        )
         return spaces.Box(low=0, high=255, shape=(H, W, 3), dtype=np.uint8)
 
     def _add_sensor(
@@ -181,7 +193,9 @@ class InstanceImageGoalSensor(RGBSensor):
         **kwargs: Any,
     ) -> Optional[VisualObservation]:
         if len(episode.goals) == 0:
-            logger.error(f"No goal specified for episode {episode.episode_id}.")
+            logger.error(
+                f"No goal specified for episode {episode.episode_id}."
+            )
             return None
         if not isinstance(episode.goals[0], InstanceImageGoal):
             logger.error(
@@ -221,7 +235,9 @@ class InstanceImageGoalHFOVSensor(Sensor):
         self, *args: Any, episode: InstanceImageGoalNavEpisode, **kwargs: Any
     ) -> np.ndarray:
         if len(episode.goals) == 0:
-            logger.error(f"No goal specified for episode {episode.episode_id}.")
+            logger.error(
+                f"No goal specified for episode {episode.episode_id}."
+            )
             return None
         if not isinstance(episode.goals[0], InstanceImageGoal):
             logger.error(

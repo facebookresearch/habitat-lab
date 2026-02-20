@@ -7,6 +7,7 @@ from typing import Dict, List, Optional, Tuple
 
 import magnum as mn
 import numpy as np
+
 from habitat.articulated_agents.articulated_agent_interface import (
     ArticulatedAgentInterface,
 )
@@ -108,7 +109,10 @@ class ArticulatedAgentBase(ArticulatedAgentInterface):
         self._update_motor_settings_cache()
 
         # set correct gains for legs
-        if hasattr(self.params, "leg_joints") and self.params.leg_joints is not None:
+        if (
+            hasattr(self.params, "leg_joints")
+            and self.params.leg_joints is not None
+        ):
             jms = JointMotorSettings(
                 0,  # position_target
                 self.params.leg_mtr_pos_gain,  # position_gain
@@ -146,7 +150,9 @@ class ArticulatedAgentBase(ArticulatedAgentInterface):
         if self._base_type in ["mobile", "leg"]:
             return (
                 self.sim_obj.translation
-                + self.sim_obj.transformation.transform_vector(self.params.base_offset)
+                + self.sim_obj.transformation.transform_vector(
+                    self.params.base_offset
+                )
             )
         else:
             raise NotImplementedError("The base type is not implemented.")
@@ -161,7 +167,9 @@ class ArticulatedAgentBase(ArticulatedAgentInterface):
                 raise ValueError("Base position needs to be three dimensions")
             self.sim_obj.translation = (
                 position
-                - self.sim_obj.transformation.transform_vector(self.params.base_offset)
+                - self.sim_obj.transformation.transform_vector(
+                    self.params.base_offset
+                )
             )
         else:
             raise NotImplementedError("The base type is not implemented.")
@@ -206,7 +214,9 @@ class ArticulatedAgentBase(ArticulatedAgentInterface):
                 motor_targets[i] = self._get_motor_pos(jidx)
             return motor_targets
         else:
-            raise NotImplementedError("There are no leg motors other than leg robots")
+            raise NotImplementedError(
+                "There are no leg motors other than leg robots"
+            )
 
     @leg_motor_pos.setter
     def leg_motor_pos(self, ctrl: List[float]) -> None:
@@ -216,7 +226,9 @@ class ArticulatedAgentBase(ArticulatedAgentInterface):
             for i, jidx in enumerate(self.params.leg_joints):
                 self._set_motor_pos(jidx, ctrl[i])
         else:
-            raise NotImplementedError("There are no leg motors other than leg robots")
+            raise NotImplementedError(
+                "There are no leg motors other than leg robots"
+            )
 
     @property
     def leg_joint_pos(self):
@@ -227,7 +239,9 @@ class ArticulatedAgentBase(ArticulatedAgentInterface):
             leg_pos_indices = [joint_pos_indices[x] for x in leg_joints]
             return [self.sim_obj.joint_positions[i] for i in leg_pos_indices]
         else:
-            raise NotImplementedError("There are no leg motors other than leg robots")
+            raise NotImplementedError(
+                "There are no leg motors other than leg robots"
+            )
 
     @leg_joint_pos.setter
     def leg_joint_pos(self, ctrl: List[float]):
@@ -244,14 +258,18 @@ class ArticulatedAgentBase(ArticulatedAgentInterface):
                 joint_positions[self.joint_pos_indices[jidx]] = ctrl[i]
             self.sim_obj.joint_positions = joint_positions
         else:
-            raise NotImplementedError("There are no leg motors other than leg robots")
+            raise NotImplementedError(
+                "There are no leg motors other than leg robots"
+            )
 
     @property
     def base_transformation(self):
         return self.sim_obj.transformation
 
     def is_base_link(self, link_id: int) -> bool:
-        return self.sim_obj.get_link_name(link_id) in self.params.base_link_names
+        return (
+            self.sim_obj.get_link_name(link_id) in self.params.base_link_names
+        )
 
     def update_base(self, rigid_state, target_rigid_state):
         end_pos = self._sim.step_filter(

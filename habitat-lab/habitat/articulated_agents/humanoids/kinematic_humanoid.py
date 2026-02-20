@@ -5,9 +5,10 @@
 import pickle as pkl
 from typing import List
 
-import habitat_sim
 import magnum as mn
 import numpy as np
+
+import habitat_sim
 from habitat.articulated_agents.mobile_manipulator import (
     ArticulatedAgentCameraParams,
     MobileManipulator,
@@ -37,7 +38,9 @@ class KinematicHumanoid(MobileManipulator):
             ee_constraint=np.zeros((2, 2, 3)),
             cameras={
                 "head": ArticulatedAgentCameraParams(
-                    cam_offset_pos=mn.Vector3(0.0, HUMANOID_CAMERA_HEIGHT_OFFSET, 0.25),
+                    cam_offset_pos=mn.Vector3(
+                        0.0, HUMANOID_CAMERA_HEIGHT_OFFSET, 0.25
+                    ),
                     cam_look_at_pos=mn.Vector3(
                         0.0, HUMANOID_CAMERA_HEIGHT_OFFSET, 0.75
                     ),
@@ -59,7 +62,9 @@ class KinematicHumanoid(MobileManipulator):
             ee_count=2,
         )
 
-    def __init__(self, agent_cfg, sim, limit_robo_joints=False, fixed_base=False):
+    def __init__(
+        self, agent_cfg, sim, limit_robo_joints=False, fixed_base=False
+    ):
         auto_update_sensor_transform = agent_cfg.auto_update_sensor_transform
 
         super().__init__(
@@ -80,8 +85,12 @@ class KinematicHumanoid(MobileManipulator):
         # to simulate different gaits
         self.offset_transform = mn.Matrix4()
         self.offset_rot = -np.pi / 2
-        add_rot = mn.Matrix4.rotation(mn.Rad(self.offset_rot), mn.Vector3(0, 1.0, 0))
-        perm = mn.Matrix4.rotation(mn.Rad(self.offset_rot), mn.Vector3(0, 0, 1.0))
+        add_rot = mn.Matrix4.rotation(
+            mn.Rad(self.offset_rot), mn.Vector3(0, 1.0, 0)
+        )
+        perm = mn.Matrix4.rotation(
+            mn.Rad(self.offset_rot), mn.Vector3(0, 0, 1.0)
+        )
         self.offset_transform_base = perm @ add_rot
 
         self.rest_joints = None
@@ -177,7 +186,9 @@ class KinematicHumanoid(MobileManipulator):
             joint_list = self.rest_joints
 
         offset_transform = mn.Matrix4()  # self.rest_matrix
-        self.set_joint_transform(joint_list, offset_transform, self.base_transformation)
+        self.set_joint_transform(
+            joint_list, offset_transform, self.base_transformation
+        )
 
     def update(self) -> None:
         """Updates the camera transformations and performs necessary checks on
@@ -218,12 +229,14 @@ class KinematicHumanoid(MobileManipulator):
                             mn.Vector3(0, 1, 0),
                         )
                     cam_transform = (
-                        link_trans @ cam_transform @ cam_info.relative_transform
+                        link_trans
+                        @ cam_transform
+                        @ cam_info.relative_transform
                     )
                     cam_transform = inv_T @ cam_transform
 
-                    sens_obj.node.transformation = orthonormalize_rotation_shear(
-                        cam_transform
+                    sens_obj.node.transformation = (
+                        orthonormalize_rotation_shear(cam_transform)
                     )
 
         if self._fix_joint_values is not None:

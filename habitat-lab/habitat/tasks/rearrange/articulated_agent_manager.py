@@ -3,11 +3,14 @@
 # LICENSE file in the root directory of this source tree.
 
 from dataclasses import dataclass
-from typing import Any, Dict, Iterator, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Optional
 
 import magnum as mn
 import numpy as np
-from habitat.articulated_agents.humanoids.kinematic_humanoid import KinematicHumanoid
+
+from habitat.articulated_agents.humanoids.kinematic_humanoid import (
+    KinematicHumanoid,
+)
 from habitat.articulated_agents.mobile_manipulator import MobileManipulator
 
 # flake8: noqa
@@ -18,17 +21,23 @@ from habitat.articulated_agents.robots import (
     StretchRobot,
 )
 from habitat.articulated_agents.robots.fetch_suction import FetchSuctionRobot
-from habitat.tasks.rearrange.rearrange_grasp_manager import RearrangeGraspManager
+from habitat.tasks.rearrange.rearrange_grasp_manager import (
+    RearrangeGraspManager,
+)
 from habitat.tasks.rearrange.utils import (
-    add_perf_timing_func,
     IkHelper,
+    add_perf_timing_func,
     is_pb_installed,
 )
 
 if TYPE_CHECKING:
-    from habitat.config.default_structured_configs import AgentConfig, SimulatorConfig
-    from habitat_sim.simulator import Simulator
     from omegaconf import DictConfig
+
+    from habitat.config.default_structured_configs import (
+        AgentConfig,
+        SimulatorConfig,
+    )
+    from habitat_sim.simulator import Simulator
 
 
 @dataclass
@@ -83,13 +92,16 @@ class ArticulatedAgentManager:
             agent = agent_cls(agent_cfg, sim)
             grasp_managers = []
             for grasp_manager_id in range(agent_cfg.grasp_managers):
-                grasp_mgr = RearrangeGraspManager(sim, cfg, agent, grasp_manager_id)
+                grasp_mgr = RearrangeGraspManager(
+                    sim, cfg, agent, grasp_manager_id
+                )
                 grasp_managers.append(grasp_mgr)
 
             if len(cfg.agents) > 1:
                 # Prefix sensors if there is more than 1 agent in the scene.
                 agent.params.cameras = {
-                    f"{agent_name}_{k}": v for k, v in agent.params.cameras.items()
+                    f"{agent_name}_{k}": v
+                    for k, v in agent.params.cameras.items()
                 }
                 for camera_prefix in agent.params.cameras:
                     for sensor_name in self._sim.sensors:
@@ -179,7 +191,9 @@ class ArticulatedAgentManager:
                         # The initial parameter for this joint should be the original angle
                         target_arm_init_params[i] = agent_data.start_js[i]
 
-            agent_data.articulated_agent.params.arm_init_params = target_arm_init_params
+            agent_data.articulated_agent.params.arm_init_params = (
+                target_arm_init_params
+            )
             # note this does not reset the base position and rotation
             agent_data.articulated_agent.reset()
 
