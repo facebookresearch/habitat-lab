@@ -22,7 +22,6 @@ from habitat.core.utils import not_none_validator
 from habitat.tasks.nav.nav import NavigationEpisode
 from habitat.tasks.nav.object_nav_task import ObjectGoal, ObjectNavigationTask
 from habitat.utils.geometry_utils import quaternion_from_coeff
-from habitat_sim import bindings as hsim
 from habitat_sim.agent.agent import AgentState, SixDOFPose
 
 try:
