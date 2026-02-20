@@ -84,7 +84,7 @@ jobs:
         cd habitat-sim
         pip install -r requirements.txt --progress-bar off
         git submodule update --init --recursive --jobs 8
-        python -u setup.py install --headless --with-cuda --bullet
+        HABITAT_BUILD_GUI_VIEWERS=OFF HABITAT_WITH_CUDA=ON HABITAT_WITH_BULLET=ON pip install . --no-build-isolation
     - name: Download test data
       run: |
         # Disable clone protection for git lfs
