@@ -183,7 +183,7 @@ jobs:
       uses: conda-incubator/setup-miniconda@v3.0.1
       with:
         miniconda-version: "latest"
-        python-version: "3.12"
+        python-version: "3.11"
         activate-environment: "non-editable-install"
     - name: Ensure non-editable mode works
       run: |-
@@ -215,7 +215,7 @@ jobs:
       uses: conda-incubator/setup-miniconda@v3.0.1
       with:
         miniconda-version: "latest"
-        python-version: "3.12"
+        python-version: "3.11"
         activate-environment: "bdist-install"
     - name: Ensure bdist install works and build sdist
       run: |-
