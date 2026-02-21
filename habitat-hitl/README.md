@@ -33,7 +33,7 @@ Example HITL apps are configured to run at 30 steps per second (SPS). If your sy
     * The HITL framework depends on the `habitat-lab` and `habitat-baselines` packages. While these packages are in the same repository as the HITL framework, it's not strictly necessary for the HITL framework to import the packages that live in th- [Human-in-the-loop (HITL) Framework](#human-in-the-loop-hitl-framework)
 3. Install Habitat-sim [main branch](https://github.com/facebookresearch/habitat-sim).
     * [Build from source](https://github.com/facebookresearch/habitat-sim/blob/main/BUILD_FROM_SOURCE.md), or install the [conda packages](https://github.com/facebookresearch/habitat-sim#recommended-conda-packages).
-        * Be sure to include Bullet physics, e.g. `python setup.py install --bullet`.
+        * Be sure to include Bullet physics, e.g. `HABITAT_WITH_BULLET=ON pip install . --no-build-isolation` or `./build.sh --with-bullet`.
 4. Install the `habitat-hitl` package.
     * From the `habitat-lab` root directory, run `pip install -e habitat-hitl`.
 5. Download required assets for our example HITL applications (Note that the dataset downloader should be run from habitat-lab/.):

@@ -48,7 +48,7 @@ runs:
     uses: conda-incubator/setup-miniconda@v3.0.1
     with:
       miniconda-version: "latest"
-      python-version: "3.12"
+      python-version: "3.11"
       activate-environment: "habitat"
   - name: Install conda and dependencies
     run: |-

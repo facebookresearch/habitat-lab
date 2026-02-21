@@ -104,7 +104,7 @@ class ArticulatedAgentManager:
                     for k, v in agent.params.cameras.items()
                 }
                 for camera_prefix in agent.params.cameras:
-                    for sensor_name in self._sim._sensors:
+                    for sensor_name in self._sim.sensors:
                         if sensor_name.startswith(camera_prefix):
                             agent._cameras[camera_prefix].append(sensor_name)
 

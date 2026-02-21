@@ -450,9 +450,9 @@ class FreeCamHelper:
             trans = mn.Matrix4.from_(
                 quat.to_matrix(), mn.Vector3(*self._free_xyz)
             )
-            env._sim._sensors[
+            env._sim.get_sensor(
                 "third_rgb"
-            ]._sensor_object.node.transformation = trans
+            ).sensor_object.node.transformation = trans
             step_result = env._sim.get_sensor_observations()
             return step_result
         return step_result

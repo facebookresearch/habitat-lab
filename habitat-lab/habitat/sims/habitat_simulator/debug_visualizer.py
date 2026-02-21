@@ -341,11 +341,12 @@ class DebugVisualizer:
         )
         self.agent = self.sim.agents[-1]
         self.agent_id = len(self.sim.agents) - 1
-        self.sim._Simulator__sensors.append({})
-        self.sim._update_simulator_sensors(self.sensor_uuid, self.agent_id)
-        self.sensor = self.sim._Simulator__sensors[self.agent_id][
-            self.sensor_uuid
-        ]
+        # Wrap the C++ sensor in a Python Sensor and register it
+        cpp_sensor = self.agent.scene_node.subtree_sensors[self.sensor_uuid]
+        from habitat_sim.sensors.sensor_wrapper import Sensor as SimSensor
+
+        self.sensor = SimSensor(sim=self.sim, sensor_object=cpp_sensor)
+        self.sim.sensors[self.sensor_uuid] = self.sensor
 
     def remove_dbv_agent(self) -> None:
         """
@@ -358,9 +359,11 @@ class DebugVisualizer:
 
         # NOTE: this guards against cases where the Simulator is deconstructed before the DBV
         if self.agent_id < len(self.sim.agents):
-            # remove the agent and sensor from the Simulator instance
+            # remove the sensor from the registry and agent from the Simulator
+            if self.sensor_uuid in self.sim.sensors:
+                self.sensor.close()
+                del self.sim.sensors[self.sensor_uuid]
             self.agent.close()
-            del self.sim._Simulator__sensors[self.agent_id]
             del self.sim.agents[self.agent_id]
 
         self.agent = None

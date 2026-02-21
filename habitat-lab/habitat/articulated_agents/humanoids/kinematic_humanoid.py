@@ -201,7 +201,7 @@ class KinematicHumanoid(MobileManipulator):
             # update the cameras
             for cam_prefix, sensor_names in self._cameras.items():
                 for sensor_name in sensor_names:
-                    sens_obj = self._sim._sensors[sensor_name]._sensor_object
+                    sens_obj = self._sim.get_sensor(sensor_name).sensor_object
                     cam_info = self.params.cameras[cam_prefix]
 
                     if cam_info.attached_link_id == -1:
