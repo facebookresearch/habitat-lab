@@ -76,16 +76,13 @@ jobs:
         #activate conda env
         export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
         conda activate habitat
-        #install habitat-sim from the agent-sensor-decoupling PR branch
+        #install habitat-sim from nightly conda
+        conda install -y -c conda-forge -c aihabitat-nightly habitat-sim headless withbullet
+        #clone habitat-sim repo for test data and benchmark scripts
         if [ ! -d ./habitat-sim ]
         then
-          git clone --branch agent-sensor-decoupling https://github.com/facebookresearch/habitat-sim.git --recursive
+          git clone https://github.com/facebookresearch/habitat-sim.git --recursive
         fi
-        cd habitat-sim
-        pip install -r requirements.txt --progress-bar off
-        pip install scikit-build-core pybind11 --progress-bar off
-        git submodule update --init --recursive --jobs 8
-        HABITAT_BUILD_GUI_VIEWERS=OFF HABITAT_WITH_CUDA=ON HABITAT_WITH_BULLET=ON pip install . --no-build-isolation
     - name: Download test data
       run: |
         # Disable clone protection for git lfs
