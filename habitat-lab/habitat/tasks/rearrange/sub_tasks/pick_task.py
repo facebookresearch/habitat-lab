@@ -43,6 +43,11 @@ class RearrangePickTaskV1(RearrangeTask):
         self._spawn_max_dist_to_obj_delta = (
             self._config.spawn_max_dist_to_obj_delta
         )
+        self._navmesh_offset = None
+        if hasattr(self._config.actions, "base_velocity_non_cylinder"):
+            self._navmesh_offset = (
+                self._config.actions.base_velocity_non_cylinder.navmesh_offset
+            )
 
     def set_args(self, obj, **kwargs):
         self.force_set_idx = obj
@@ -77,6 +82,7 @@ class RearrangePickTaskV1(RearrangeTask):
                 sim,
                 self._num_spawn_attempts,
                 self._filter_colliding_states,
+                navmesh_offset=self._navmesh_offset,
             )
             spawn_attempt_count += 1
 
