@@ -13,7 +13,9 @@ from habitat.articulated_agent_controllers import (
     HumanoidBaseController,
     Motion,
 )
-
+from habitat.articulated_agent_controllers.humanoid_base_controller import (
+    BASE_HUMANOID_OFFSET 
+)
 
 class HumanoidSeqPoseController(HumanoidBaseController):
     """
@@ -28,7 +30,7 @@ class HumanoidSeqPoseController(HumanoidBaseController):
         self,
         motion_pose_path,
         motion_fps=30,
-        base_offset=(0, 0.9, 0),
+        base_offset=BASE_HUMANOID_OFFSET,
     ):
         super().__init__(motion_fps, base_offset)
 
