@@ -617,6 +617,20 @@ class MarkerRelPosSensorConfig(LabSensorConfig):
 
 
 @dataclass
+class HandleBBoxSensorConfig(LabSensorConfig):
+    r"""
+    Articulation task only. Returns the bounding box of the handle in pixels
+    """
+    type: str = "HandleBBoxSensor"
+    height: int = 480
+    width: int = 640
+    # The pixel size (in cell) of the border of the bbox
+    pixel_size: int = 2
+    # Height - Width for the handle size in meter
+    handle_size: List[float] = field(default_factory=lambda: [0.02, 0.1])
+
+
+@dataclass
 class TargetStartSensorConfig(LabSensorConfig):
     r"""
     Rearrangement only. Returns the relative position from end effector to a target object that needs to be picked up.
@@ -2224,6 +2238,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="arm_depth_bbox_sensor",
     node=ArmDepthBBoxSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.handle_bbox_sensor",
+    group="habitat/task/lab_sensors",
+    name="handle_bbox_sensor",
+    node=HandleBBoxSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.spot_head_stereo_depth_sensor",
