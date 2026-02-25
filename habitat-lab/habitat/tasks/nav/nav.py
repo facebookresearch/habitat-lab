@@ -688,7 +688,6 @@ class TopDownMap(Measure):
     ):
         self._sim = sim
         self._config = config
-        self._grid_delta = config.map_padding
         self._step_count: Optional[int] = None
         self._map_resolution = config.map_resolution
         self._ind_x_min: Optional[int] = None
@@ -697,6 +696,7 @@ class TopDownMap(Measure):
         self._ind_y_max: Optional[int] = None
         self._previous_xy_location: List[Optional[Tuple[int, int]]] = None
         self._top_down_map: Optional[np.ndarray] = None
+        self._fog_of_war_mask: Optional[np.ndarray] = None
         self._shortest_path_points: Optional[List[Tuple[int, int]]] = None
         self.line_thickness = int(
             np.round(self._map_resolution * 2 / MAP_THICKNESS_SCALAR)
