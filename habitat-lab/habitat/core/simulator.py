@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Meta Platforms, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 """Defines the core Simulator and Sensor class wrapper APIs. The classes here are primarily defining abstract APIs which are implemented further downstream."""

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Meta Platforms, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -622,7 +622,7 @@ class AppStateRearrangeV2(AppStateBase):
             agent_cfg = rearrange_v2_config.agents[agent_index]
             head_sensor_substring = agent_cfg.head_sensor_substring
             agent_name = sim.agents_mgr.get_agent_name_from_index(agent_index)
-            for sensor_name, sensor in sim_agent._sensors.items():
+            for sensor_name, sensor in sim_agent.sensors.items():
                 if (
                     isinstance(sensor, VisualSensor)
                     and agent_name in sensor_name

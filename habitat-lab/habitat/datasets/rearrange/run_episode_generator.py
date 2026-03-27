@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Meta Platforms, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -35,7 +35,9 @@ class SceneSamplerParamsConfig:
 @dataclass
 class SceneSamplerConfig:
     type: str = "single"
-    params: SceneSamplerParamsConfig = SceneSamplerParamsConfig()
+    params: SceneSamplerParamsConfig = field(
+        default_factory=SceneSamplerParamsConfig
+    )
     comment: str = ""
 
 
@@ -112,7 +114,9 @@ class RearrangeEpisodeGeneratorConfig:
     # NOTE: "subset" scene sampler allows sampling from multiple scene sets by name
     # NOTE: "scene_balanced" scene sampler splits desired episodes evenly amongst scenes in the set and generates all episodes for each scene consecutively.
     # TODO: This default is a bit ugly, but we must use ConfigNodes and define all options to directly nest dicts with yacs|yaml...
-    scene_sampler: SceneSamplerConfig = SceneSamplerConfig()
+    scene_sampler: SceneSamplerConfig = field(
+        default_factory=SceneSamplerConfig
+    )
 
     # Specify name of receptacle and maximum # of placemenets in
     # receptacle. To allow only two objects in the chair, specify:

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Meta Platforms, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -1048,9 +1048,9 @@ class NavigationMovementAgentAction(SimulatorTaskAction):
         assert (
             len(self._sim.agents) == 1  # type: ignore
         ), "For navigation tasks, there can be only one agent in the scene"
-        sensor_names = list(self._sim.agents[0]._sensors.keys())  # type: ignore
+        sensor_names = list(self._sim.agents[0].sensors.keys())  # type: ignore
         for sensor_name in sensor_names:
-            sensor = self._sim.agents[0]._sensors[sensor_name].node  # type: ignore
+            sensor = self._sim.agents[0].sensors[sensor_name].node  # type: ignore
             sensor.rotation = sensor.rotation * mn.Quaternion.rotation(
                 mn.Deg(amount), mn.Vector3.x_axis()
             )

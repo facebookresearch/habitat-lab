@@ -38,11 +38,11 @@ RUN ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake
 RUN cmake --version
 
 # Conda environment
-RUN conda create -n habitat python=3.9 cmake=3.14.0
+RUN conda create -n habitat python=3.12 cmake=3.28
 
 # Setup habitat-sim
-RUN git clone --branch stable https://github.com/facebookresearch/habitat-sim.git
-RUN /bin/bash -c ". activate habitat; cd habitat-sim; pip install -r requirements.txt; python setup.py install --headless"
+RUN git clone --branch stable https://github.com/facebookresearch/habitat-sim.git --recursive
+RUN /bin/bash -c ". activate habitat; cd habitat-sim; pip install -r requirements.txt; HABITAT_BUILD_GUI_VIEWERS=OFF pip install . --no-build-isolation"
 
 # Install challenge specific habitat-lab
 RUN git clone --branch stable https://github.com/facebookresearch/habitat-lab.git

@@ -72,19 +72,17 @@ jobs:
     - name: Build, install habitat-sim
       run: |-
         #give cmake ownership to the runner for installation
-        sudo chown runner -R /opt/cmake312/
+        sudo chown runner -R /opt/cmake328/
         #activate conda env
         export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
         conda activate habitat
-        #install habitat-sim
+        #install habitat-sim from nightly conda
+        conda install -y -c conda-forge -c aihabitat-nightly habitat-sim headless withbullet
+        #clone habitat-sim repo for test data and benchmark scripts
         if [ ! -d ./habitat-sim ]
         then
           git clone https://github.com/facebookresearch/habitat-sim.git --recursive
         fi
-        cd habitat-sim
-        pip install -r requirements.txt --progress-bar off
-        git submodule update --init --recursive --jobs 8
-        python -u setup.py install --headless --with-cuda --bullet
     - name: Download test data
       run: |
         # Disable clone protection for git lfs
@@ -104,7 +102,7 @@ jobs:
     - name: Run sim benchmark
       run: |-
         #give cmake ownership to the runner for installation
-        sudo chown runner -R /opt/cmake312/
+        sudo chown runner -R /opt/cmake328/
         #activate conda env
         export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
         conda activate habitat
@@ -182,7 +180,7 @@ jobs:
       uses: conda-incubator/setup-miniconda@v3.0.1
       with:
         miniconda-version: "latest"
-        python-version: "3.9"
+        python-version: "3.11"
         activate-environment: "non-editable-install"
     - name: Ensure non-editable mode works
       run: |-
@@ -200,7 +198,7 @@ jobs:
       uses: conda-incubator/setup-miniconda@v3.0.1
       with:
         miniconda-version: "latest"
-        python-version: "3.9"
+        python-version: "3.12"
         activate-environment: "build-env"
     - name: Build lab and baselines packages
       run: |-
@@ -214,7 +212,7 @@ jobs:
       uses: conda-incubator/setup-miniconda@v3.0.1
       with:
         miniconda-version: "latest"
-        python-version: "3.9"
+        python-version: "3.11"
         activate-environment: "bdist-install"
     - name: Ensure bdist install works and build sdist
       run: |-

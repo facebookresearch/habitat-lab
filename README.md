@@ -216,6 +216,8 @@ Note that ROS-X-Habitat was developed, and is maintained by the Lab for Computat
 ## License
 Habitat-Lab is MIT licensed. See the [LICENSE file](/LICENSE) for details.
 
+Copyright (c) Meta Platforms, Inc. and affiliates.
+
 The trained models and the task datasets are considered data derived from the correspondent scene datasets.
 
 - Matterport3D based task datasets and trained models are distributed with [Matterport3D Terms of Use](http://kaldir.vc.in.tum.de/matterport/MP_TOS.pdf) and under [CC BY-NC-SA 3.0 US license](https://creativecommons.org/licenses/by-nc-sa/3.0/us/).

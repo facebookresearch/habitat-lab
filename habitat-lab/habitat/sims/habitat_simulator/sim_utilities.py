@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Meta Platforms, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 """This module provides a diverse set of functional utilities for common operations involving the Simulator and ManagedObjects including: object getters from id and handle, geometric utilities, prepositional logic, region queries, articulated object interactions, and more."""

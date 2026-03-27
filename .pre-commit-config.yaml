@@ -22,14 +22,14 @@ repos:
         args: ['--fix=lf']
 
 -   repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
-    rev: v2.3.0
+    rev: v2.14.0
     hooks:
     -   id: pretty-format-ini
         args: [--autofix]
     -   id: pretty-format-toml
         args: [--autofix]
         additional_dependencies:
-         - toml-sort==0.21.0
+         - toml-sort==0.23.1
 
 -   repo: https://github.com/pre-commit/pygrep-hooks
     rev: v1.9.0  # Use the ref you want to point at

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Meta Platforms, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -732,8 +732,8 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         assert self.config.enable_batch_renderer
 
         assert KEYFRAME_OBSERVATION_KEY not in observations
-        for _sensor_uuid, sensor in self._sensors.items():
-            node = sensor._sensor_object.node
+        for _sensor_uuid, sensor in self.sensors.items():
+            node = sensor.node
             transform = node.absolute_transformation()
             rotation = mn.Quaternion.from_matrix(transform.rotation())
             self.gfx_replay_manager.add_user_transform_to_keyframe(

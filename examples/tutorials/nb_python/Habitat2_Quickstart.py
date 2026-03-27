@@ -1,10 +1,6 @@
 # ---
 # jupyter:
 #   accelerator: GPU
-#   colab:
-#     collapsed_sections: []
-#     name: Habitat 2.0 Quick Start Tutorial
-#     provenance: []
 #   jupytext:
 #     cell_metadata_filter: -all
 #     formats: nb_python//py:percent,notebooks//ipynb
@@ -14,21 +10,12 @@
 #       format_name: percent
 #       format_version: '1.3'
 #       jupytext_version: 1.13.8
-#   kernelspec:
-#     display_name: Python 3 (ipykernel)
-#     language: python
-#     name: python3
-#   language_info:
-#     codemirror_mode:
-#       name: ipython
-#       version: 3
-#     file_extension: .py
-#     mimetype: text/x-python
-#     name: python
-#     nbconvert_exporter: python
-#     pygments_lexer: ipython3
-#     version: 3.9.17
 # ---
+
+# %%
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
 
 # %% [markdown]
 # # Overview

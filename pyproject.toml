@@ -1,5 +1,4 @@
 [tool.black]
-line_length = 79
 exclude = '''
 (
   /(
@@ -20,3 +19,4 @@ exclude = '''
   )/
 )
 '''
+line_length = 79
