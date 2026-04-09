@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
-from gym import spaces
+from gymnasium import spaces
 from omegaconf import MISSING
 
 import habitat

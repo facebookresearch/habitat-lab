@@ -4,7 +4,7 @@
 
 from typing import Any
 
-import gym.spaces as spaces
+import gymnasium.spaces as spaces
 import torch
 
 from habitat_baselines.rl.hrl.skills.skill import SkillPolicy

@@ -13,7 +13,7 @@ in habitat. Customized environments should be registered using
 import importlib
 from typing import TYPE_CHECKING, Dict, Optional, Tuple, Type, Union
 
-import gym
+import gymnasium as gym
 import numpy as np
 
 import habitat
@@ -57,9 +57,20 @@ class RLTaskEnv(habitat.RLEnv):
         ), "The key task.success_measure cannot be None"
 
     def reset(
-        self, *args, return_info: bool = False, **kwargs
+        self,
+        *args,
+        return_info: bool = False,
+        seed=None,
+        options=None,
+        **kwargs,
     ) -> Union[RLTaskEnvObsType, Tuple[RLTaskEnvObsType, Dict]]:
-        return super().reset(*args, return_info=return_info, **kwargs)
+        return super().reset(
+            *args,
+            return_info=return_info,
+            seed=seed,
+            options=options,
+            **kwargs,
+        )
 
     def step(
         self, *args, **kwargs
@@ -96,8 +107,42 @@ class RLTaskEnv(habitat.RLEnv):
         return self._env.get_metrics()
 
 
+class _OldGymPassthroughWrapper(gym.Wrapper):
+    def reset(self, *args, **kwargs):
+        return self.env.reset(*args, **kwargs)
+
+    def step(self, action):
+        return self.env.step(action)
+
+    def render(self, *args, **kwargs):
+        return self.env.render(*args, **kwargs)
+
+
+class _GymnasiumToOldGymAPIWrapper(_OldGymPassthroughWrapper):
+    def reset(self, *, return_info: bool = False, **kwargs):
+        reset_output = self.env.reset(**kwargs)
+        if not isinstance(reset_output, tuple):
+            return reset_output
+
+        obs, info = reset_output
+        if return_info:
+            return obs, info
+        return obs
+
+    def step(self, action):
+        step_output = self.env.step(action)
+        if len(step_output) == 4:
+            return step_output
+
+        obs, reward, terminated, truncated, info = step_output
+        info = dict(info)
+        if truncated and not terminated:
+            info.setdefault("TimeLimit.truncated", True)
+        return obs, reward, terminated or truncated, info
+
+
 @habitat.registry.register_env(name="GymRegistryEnv")
-class GymRegistryEnv(gym.Wrapper):
+class GymRegistryEnv(_OldGymPassthroughWrapper):
     """
     A registered environment that wraps a gym environment to be
     used with habitat-baselines
@@ -109,12 +154,12 @@ class GymRegistryEnv(gym.Wrapper):
         for dependency in config["env_task_gym_dependencies"]:
             importlib.import_module(dependency)
         env_name = config["env_task_gym_id"]
-        gym_env = gym.make(env_name)
+        gym_env = _GymnasiumToOldGymAPIWrapper(gym.make(env_name))
         super().__init__(gym_env)
 
 
 @habitat.registry.register_env(name="GymHabitatEnv")
-class GymHabitatEnv(gym.Wrapper):
+class GymHabitatEnv(_OldGymPassthroughWrapper):
     """
     A registered environment that wraps a RLTaskEnv with the HabGymWrapper
     to use the default gym API.

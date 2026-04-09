@@ -6,7 +6,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 
-import gym.spaces as spaces
+import gymnasium.spaces as spaces
 import numpy as np
 import torch
 
@@ -383,8 +383,7 @@ class MultiPolicy(Policy):
                 lens.append(policy.policy_action_space.shape[0])
             else:
                 raise ValueError(
-                    f"Action distribution {policy.policy_action_space}"
-                    "not supported."
+                    f"Action distribution {policy.policy_action_space}not supported."
                 )
         return lens
 

@@ -191,7 +191,7 @@ class Registry(metaclass=Singleton):
                 If None will use the name of the class.
 
         """
-        from gym import Env
+        from gymnasium import Env
 
         return cls._register_impl("env", to_register, name, assert_type=Env)
 

@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
-from gym import spaces
+from gymnasium import spaces
 from torch import nn as nn
 from torch.nn import functional as F
 from torchvision import transforms as T

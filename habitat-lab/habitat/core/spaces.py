@@ -8,8 +8,8 @@ from collections import OrderedDict
 from collections.abc import Collection
 from typing import Dict, List, Union
 
-import gym
-from gym import Space
+import gymnasium as gym
+from gymnasium import Space
 
 
 class EmptySpace(Space):

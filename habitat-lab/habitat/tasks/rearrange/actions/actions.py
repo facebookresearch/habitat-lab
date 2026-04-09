@@ -8,7 +8,7 @@ from typing import Optional, cast
 
 import magnum as mn
 import numpy as np
-from gym import spaces
+from gymnasium import spaces
 
 import habitat_sim
 from habitat.articulated_agents.mobile_manipulator import (

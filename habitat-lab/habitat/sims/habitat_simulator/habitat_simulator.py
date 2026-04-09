@@ -19,8 +19,8 @@ from typing import (
 
 import magnum as mn
 import numpy as np
-from gym import spaces
-from gym.spaces.box import Box
+from gymnasium import spaces
+from gymnasium.spaces.box import Box
 from omegaconf import DictConfig
 
 import habitat_sim

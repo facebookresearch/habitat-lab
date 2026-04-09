@@ -10,7 +10,7 @@ from collections import OrderedDict
 from typing import Any, Dict, List, Tuple, Union
 
 import numpy as np
-from gym import spaces
+from gymnasium import spaces
 
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
@@ -287,8 +287,8 @@ class RearrangeTask(NavigationTask):
         idxs, goal_pos = self._sim.get_targets()
         scene_pos = self._sim.get_scene_pos()
         target_pos = scene_pos[idxs]
-        min_dist = np.min(
-            np.linalg.norm(target_pos - goal_pos, ord=2, axis=-1)
+        min_dist: float = float(
+            np.min(np.linalg.norm(target_pos - goal_pos, ord=2, axis=-1))
         )
         return (
             self._sim.grasp_mgr.is_grasped

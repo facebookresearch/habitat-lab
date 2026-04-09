@@ -57,7 +57,7 @@ os.chdir(dir_path)
 
 # %%
 # The ONLY two lines you need to add to start importing Habitat 2.0 Gym environments.
-import gym
+import gymnasium as gym
 
 # flake8: noqa
 import habitat.gym

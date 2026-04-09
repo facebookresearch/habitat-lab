@@ -6,7 +6,7 @@ import os.path as osp
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Tuple
 
-import gym.spaces as spaces
+import gymnasium.spaces as spaces
 import numpy as np
 import torch
 import torch.nn as nn
@@ -191,7 +191,7 @@ class HierarchicalPolicy(nn.Module, Policy):
         ):
             cur_skill_idx = self._cur_skills[i]
             ret_policy_info: Dict[str, Any] = {
-                "cur_skill": self._idx_to_name[cur_skill_idx],
+                "cur_skill": self._idx_to_name[int(cur_skill_idx)],
                 **policy_info,
             }
 
@@ -584,7 +584,8 @@ class HierarchicalPolicy(nn.Module, Policy):
                 batch_idx=batch_ids,
                 log_info=log_info,
                 skill_name=[
-                    self._idx_to_name[self._cur_skills[i]] for i in batch_ids
+                    self._idx_to_name[int(self._cur_skills[i])]
+                    for i in batch_ids
                 ],
             )
 

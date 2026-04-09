@@ -6,13 +6,22 @@
 
 # TODO, lots of typing errors in here
 
-from typing import TYPE_CHECKING, Any, List, Optional, Sequence, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+    cast,
+)
 
 import attr
 import cv2
 import numpy as np
 import quaternion
-from gym import spaces
+from gymnasium import spaces
 
 from habitat.config import read_write
 from habitat.config.default import get_agent_config
@@ -126,6 +135,7 @@ class PointGoalSensor(Sensor):
             in cartesian or polar coordinates.
         _dimensionality: number of dimensions used to specify the goal
     """
+
     cls_uuid: str = "pointgoal"
 
     def __init__(
@@ -219,6 +229,7 @@ class ImageGoalSensor(Sensor):
         sim: reference to the simulator for calculating task observations.
         config: config for the ImageGoal sensor.
     """
+
     cls_uuid: str = "imagegoal"
 
     def __init__(
@@ -306,6 +317,7 @@ class IntegratedPointGoalGPSAndCompassSensor(PointGoalSensor):
             in cartesian or polar coordinates.
         _dimensionality: number of dimensions used to specify the goal
     """
+
     cls_uuid: str = "pointgoal_with_gps_compass"
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
@@ -333,6 +345,7 @@ class HeadingSensor(Sensor):
         sim: reference to the simulator for calculating task observations.
         config: config for the sensor.
     """
+
     cls_uuid: str = "heading"
 
     def __init__(
@@ -375,6 +388,7 @@ class EpisodicCompassSensor(HeadingSensor):
     r"""The agents heading in the coordinate frame defined by the episode,
     theta=0 is defined by the agents state at t=0
     """
+
     cls_uuid: str = "compass"
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
@@ -406,6 +420,7 @@ class EpisodicGPSSensor(Sensor):
     Attributes:
         _dimensionality: number of dimensions used to specify the agents position
     """
+
     cls_uuid: str = "gps"
 
     def __init__(
@@ -461,6 +476,7 @@ class ProximitySensor(Sensor):
         sim: reference to the simulator for calculating task observations.
         config: config for the sensor.
     """
+
     cls_uuid: str = "proximity"
 
     def __init__(self, sim, config, *args: Any, **kwargs: Any):
@@ -724,13 +740,16 @@ class TopDownMap(Measure):
         return top_down_map
 
     def _draw_point(self, position, point_type):
+        top_down_map = self._top_down_map
+        assert top_down_map is not None
+        top_down_map_shape = cast(Tuple[int, int], top_down_map.shape)
         t_x, t_y = maps.to_grid(
             position[2],
             position[0],
-            (self._top_down_map.shape[0], self._top_down_map.shape[1]),
+            top_down_map_shape,
             sim=self._sim,
         )
-        self._top_down_map[
+        top_down_map[
             t_x - self.point_padding : t_x + self.point_padding + 1,
             t_y - self.point_padding : t_y + self.point_padding + 1,
         ] = point_type
@@ -776,6 +795,11 @@ class TopDownMap(Measure):
                     x_len, _, z_len = (
                         sem_scene.objects[object_id].aabb.sizes / 2.0
                     )
+                    top_down_map = self._top_down_map
+                    assert top_down_map is not None
+                    top_down_map_shape = cast(
+                        Tuple[int, int], top_down_map.shape
+                    )
                     # Nodes to draw rectangle
                     corners = [
                         center + np.array([x, 0, z])
@@ -793,17 +817,14 @@ class TopDownMap(Measure):
                         maps.to_grid(
                             p[2],
                             p[0],
-                            (
-                                self._top_down_map.shape[0],
-                                self._top_down_map.shape[1],
-                            ),
+                            top_down_map_shape,
                             sim=self._sim,
                         )
                         for p in corners
                     ]
 
                     maps.draw_path(
-                        self._top_down_map,
+                        top_down_map,
                         map_corners,
                         maps.MAP_TARGET_BOUNDING_BOX,
                         self.line_thickness,
@@ -820,17 +841,20 @@ class TopDownMap(Measure):
                     agent_position, episode.goals[0].position
                 )
             )
+            top_down_map = self._top_down_map
+            assert top_down_map is not None
+            top_down_map_shape = cast(Tuple[int, int], top_down_map.shape)
             self._shortest_path_points = [
                 maps.to_grid(
                     p[2],
                     p[0],
-                    (self._top_down_map.shape[0], self._top_down_map.shape[1]),
+                    top_down_map_shape,
                     sim=self._sim,
                 )
                 for p in _shortest_path_points
             ]
             maps.draw_path(
-                self._top_down_map,
+                top_down_map,
                 self._shortest_path_points,
                 maps.MAP_SHORTEST_PATH_COLOR,
                 self.line_thickness,
@@ -893,14 +917,17 @@ class TopDownMap(Measure):
 
     def update_map(self, agent_state: AgentState, agent_index: int):
         agent_position = agent_state.position
+        top_down_map = self._top_down_map
+        assert top_down_map is not None
+        top_down_map_shape = cast(Tuple[int, int], top_down_map.shape)
         a_x, a_y = maps.to_grid(
-            agent_position[2],
-            agent_position[0],
-            (self._top_down_map.shape[0], self._top_down_map.shape[1]),
+            float(agent_position[2]),
+            float(agent_position[0]),
+            top_down_map_shape,
             sim=self._sim,
         )
         # Don't draw over the source point
-        if self._top_down_map[a_x, a_y] != maps.MAP_SOURCE_POINT_INDICATOR:
+        if top_down_map[a_x, a_y] != maps.MAP_SOURCE_POINT_INDICATOR:
             color = 10 + min(
                 self._step_count * 245 // self._config.max_episode_steps, 245
             )
@@ -908,7 +935,7 @@ class TopDownMap(Measure):
             thickness = self.line_thickness
             if self._previous_xy_location[agent_index] is not None:
                 cv2.line(
-                    self._top_down_map,
+                    top_down_map,
                     self._previous_xy_location[agent_index],
                     (a_y, a_x),
                     color,
@@ -987,13 +1014,13 @@ class DistanceToGoal(Measure):
                 )
             else:
                 logger.error(
-                    f"Non valid distance_to parameter was provided: {self._distance_to }"
+                    f"Non valid distance_to parameter was provided: {self._distance_to}"
                 )
 
             self._previous_position = (
-                current_position[0],
-                current_position[1],
-                current_position[2],
+                float(current_position[0]),
+                float(current_position[1]),
+                float(current_position[2]),
             )
             self._metric = distance_to_target
 

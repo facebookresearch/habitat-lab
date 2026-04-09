@@ -11,7 +11,7 @@
 from typing import Any, Dict, List, Optional
 
 import attr
-from gym import spaces
+from gymnasium import spaces
 
 from habitat.core.registry import registry
 from habitat.core.simulator import Observations, Sensor
@@ -44,6 +44,7 @@ class VLNEpisode(NavigationEpisode):
         instruction: single natural language instruction guide to goal.
         trajectory_id: id of ground truth trajectory path.
     """
+
     reference_path: List[List[float]] = attr.ib(
         default=None, validator=not_none_validator
     )

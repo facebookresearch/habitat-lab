@@ -4,7 +4,7 @@
 
 from dataclasses import dataclass
 
-import gym.spaces as spaces
+import gymnasium.spaces as spaces
 import torch
 
 from habitat.tasks.rearrange.rearrange_sensors import (

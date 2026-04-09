@@ -26,7 +26,7 @@ from typing import (
 import attr
 import numpy as np
 import torch
-from gym import spaces
+from gymnasium import spaces
 from PIL import Image
 from torch import Size, Tensor
 from torch import nn as nn
@@ -63,7 +63,8 @@ def cosine_decay(progress: float) -> float:
 
 class CustomFixedCategorical(torch.distributions.Categorical):  # type: ignore
     def sample(
-        self, sample_shape: Size = torch.Size()  # noqa: B008
+        self,
+        sample_shape: Size = torch.Size(),  # noqa: B008
     ) -> Tensor:
         return super().sample(sample_shape).unsqueeze(-1)
 
@@ -98,7 +99,8 @@ class CategoricalNet(nn.Module):
 
 class CustomNormal(torch.distributions.normal.Normal):
     def sample(
-        self, sample_shape: Size = torch.Size()  # noqa: B008
+        self,
+        sample_shape: Size = torch.Size(),  # noqa: B008
     ) -> Tensor:
         return self.rsample(sample_shape)
 
@@ -193,6 +195,7 @@ class _ObservationBatchingCache(metaclass=Singleton):
     r"""Helper for batching observations that maintains a cpu-side tensor
     that is the right size and is pinned to cuda memory
     """
+
     _pool: Dict[Any, Union[torch.Tensor, np.ndarray]] = {}
 
     def get(
@@ -248,9 +251,11 @@ class _ObservationBatchingCache(metaclass=Singleton):
     ) -> TensorDict:
         observations = [
             TensorOrNDArrayDict.from_tree(o).map(
-                lambda t: t.numpy()
-                if isinstance(t, torch.Tensor) and t.device.type == "cpu"
-                else t
+                lambda t: (
+                    t.numpy()
+                    if isinstance(t, torch.Tensor) and t.device.type == "cpu"
+                    else t
+                )
             )
             for o in observations
         ]
@@ -260,9 +265,11 @@ class _ObservationBatchingCache(metaclass=Singleton):
         # Order sensors by size, stack and move the largest first
         upload_ordering = sorted(
             range(len(observation_keys)),
-            key=lambda idx: 1
-            if isinstance(observation_tensors[0][idx], numbers.Number)
-            else int(np.prod(observation_tensors[0][idx].shape)),  # type: ignore
+            key=lambda idx: (
+                1
+                if isinstance(observation_tensors[0][idx], numbers.Number)
+                else int(np.prod(observation_tensors[0][idx].shape))
+            ),  # type: ignore
             reverse=True,
         )
 
@@ -361,9 +368,9 @@ def poll_checkpoint_folder(
         return checkpoint path if (previous_ckpt_ind + 1)th checkpoint is found
         else return None.
     """
-    assert os.path.isdir(checkpoint_folder), (
-        f"invalid checkpoint folder " f"path {checkpoint_folder}"
-    )
+    assert os.path.isdir(
+        checkpoint_folder
+    ), f"invalid checkpoint folder path {checkpoint_folder}"
     models_paths = list(
         filter(
             lambda name: "latest" not in name,
@@ -459,7 +466,7 @@ def tensor_to_depth_images(
 
 
 def tensor_to_bgr_images(
-    tensor: Union[torch.Tensor, Iterable[torch.Tensor]]
+    tensor: Union[torch.Tensor, Iterable[torch.Tensor]],
 ) -> List[np.ndarray]:
     r"""Converts tensor of n image tensors to list of n BGR images.
     Args:
@@ -620,7 +627,7 @@ def valid_sample(sample: Optional[Any]) -> bool:
 
 
 def img_bytes_2_np_array(
-    x: Tuple[int, torch.Tensor, bytes]
+    x: Tuple[int, torch.Tensor, bytes],
 ) -> Tuple[int, torch.Tensor, bytes, np.ndarray]:
     """Mapper function to convert image bytes in webdataset sample to numpy
     arrays.

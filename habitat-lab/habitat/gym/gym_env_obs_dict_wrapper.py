@@ -4,8 +4,8 @@
 
 from typing import Tuple, Union
 
-from gym import Env, Wrapper, spaces
-from gym.core import ActType, ObsType
+from gymnasium import Env, Wrapper, spaces
+from gymnasium.core import ActType, ObsType
 
 
 class EnvObsDictWrapper(Wrapper):
@@ -32,12 +32,11 @@ class EnvObsDictWrapper(Wrapper):
         return obs, reward, done, info
 
     def reset(self, **kwargs) -> Union[ObsType, Tuple[ObsType, dict]]:
-        if not self._requires_dict:
-            return self.env.reset(**kwargs)
         reset_output = self.env.reset(**kwargs)
+        if not self._requires_dict:
+            return reset_output
         if isinstance(reset_output, tuple):
-            obs, info = self.env.reset(**kwargs)
+            obs, info = reset_output
             return {self.OBSERVATION_KEY: obs}, info
-        else:
-            obs = self.env.reset(**kwargs)
-            return {self.OBSERVATION_KEY: obs}
+
+        return {self.OBSERVATION_KEY: reset_output}

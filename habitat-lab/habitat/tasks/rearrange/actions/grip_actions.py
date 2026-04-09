@@ -8,7 +8,7 @@ from typing import Optional, Union
 
 import magnum as mn
 import numpy as np
-from gym import spaces
+from gymnasium import spaces
 
 from habitat.articulated_agents.robots.spot_robot import SpotRobot
 from habitat.articulated_agents.robots.stretch_robot import StretchRobot

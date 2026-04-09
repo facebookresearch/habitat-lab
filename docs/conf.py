@@ -10,7 +10,7 @@ sys.path = [os.path.join(os.path.dirname(__file__), "../")] + sys.path
 
 import habitat  # isort:skip
 
-import gym  # isort:skip
+import gymnasium as gym  # isort:skip
 import typing  # isort:skip
 
 # Override the typing annotation of _np_random of gym.Env since the type provided is

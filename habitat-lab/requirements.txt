@@ -1,4 +1,4 @@
-gym>=0.22.0,<0.23.1
+gymnasium>=0.29.1,<1.0.0
 numpy==1.26.4
 numpy-quaternion>=2019.3.18.14.33.20
 attrs>=19.1.0

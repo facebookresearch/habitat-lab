@@ -10,7 +10,7 @@ import subprocess
 import numpy as np
 import pytest
 import torch
-from gym import spaces
+from gymnasium import spaces
 
 from habitat import read_write
 from habitat_baselines.config.default import get_config
