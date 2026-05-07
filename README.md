@@ -1,3 +1,6 @@
+> [!WARNING]
+> **Beyond v0.3.4 this project is no longer receiving official active development or maintenance by Meta internal teams. Please feel free to continue forking and developing the software independently.**
+
 [![codecov](https://codecov.io/gh/facebookresearch/habitat-lab/branch/main/graph/badge.svg)](https://codecov.io/gh/facebookresearch/habitat-lab)
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/facebookresearch/habitat-lab/blob/main/LICENSE)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/facebookresearch/habitat-lab)](https://github.com/facebookresearch/habitat-lab/releases/latest)
