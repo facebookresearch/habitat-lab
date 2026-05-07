@@ -85,6 +85,15 @@ If you use the Habitat platform in your research, please cite the [Habitat 1.0](
    conda activate habitat
    ```
 
+   Additionally, make sure Git LFS >=3.0
+   ```
+   sudo apt remove git-lfs
+   curl -fsSL https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | sudo bash
+   sudo apt install git-lfs
+   git lfs install
+   git lfs --version   # should be 3.x or later
+   ```
+
 1. **conda install habitat-sim**
    - To install habitat-sim with bullet physics
       ```
@@ -119,6 +128,24 @@ If you use the Habitat platform in your research, please cite the [Habitat 1.0](
    - Download point-goal navigation episodes for the test scenes:
       ```bash
       python -m habitat_sim.utils.datasets_download --uids habitat_test_pointnav_dataset --data-path data/
+      ```
+   - Download ReplicaCAD meshes and baked-lighting textures:
+      ```bash
+      python -m habitat_sim.utils.datasets_download --uids replica_cad_dataset replica_cad_baked_lighting --data-path data/
+      ```
+   - Download rearrangement v2 episode JSONS (rearrange_easy.json.gz, etc):
+      ```bash
+      python -m habitat_sim.utils.datasets_download --uids rearrange_dataset_v2 --data-path data/
+      ```
+   - Download YCB object models/configs for Rearrange task, as well as Fetch-robot URDFs:
+      ```bash
+      python -m habitat_sim.utils.datasets_download --uids ycb hab_fetch --data-path data/
+      ```
+   - Here are all the downloads merged into one command:
+      ```bash
+      python -m habitat_sim.utils.datasets_download \
+      --uids habitat_test_scenes habitat_test_pointnav_dataset replica_cad_dataset replica_cad_baked_lighting rearrange_dataset_v2 ycb hab_fetch \
+      --data-path data/
       ```
 
 1. **Non-interactive testing**: Test the Pick task: Run the example pick task script
