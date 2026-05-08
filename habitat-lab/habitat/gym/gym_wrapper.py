@@ -8,9 +8,9 @@ from collections import OrderedDict
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union, cast
 
-import gym
+import gymnasium as gym
 import numpy as np
-from gym import spaces
+from gymnasium import spaces
 
 from habitat.core.batch_rendering.env_batch_renderer_constants import (
     KEYFRAME_OBSERVATION_KEY,
@@ -314,9 +314,20 @@ class HabGymWrapper(gym.Wrapper):
         return observation
 
     def reset(
-        self, *args, return_info: bool = False, **kwargs
+        self,
+        *args,
+        return_info: bool = False,
+        seed=None,
+        options=None,
+        **kwargs,
     ) -> Union[HabGymWrapperObsType, Tuple[HabGymWrapperObsType, dict]]:
-        obs = self.env.reset(*args, return_info=return_info, **kwargs)
+        obs = self.env.reset(
+            *args,
+            return_info=return_info,
+            seed=seed,
+            options=options,
+            **kwargs,
+        )
         if return_info:
             obs, info = obs
             self._last_obs = obs
@@ -328,17 +339,21 @@ class HabGymWrapper(gym.Wrapper):
     def render(self, mode: str = "human", **kwargs):
         last_infos = self.env.get_info(observations=None)
         if mode == "rgb_array":
-            frame = observations_to_image(self._last_obs, last_infos)
+            frame = np.asarray(
+                observations_to_image(self._last_obs, last_infos)
+            )
         elif mode == "human":
             if pygame is None:
                 raise ValueError(
                     "Render mode human not supported without pygame."
                 )
-            frame = observations_to_image(self._last_obs, last_infos)
+            frame = np.asarray(
+                observations_to_image(self._last_obs, last_infos)
+            )
             if self._screen is None:
                 pygame.init()
                 self._screen = pygame.display.set_mode(
-                    [frame.shape[1], frame.shape[0]]
+                    list(frame.shape[:2][::-1])
                 )
             draw_frame = np.transpose(
                 frame, (1, 0, 2)

@@ -8,7 +8,7 @@
 import warnings
 
 import numpy as np
-from gym import spaces
+from gymnasium import spaces
 
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes

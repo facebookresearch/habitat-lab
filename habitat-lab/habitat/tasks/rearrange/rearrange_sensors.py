@@ -8,7 +8,7 @@
 from collections import defaultdict, deque
 
 import numpy as np
-from gym import spaces
+from gymnasium import spaces
 
 from habitat.articulated_agents.humanoids import KinematicHumanoid
 from habitat.core.embodied_task import Measure
@@ -76,7 +76,7 @@ class TargetCurrentSensor(UsesArticulatedAgentInterface, MultiObjSensor):
         scene_pos = self._sim.get_scene_pos()
         pos = scene_pos[idxs]
 
-        for i in range(pos.shape[0]):
+        for i in range(len(pos)):
             pos[i] = T_inv.transform_point(pos[i])
 
         return pos.reshape(-1)

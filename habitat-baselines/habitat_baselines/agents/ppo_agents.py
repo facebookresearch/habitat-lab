@@ -12,9 +12,9 @@ from typing import Dict, Optional
 
 import numpy as np
 import torch
-from gym.spaces import Box
-from gym.spaces import Dict as SpaceDict
-from gym.spaces import Discrete
+from gymnasium.spaces import Box
+from gymnasium.spaces import Dict as SpaceDict
+from gymnasium.spaces import Discrete
 from omegaconf import DictConfig, OmegaConf
 
 import habitat
@@ -102,7 +102,7 @@ class PPOAgent(Agent):
 
         else:
             habitat.logger.error(
-                "Model checkpoint wasn't loaded, evaluating " "a random model."
+                "Model checkpoint wasn't loaded, evaluating a random model."
             )
 
         self.test_recurrent_hidden_states: Optional[torch.Tensor] = None

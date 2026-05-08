@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import pytest
-from gym import spaces
+from gymnasium import spaces
 
 try:
     import torch

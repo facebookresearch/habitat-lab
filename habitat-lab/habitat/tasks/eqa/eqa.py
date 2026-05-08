@@ -7,7 +7,7 @@
 from typing import Any, Dict, List, Optional
 
 import attr
-from gym import Space, spaces
+from gymnasium import Space, spaces
 
 from habitat.core.embodied_task import Action, Measure
 from habitat.core.registry import registry
@@ -63,7 +63,7 @@ class QuestionSensor(Sensor):
         observations: Dict[str, Observations],
         episode: EQAEpisode,
         *args: Any,
-        **kwargs: Any
+        **kwargs: Any,
     ):
         return episode.question.question_tokens
 

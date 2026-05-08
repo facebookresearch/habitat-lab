@@ -3,7 +3,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import numpy as np
-from gym import spaces
+from gymnasium import spaces
 
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.actions.grip_actions import ArticulatedAgentAction

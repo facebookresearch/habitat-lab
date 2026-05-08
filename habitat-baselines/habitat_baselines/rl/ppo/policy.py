@@ -17,7 +17,7 @@ from typing import (
 )
 
 import torch
-from gym import spaces
+from gymnasium import spaces
 from torch import nn as nn
 
 from habitat.tasks.nav.nav import (
@@ -281,8 +281,7 @@ class NetPolicy(nn.Module, Policy):
             )
         else:
             raise ValueError(
-                f"Action distribution {self.action_distribution_type}"
-                "not supported."
+                f"Action distribution {self.action_distribution_type}not supported."
             )
 
         self.critic = CriticHead(self.net.output_size)

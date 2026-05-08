@@ -6,9 +6,10 @@
 
 import importlib
 import sys
+from typing import Tuple, cast
 
-import gym
-import gym.spaces as spaces
+import gymnasium as gym
+import gymnasium.spaces as spaces
 import mock
 import numpy as np
 import pytest
@@ -69,9 +70,10 @@ def test_gym_wrapper_contract_continuous(
     obs, _, _, info = env.step(env.action_space.sample())
     assert isinstance(obs, expected_obs_type), f"Obs {obs}"
 
-    frame = env.render()
+    frame = np.asarray(env.render())
     assert isinstance(frame, np.ndarray)
-    assert len(frame.shape) == 3 and frame.shape[-1] == 3
+    frame_shape = cast(Tuple[int, int, int], frame.shape)
+    assert len(frame_shape) == 3 and frame_shape[-1] == 3
 
     env.close()
 
@@ -115,9 +117,10 @@ def test_gym_wrapper_contract_discrete(
     obs, _, _, info = env.step(env.action_space.sample())
     assert isinstance(obs, expected_obs_type), f"Obs {obs}"
 
-    frame = env.render()
+    frame = np.asarray(env.render())
     assert isinstance(frame, np.ndarray)
-    assert len(frame.shape) == 3 and frame.shape[-1] == 3
+    frame_shape = cast(Tuple[int, int, int], frame.shape)
+    assert len(frame_shape) == 3 and frame_shape[-1] == 3
 
     env.close()
 

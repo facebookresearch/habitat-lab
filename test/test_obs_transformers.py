@@ -3,8 +3,8 @@
 # LICENSE file in the root directory of this source tree.
 
 import pytest
-from gym import spaces
-from gym.vector.utils.spaces import batch_space
+from gymnasium import spaces
+from gymnasium.vector.utils import batch_space
 
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.obs_transformers import (  # get_active_obs_transforms,
@@ -61,4 +61,4 @@ def test_transforms(obs_transform_config: ObsTransformConfig):
     )
     assert modified_obs_space.contains(
         {k: v[0] for k, v in transformed_obs.items()}
-    ), f"Observation transform generated the observation ({str({k: v.shape for k,v in transformed_obs.items()}) }) which is incompatible with the defined observation space {modified_obs_space}"
+    ), f"Observation transform generated the observation ({str({k: v.shape for k, v in transformed_obs.items()})}) which is incompatible with the defined observation space {modified_obs_space}"

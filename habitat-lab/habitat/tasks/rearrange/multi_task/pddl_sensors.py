@@ -8,7 +8,7 @@
 from typing import List
 
 import numpy as np
-from gym import spaces
+from gymnasium import spaces
 
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry

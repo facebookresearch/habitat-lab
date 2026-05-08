@@ -7,8 +7,8 @@
 import os.path as osp
 from typing import TYPE_CHECKING, Any, List, Optional
 
-import gym
-from gym.envs.registration import register, registry
+import gymnasium as gym
+from gymnasium.envs.registration import register, registry
 
 from habitat import get_config, read_write
 from habitat.config.default import _HABITAT_CFG_DIR, register_configs
@@ -93,16 +93,18 @@ def _make_habitat_gym_env(
 
 
 def _try_register(id_name, entry_point, kwargs):
-    if id_name in registry.env_specs:
+    if id_name in registry:
         return
     register(
         id_name,
         entry_point=entry_point,
         kwargs=kwargs,
+        order_enforce=False,
+        disable_env_checker=True,
     )
 
 
-if "Habitat-v0" not in registry.env_specs:
+if "Habitat-v0" not in registry:
     register_configs()
     # Generic supporting general configs
     _try_register(

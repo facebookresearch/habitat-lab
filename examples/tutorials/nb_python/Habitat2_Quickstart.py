@@ -51,7 +51,7 @@ except Exception:
 import os
 
 import git
-import gym
+import gymnasium as gym
 import imageio
 import numpy as np
 from hydra.core.config_store import ConfigStore

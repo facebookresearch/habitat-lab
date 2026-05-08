@@ -14,7 +14,7 @@ from habitat.tasks.nav.nav import IntegratedPointGoalGPSAndCompassSensor
 torch = pytest.importorskip("torch")
 habitat_baselines = pytest.importorskip("habitat_baselines")
 
-import gym
+import gymnasium as gym
 from torch import distributed as distrib
 from torch import nn
 

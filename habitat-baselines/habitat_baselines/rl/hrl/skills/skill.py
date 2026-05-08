@@ -5,7 +5,7 @@
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 
-import gym.spaces as spaces
+import gymnasium.spaces as spaces
 import torch
 
 from habitat.core.simulator import Observations

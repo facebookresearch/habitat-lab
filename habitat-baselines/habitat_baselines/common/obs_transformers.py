@@ -20,6 +20,7 @@ fake or modify sensor input from the simulator.
 
 This module API is experimental and likely to change
 """
+
 import abc
 import copy
 import numbers
@@ -28,7 +29,7 @@ from typing import TYPE_CHECKING, Dict, Iterable, List, Optional, Tuple, Union
 
 import numpy as np
 import torch
-from gym import spaces
+from gymnasium import spaces
 from torch import nn
 
 from habitat.core.logging import logger
@@ -815,13 +816,14 @@ def get_cubemap_projections(
     The rotation matrices are equivalent to
     .. code-block:: python
         from scipy.spatial.transform import Rotation
+
         rotations = [
             Rotation.from_euler("y", 180, degrees=True),  # Back
             Rotation.from_euler("x", -90, degrees=True),  # Down
             Rotation.from_euler("x", 0, degrees=True),  # Front
             Rotation.from_euler("y", -90, degrees=True),  # Left
             Rotation.from_euler("y", 90, degrees=True),  # Right
-            Rotation.from_euler("x", 90, degrees=True)  # Up
+            Rotation.from_euler("x", 90, degrees=True),  # Up
         ]
     """
     rotations = [
@@ -918,7 +920,7 @@ class ProjectionTransformer(ObservationTransformer):
             in_len = self.converter.input_len
             logger.info(
                 f"Overwrite sensor: {key} from size of ({h}, {w}) to image of"
-                f" {self.img_shape} from sensors: {self.sensor_uuids[i*in_len:(i+1)*in_len]}"
+                f" {self.img_shape} from sensors: {self.sensor_uuids[i * in_len : (i + 1) * in_len]}"
             )
             if (h, w) != self.img_shape:
                 observation_space.spaces[key] = overwrite_gym_box_shape(

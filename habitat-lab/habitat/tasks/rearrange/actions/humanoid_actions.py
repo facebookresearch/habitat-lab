@@ -8,7 +8,7 @@ from enum import Enum
 
 import magnum as mn
 import numpy as np
-from gym import spaces
+from gymnasium import spaces
 
 from habitat.articulated_agent_controllers import HumanoidRearrangeController
 from habitat.core.registry import registry

@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 """Defines the core Simulator and Sensor class wrapper APIs. The classes here are primarily defining abstract APIs which are implemented further downstream."""
+
 import abc
 import time
 from collections import OrderedDict
@@ -22,7 +23,7 @@ from typing import (
 import attr
 import numpy as np
 import quaternion
-from gym import Space, spaces
+from gymnasium import Space, spaces
 
 from habitat.core.dataset import Episode
 

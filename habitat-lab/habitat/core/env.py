@@ -18,10 +18,10 @@ from typing import (
     cast,
 )
 
-import gym
+import gymnasium as gym
 import numba
 import numpy as np
-from gym import spaces
+from gymnasium import spaces
 
 from habitat.config import read_write
 from habitat.core.dataset import BaseEpisode, Dataset, Episode, EpisodeIterator
@@ -233,11 +233,19 @@ class Env:
         self._elapsed_steps = 0
         self._episode_over = False
 
-    def reset(self) -> Observations:
+    def reset(
+        self,
+        *,
+        seed: Optional[int] = None,
+        options: Optional[Dict[str, Any]] = None,
+    ) -> Observations:
         r"""Resets the environments and returns the initial observations.
 
         :return: initial observations from the environment.
         """
+        if seed is not None:
+            self.seed(seed)
+
         self._reset_stats()
 
         # Delete the shortest path cache of the current episode
@@ -420,9 +428,14 @@ class RLEnv(gym.Env):
 
     @profiling_wrapper.RangeContext("RLEnv.reset")
     def reset(
-        self, *, return_info: bool = False, **kwargs
+        self,
+        *,
+        return_info: bool = False,
+        seed: Optional[int] = None,
+        options: Optional[Dict[str, Any]] = None,
+        **kwargs,
     ) -> Union[Observations, Tuple[Observations, Dict]]:
-        observations = self._env.reset()
+        observations = self._env.reset(seed=seed, options=options)
         if return_info:
             return observations, self.get_info(observations)
         else:

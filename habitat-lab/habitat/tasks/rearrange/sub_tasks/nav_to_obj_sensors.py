@@ -6,7 +6,7 @@
 
 
 import numpy as np
-from gym import spaces
+from gymnasium import spaces
 
 import habitat_sim
 from habitat.core.embodied_task import Measure

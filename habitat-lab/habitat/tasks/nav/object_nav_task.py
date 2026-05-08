@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, List, Optional
 
 import attr
 import numpy as np
-from gym import spaces
+from gymnasium import spaces
 
 from habitat.core.logging import logger
 from habitat.core.registry import registry
@@ -36,6 +36,7 @@ class ObjectGoalNavEpisode(NavigationEpisode):
 
     :param object_category: Category of the obect
     """
+
     object_category: Optional[str] = None
 
     @property
@@ -63,6 +64,7 @@ class ObjectViewLocation:
         1.0 if whole object is inside of the rectangle and no pixel inside
         the rectangle belongs to anything except the object.
     """
+
     agent_state: AgentState
     iou: Optional[float]
 
@@ -113,6 +115,7 @@ class ObjectGoalSensor(Sensor):
         dataset: a Object Goal navigation dataset that contains dictionaries
         of categories id to text mapping.
     """
+
     cls_uuid: str = "objectgoal"
 
     def __init__(

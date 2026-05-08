@@ -4,8 +4,8 @@
 
 from typing import Tuple, Union
 
-from gym import Env, Wrapper, spaces
-from gym.core import ActType, ObsType
+from gymnasium import Env, Wrapper, spaces
+from gymnasium.core import ActType, ObsType
 
 from habitat.core.dataset import Episode
 

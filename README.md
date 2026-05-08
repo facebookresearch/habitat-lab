@@ -133,7 +133,7 @@ If you use the Habitat platform in your research, please cite the [Habitat 1.0](
     which uses [`habitat-lab/habitat/config/benchmark/rearrange/skills/pick.yaml`](habitat-lab/habitat/config/benchmark/rearrange/skills/pick.yaml) for configuration of task and agent. The script roughly does this:
 
     ```python
-    import gym
+    import gymnasium as gym
     import habitat.gym
 
     # Load embodied AI task (RearrangePick) and a pre-specified virtual robot

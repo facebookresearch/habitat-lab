@@ -5,7 +5,7 @@
 
 import magnum as mn
 import numpy as np
-from gym import spaces
+from gymnasium import spaces
 
 import habitat_sim
 from habitat.articulated_agent_controllers import HumanoidRearrangeController

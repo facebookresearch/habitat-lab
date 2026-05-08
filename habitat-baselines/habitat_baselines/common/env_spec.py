@@ -3,7 +3,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import attr
-import gym.spaces as spaces
+import gymnasium.spaces as spaces
 
 
 @attr.s(auto_attribs=True, slots=True)

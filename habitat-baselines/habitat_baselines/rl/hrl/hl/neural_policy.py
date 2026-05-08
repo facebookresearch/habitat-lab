@@ -6,7 +6,7 @@ import logging
 from itertools import chain
 from typing import Any, List
 
-import gym.spaces as spaces
+import gymnasium.spaces as spaces
 import numpy as np
 import torch
 import torch.nn as nn

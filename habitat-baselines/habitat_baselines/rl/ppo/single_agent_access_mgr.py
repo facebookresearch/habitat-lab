@@ -4,7 +4,7 @@
 
 from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Tuple
 
-import gym.spaces as spaces
+import gymnasium.spaces as spaces
 import numpy as np
 import torch
 import torch.nn as nn
@@ -102,7 +102,7 @@ class SingleAgentAccessMgr(AgentAccessMgr):
             self._updater.load_state_dict(
                 {
                     "actor_critic." + k: v
-                    for k, v, in resume_state["state_dict"].items()
+                    for k, v in resume_state["state_dict"].items()
                 }
             )
 

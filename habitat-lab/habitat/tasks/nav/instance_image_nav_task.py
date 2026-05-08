@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union
 
 import attr
 import numpy as np
-from gym import Space, spaces
+from gymnasium import Space, spaces
 
 import habitat_sim
 from habitat.core.logging import logger

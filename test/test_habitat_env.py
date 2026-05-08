@@ -11,7 +11,7 @@ from typing import List
 
 import numpy as np
 import pytest
-from gym import Wrapper
+from gymnasium import Wrapper
 
 import habitat
 from habitat.config.default import get_agent_config, get_config
@@ -228,9 +228,9 @@ def test_env(gpu2gpu):
             env.step(sample_non_stop_action(env.action_space))
 
         # check for steps limit on environment
-        assert env.episode_over is True, (
-            "episode should be over after " "max_episode_steps"
-        )
+        assert (
+            env.episode_over is True
+        ), "episode should be over after max_episode_steps"
 
         env.reset()
 

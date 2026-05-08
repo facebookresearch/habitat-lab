@@ -5,9 +5,9 @@
 import random
 from collections import deque
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
-import gym.spaces as spaces
+import gymnasium.spaces as spaces
 import torch
 
 from habitat.tasks.rearrange.multi_task.pddl_action import PddlAction
@@ -295,7 +295,9 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
         batch_size = masks.shape[0]
         all_pred_vals = observations["all_predicates"]
         next_skill = torch.zeros(batch_size)
-        skill_args_data = [None for _ in range(batch_size)]
+        skill_args_data: List[Optional[List[str]]] = [
+            None for _ in range(batch_size)
+        ]
         immediate_end = torch.zeros(batch_size, dtype=torch.bool)
 
         if (~masks).sum() > 0:
@@ -315,7 +317,9 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
             )
             if cur_ac is not None:
                 next_skill[batch_idx] = self._skill_name_to_idx[cur_ac.name]
-                skill_args_data[batch_idx] = [param.name for param in cur_ac.param_values]  # type: ignore[call-overload]
+                skill_args_data[batch_idx] = [
+                    param.name for param in cur_ac.param_values
+                ]  # type: ignore[call-overload]
             else:
                 # If we have no next action, do nothing.
                 next_skill[batch_idx] = self._skill_name_to_idx["wait"]
