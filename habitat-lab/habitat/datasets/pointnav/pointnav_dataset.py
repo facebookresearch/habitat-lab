@@ -35,10 +35,15 @@ class PointNavDatasetV1(Dataset):
     content_scenes_path: str = "{data_path}/content/{scene}.json.gz"
 
     @staticmethod
-    def check_config_paths_exist(config: "DictConfig") -> bool:
-        return os.path.exists(
-            config.data_path.format(split=config.split)
-        ) and os.path.exists(config.scenes_dir)
+    def check_config_paths_exist(config):
+        data_path = config.data_path.format(split=config.split)
+        if not os.path.exists(data_path):
+            raise FileNotFoundError(f"Could not find data_path: {data_path}")
+        if not os.path.exists(config.scenes_dir):
+            raise FileNotFoundError(
+                f"Could not find scenes_dir: {config.scenes_dir}"
+            )
+        return True
 
     @classmethod
     def get_scenes_to_load(cls, config: "DictConfig") -> List[str]:
@@ -50,7 +55,9 @@ class PointNavDatasetV1(Dataset):
         )
         if not cls.check_config_paths_exist(config):
             raise FileNotFoundError(
-                f"Could not find dataset file `{dataset_dir}`"
+                "Dataset paths not found.\n"
+                f"  data_path: {config.data_path.format(split=config.split)}\n"
+                f"  scenes_dir: {config.scenes_dir}"
             )
 
         cfg = config.copy()
