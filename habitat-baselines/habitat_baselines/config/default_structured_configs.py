@@ -499,6 +499,14 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     # Function signature: fn(save_file_path: str) -> None
     # If not specified, there is no callback.
     on_save_ckpt_callback: Optional[HydraCallbackConfig] = None
+    # If we want to load third party models such as robot-skills
+    # It is "true" for loading third party models
+    load_third_party_ckpt: bool = False
+    # The obsolute path of third party models config
+    third_party_config_path_dir: str = "third_party/config"
+    # The obsolute path of third party folder such as the location of robot-skills
+    # Example: "<the_path_to_robot_skills>/robot-skills"
+    third_party_ckpt_root_folder: str = "third_party/model"
 
 
 @dataclass
