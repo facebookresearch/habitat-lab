@@ -14,6 +14,16 @@ def read(file_path, *args, **kwargs):
     return content
 
 
+def read_requirements(file_path):
+    requirements = []
+    for raw_line in read(file_path).splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        requirements.append(line)
+    return requirements
+
+
 def get_package_version():
     import os.path as osp
     import sys
@@ -30,7 +40,7 @@ def get_long_description():
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/facebookresearch/habitat-lab/blob/main/LICENSE)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/facebookresearch/habitat-lab)](https://github.com/facebookresearch/habitat-lab/releases/latest)
 [![Supports Habitat_Sim](https://img.shields.io/static/v1?label=supports&message=Habitat%20Sim&color=informational&link=https://github.com/facebookresearch/habitat-sim)](https://github.com/facebookresearch/habitat-sim)
-[![Python 3.7](https://img.shields.io/badge/python-3.7-blue.svg)](https://www.python.org/downloads/release/python-370/)
+[![Python 3.9](https://img.shields.io/badge/python-3.9-blue.svg)](https://www.python.org/downloads/release/python-390/)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://timothycrosley.github.io/isort/)
@@ -55,7 +65,8 @@ For documentation refer [here](https://aihabitat.org/docs/habitat-lab/).
 if __name__ == "__main__":
     setup(
         name="habitat-lab",
-        install_requires=read("requirements.txt").strip().split("\n"),
+        install_requires=read_requirements("requirements.txt"),
+        python_requires=">=3.9",
         packages=find_packages(),
         version=get_package_version(),
         include_package_data=True,
