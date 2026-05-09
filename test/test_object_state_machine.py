@@ -4,13 +4,15 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Union
+import json
+from typing import Any, Tuple, Union
 
 import magnum as mn
 
 from habitat.sims.habitat_simulator.object_state_machine import (
     BooleanObjectState,
     ObjectStateMachine,
+    ObjectStateSpec,
     get_state_of_obj,
     set_state_of_obj,
 )
@@ -69,6 +71,23 @@ class TestObjectState(BooleanObjectState):
             set_state_of_obj(obj, self.name, False)
 
 
+# TupleObjectState is a contrived example of a state that is a tuple
+class TupleObjectState(ObjectStateSpec):
+    def __init__(self):
+        super().__init__()
+        self.name = "TupleObjectState"
+        self.accepted_semantic_classes = ["test_class"]
+
+    def default_value(self) -> Tuple:
+        return (1, "test")
+
+    def serialize_value(self, value: Tuple) -> str:
+        return json.dumps(value)
+
+    def deserialize_value(self, config_value: Any) -> Any:
+        return tuple(json.loads(config_value))
+
+
 def test_object_state_machine():
     """
     Test initializing and assigning a state to the state machine.
@@ -92,7 +111,9 @@ def test_object_state_machine():
         assert get_state_of_obj(new_obj, "semantic_class") == "test_class"
 
         # initialize the ObjectStateMachine
-        osm = ObjectStateMachine(active_states=[TestObjectState()])
+        osm = ObjectStateMachine(
+            active_states=[TestObjectState(), TupleObjectState()]
+        )
         osm.initialize_object_state_map(sim)
 
         # now the cube should be registered for TestObjectState because it has the correct semantic_class
@@ -101,6 +122,20 @@ def test_object_state_machine():
         assert isinstance(
             osm.objects_with_states[new_obj.handle][0], TestObjectState
         )
+
+        # The default value of the state should be True
+        assert osm.get_state_of_obj(new_obj, "TestState") == True
+        # Set the state to False
+        osm.set_state_of_obj(new_obj, "TestState", False)
+        # The return type should still be boolean and not integer
+        assert osm.get_state_of_obj(new_obj, "TestState") is False
+        # Set back to default value
+        osm.set_state_of_obj(new_obj, "TestState", True)
+
+        # Test the TupleObjectState can read and write tuples
+        assert osm.get_state_of_obj(new_obj, "TupleObjectState") == (1, "test")
+        osm.set_state_of_obj(new_obj, "TupleObjectState", (8, "val"))
+        assert osm.get_state_of_obj(new_obj, "TupleObjectState") == (8, "val")
 
         state_report_dict = osm.get_snapshot_dict(sim)
         assert "TestState" in state_report_dict
