@@ -426,7 +426,6 @@ class PointNavResNetNet(Net):
             self.prev_action_embedding = nn.Linear(
                 num_actions, self._n_prev_action
             )
-        self._n_prev_action = 32
         rnn_input_size = self._n_prev_action  # test
 
         # Only fuse the 1D state inputs. Other inputs are processed by the
