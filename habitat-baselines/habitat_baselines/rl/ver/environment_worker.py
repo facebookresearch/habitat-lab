@@ -48,8 +48,6 @@ if TYPE_CHECKING:
     from omegaconf import DictConfig
 
 
-MIN_SCENES_PER_ENV = 16
-
 T = TypeVar("T")
 
 
@@ -339,7 +337,8 @@ def _create_worker_configs(config: "DictConfig"):
 
     # We use a minimum number of scenes per environment to reduce bias
     scenes_per_env = max(
-        int(math.ceil(len(scenes) / num_environments)), MIN_SCENES_PER_ENV
+        int(math.ceil(len(scenes) / num_environments)),
+        config.habitat_baselines.min_scenes_per_env,
     )
     scene_splits: List[List[str]] = [[] for _ in range(num_environments)]
     for idx, scene in enumerate(infinite_shuffling_iterator(scenes)):
