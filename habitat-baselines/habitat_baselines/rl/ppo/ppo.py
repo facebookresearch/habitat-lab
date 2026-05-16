@@ -358,6 +358,25 @@ class PPO(nn.Module, Updater):
                         )
                     )
 
+        # Sanitise non-finite gradient elements before clip_grad_norm_ runs.
+        # `torch.nn.utils.clip_grad_norm_` is NaN-unsafe: any NaN in the
+        # gradient produces a NaN total_norm, a NaN clip_coef, and silently
+        # leaves NaN gradients in place. `optimizer.step()` then writes NaN
+        # into every parameter, after which all subsequent forward outputs
+        # are NaN and the training loop runs with a dead model until something
+        # (e.g. `torch.multinomial`) finally raises, by which point recent
+        # checkpoints are unusable. A single NaN gradient on one DD-PPO worker
+        # is enough: DDP all-reduce averages NaN with finite into NaN.
+        # Replacing non-finite gradient elements with zero turns a bad
+        # mini-batch into a no-op update instead of corrupting weights;
+        # `torch.nan_to_num_` of a finite tensor is identity, so clean training
+        # paths produce bitwise-identical weights. See #2226.
+        for p in self.actor_critic.parameters():
+            if p.grad is not None and not torch.isfinite(p.grad).all():
+                torch.nan_to_num_(
+                    p.grad, nan=0.0, posinf=0.0, neginf=0.0
+                )
+
         grad_norm = nn.utils.clip_grad_norm_(
             self.actor_critic.policy_parameters(),
             self.max_grad_norm,
