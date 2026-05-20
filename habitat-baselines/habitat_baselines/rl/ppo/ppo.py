@@ -368,6 +368,11 @@ class PPO(nn.Module, Updater):
 
         [h.wait() for h in handles]
 
+        # Replace NaN/Inf gradients with zero to prevent silent weight corruption
+        for p in self.parameters():
+            if p.grad is not None:
+                p.grad.data.nan_to_num_(nan=0.0, posinf=self.max_grad_norm, neginf=-self.max_grad_norm)
+
         return grad_norm
 
     def after_step(self) -> None:
