@@ -225,3 +225,70 @@ The trained models and the task datasets are considered data derived from the co
 
 - Matterport3D based task datasets and trained models are distributed with [Matterport3D Terms of Use](http://kaldir.vc.in.tum.de/matterport/MP_TOS.pdf) and under [CC BY-NC-SA 3.0 US license](https://creativecommons.org/licenses/by-nc-sa/3.0/us/).
 - Gibson based task datasets, the code for generating such datasets, and trained models are distributed with [Gibson Terms of Use](https://storage.googleapis.com/gibson_material/Agreement%20GDS%2006-04-18.pdf) and under [CC BY-NC-SA 3.0 US license](https://creativecommons.org/licenses/by-nc-sa/3.0/us/).
+
+
+## ❓ FAQ (Frequently Asked Questions)
+
+### What is Habitat-lab?
+
+Habitat-lab is a platform for developing AI agents that can navigate and interact with 3D environments. Built by Facebook AI Research (FAIR) for embodied AI research. Supports simulation-to-real transfer.
+
+### Key Features
+
+| Feature | Description |
+|---------|-------------|
+| **3D Simulation** | High-fidelity indoor environment simulation |
+| **Embodied AI** | Agents with vision, navigation, interaction |
+| **Sim-to-Real** | Transfer learned skills to real robots |
+| **Multi-Agent** | Support for collaborative agent scenarios |
+| **Benchmark Suite** | Habitat Challenge benchmarks included |
+
+### Core Components
+
+| Component | Description |
+|---------|-------------|
+| **Habitat-Sim** | High-performance 3D simulator |
+| **Habitat-API** | Task and agent abstractions |
+| **Habitat-Baselines** | RL algorithms and agents |
+| **Dataset Integration** | Matterport3D, Gibson, HM3D datasets |
+
+### Getting Started
+
+```bash
+# Install habitat-lab
+pip install habitat-lab
+
+# Install habitat-sim with bullet
+pip install habitat-sim-with-bullet
+
+# Run navigation example
+python examples/navigation_example.py
+```
+
+### Supported Tasks
+
+| Task | Description |
+|------|-------------|
+| **PointNav** | Navigate to coordinates |
+| **ObjectNav** | Find specific objects |
+| **ImageNav** | Navigate to image goal |
+| **Interaction** | Object manipulation tasks |
+
+### Use Cases
+
+| Use Case | Description |
+|----------|-------------|
+| **Robot Navigation** | Real-world robot path planning |
+| **Embodied AI Research** | Train agents in simulation |
+| **VR Applications** | Virtual environment exploration |
+| **Smart Home** | Home assistant navigation |
+
+### License
+
+MIT License - Free for research and commercial use.
+
+### Help & Resources
+
+- **Documentation**: https://aihabitat.org/docs/
+- **Paper**: https://arxiv.org/abs/1904.01201
+- **Datasets**: https://aihabitat.org/datasets/
