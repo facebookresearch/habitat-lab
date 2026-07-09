@@ -356,6 +356,7 @@ class HeadingSensor(Sensor):
         heading_vector = quaternion_rotate_vector(quat, direction_vector)
 
         phi = cartesian_to_polar(-heading_vector[2], heading_vector[0])[1]
+        phi = np.clip(phi, -np.pi, np.pi)
         return np.array([phi], dtype=np.float32)
 
     def get_observation(
