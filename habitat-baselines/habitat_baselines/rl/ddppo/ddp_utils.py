@@ -221,7 +221,10 @@ def load_resume_state(
     if rank0_only():
         logger.info(f"Loading resume state: {filename}")
 
-    return torch.load(filename, map_location="cpu")
+    # The resume state embeds the training config (an OmegaConf DictConfig),
+    # which the `weights_only=True` unpickler that is the default since
+    # PyTorch 2.6 refuses to load.
+    return torch.load(filename, map_location="cpu", weights_only=False)
 
 
 def requeue_job():
