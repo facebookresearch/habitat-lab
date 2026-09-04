@@ -107,7 +107,9 @@ class MultiAgentAccessMgr(AgentAccessMgr):
             )
 
         for agent, ckpt_path in zip(agents, ckpt_paths):
-            ckpt_dict = torch.load(ckpt_path, map_location="cpu")
+            ckpt_dict = torch.load(
+                ckpt_path, map_location="cpu", weights_only=False
+            )
             # Fetch the 1st agent from the type 1 population in the
             # checkpoint.
             agent.load_state_dict(ckpt_dict[1])

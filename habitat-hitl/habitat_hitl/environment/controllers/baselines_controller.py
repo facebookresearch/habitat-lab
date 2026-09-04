@@ -147,6 +147,7 @@ class BaselinesController(Controller):
         checkpoint = torch.load(
             self._config.habitat_baselines.eval_ckpt_path_dir,
             map_location="cpu",
+            weights_only=False,
         )
         self._load_agent_state_dict(checkpoint)
 

@@ -23,7 +23,12 @@ try:
     from habitat_baselines.common.base_trainer import BaseRLTrainer
     from habitat_baselines.common.baseline_registry import baseline_registry
     from habitat_baselines.config.default import get_config
-    from habitat_baselines.rl.ddppo.ddp_utils import find_free_port
+    from habitat_baselines.rl.ddppo.ddp_utils import (
+        find_free_port,
+        load_resume_state,
+        save_resume_state,
+    )
+    from habitat_baselines.rl.ppo.ppo_trainer import PPOTrainer
     from habitat_baselines.run import execute_exp
     from habitat_baselines.utils.common import batch_obs
 
@@ -333,6 +338,44 @@ def test_eval_config():
         resume_state_config=ckpt_cfg
     )
     assert returned_config.habitat_baselines.eval.video_option == ["disk"]
+
+
+@pytest.mark.skipif(
+    not baseline_installed, reason="baseline sub-module not installed"
+)
+def test_checkpoint_and_resume_state_load_with_config(tmp_path):
+    """Checkpoints and resume states embed the OmegaConf training config.
+    Since PyTorch 2.6 `torch.load` defaults to `weights_only=True`, which
+    refuses to unpickle it, so the loaders have to opt out explicitly."""
+    config = get_config("test/config/habitat_baselines/ppo_pointnav_test.yaml")
+    state_dict = {"actor_critic.net.fc.weight": torch.zeros(2, 2)}
+
+    ckpt_path = str(tmp_path / "ckpt.0.pth")
+    torch.save(
+        {
+            "state_dict": state_dict,
+            "config": config,
+            "extra_state": {"step": 7, "wall_time": 1.0},
+        },
+        ckpt_path,
+    )
+    ckpt = PPOTrainer(config).load_checkpoint(ckpt_path, map_location="cpu")
+    assert ckpt["config"] == config
+    assert ckpt["extra_state"]["step"] == 7
+
+    resume_path = str(tmp_path / ".habitat-resume-state.pth")
+    save_resume_state(
+        {
+            "state_dict": state_dict,
+            "optim_state": {},
+            "config": config,
+            "requeue_stats": {"num_steps_done": 7},
+        },
+        resume_path,
+    )
+    resume_state = load_resume_state(resume_path)
+    assert resume_state["config"] == config
+    assert resume_state["requeue_stats"]["num_steps_done"] == 7
 
 
 def __do_pause_test(num_envs, envs_to_pause):

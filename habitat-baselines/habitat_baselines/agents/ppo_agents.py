@@ -90,7 +90,9 @@ class PPOAgent(Agent):
         self.actor_critic.to(self.device)
 
         if config.MODEL_PATH:
-            ckpt = torch.load(config.MODEL_PATH, map_location=self.device)
+            ckpt = torch.load(
+                config.MODEL_PATH, map_location=self.device, weights_only=False
+            )
             #  Filter only actor_critic weights
             self.actor_critic.load_state_dict(
                 {  # type: ignore

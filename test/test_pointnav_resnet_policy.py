@@ -139,7 +139,9 @@ def test_pretrained_models(
         action_space=action_space,
     )
 
-    pretrained_state = torch.load(pretrained_weights_path, map_location="cpu")
+    pretrained_state = torch.load(
+        pretrained_weights_path, map_location="cpu", weights_only=False
+    )
 
     prefix = "actor_critic."
     policy.load_state_dict(

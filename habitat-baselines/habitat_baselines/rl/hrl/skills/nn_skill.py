@@ -170,7 +170,9 @@ class NnSkillPolicy(SkillPolicy):
         else:
             try:
                 ckpt_dict = torch.load(
-                    config.load_ckpt_file, map_location="cpu"
+                    config.load_ckpt_file,
+                    map_location="cpu",
+                    weights_only=False,
                 )
             except FileNotFoundError as e:
                 raise FileNotFoundError(
